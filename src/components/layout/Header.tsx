@@ -34,7 +34,7 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center">
-              <img src={futraLogo} alt="FUTRA" className="h-8 w-auto" />
+              <img src={futraLogo} alt="FUTRA" className="h-6 sm:h-7 lg:h-8 w-auto" />
             </Link>
             <nav className="hidden lg:flex items-center gap-1">
               {NAV_ITEMS.map(item => (
