@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CATEGORIES } from '@/data/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import futraLogo from '@/assets/futra-logo.png';
 
 const NAV_ITEMS = [
   { label: 'Browse', path: '/browse' },
