@@ -35,8 +35,9 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
     <Link
       to={`/market/${market.id}`}
       className={cn(
-        'block rounded-xl border border-border bg-card p-5 card-hover',
-        featured && 'border-primary/15 glow-soft',
+        'block rounded-xl border border-border bg-card p-5 transition-all duration-200',
+        'hover:border-primary/30 hover:glow-blue',
+        featured && 'border-primary/20',
         className
       )}
     >
@@ -48,24 +49,13 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
         </span>
       </div>
 
-      <h3 className="font-display font-semibold text-foreground leading-snug mb-1 line-clamp-2 text-[15px]">
+      <h3 className="font-display font-semibold text-foreground leading-snug mb-4 line-clamp-2">
         {market.question}
       </h3>
 
-      {/* Hero percentage */}
-      <div className="my-3">
-        <span className={cn(
-          'text-3xl stat-emerald',
-          leader.percentage >= 50 ? 'text-emerald' : 'text-primary'
-        )}>
-          {leader.percentage}%
-        </span>
-        <span className="text-sm text-muted-foreground ml-2">{leader.label}</span>
-      </div>
-
       <VoteBar options={market.options} type={market.type} compact />
 
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/60">
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
@@ -76,6 +66,9 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
             {formatNumber(market.totalCredits)}
           </span>
         </div>
+        <span className="text-xs font-medium text-emerald">
+          {leader.label} leads
+        </span>
       </div>
     </Link>
   );
