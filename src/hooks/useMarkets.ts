@@ -40,10 +40,10 @@ export function useMarkets(filters?: { category?: string; featured?: boolean; tr
     queryKey: ['markets', filters],
     queryFn: async () => {
       let query = supabase.from('markets').select('*');
-      if (filters?.category) query = query.eq('category', filters.category);
+      if (filters?.category) query = query.eq('category', filters.category as any);
       if (filters?.featured) query = query.eq('featured', true);
       if (filters?.trending) query = query.eq('trending', true);
-      if (filters?.status) query = query.eq('status', filters.status);
+      if (filters?.status) query = query.eq('status', filters.status as any);
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []).map(parseMarket);
