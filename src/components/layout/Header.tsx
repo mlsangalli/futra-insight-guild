@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CATEGORIES } from '@/data/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import futraLogo from '@/assets/futra-logo.png';
 
 const NAV_ITEMS = [
   { label: 'Browse', path: '/browse' },
@@ -32,8 +33,8 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
-            <Link to="/" className="font-display font-bold text-xl tracking-tight">
-              <span className="gradient-primary-text">FUTRA</span>
+            <Link to="/" className="flex items-center">
+              <img src={futraLogo} alt="FUTRA" className="h-8 w-auto" />
             </Link>
             <nav className="hidden lg:flex items-center gap-1">
               {NAV_ITEMS.map(item => (
