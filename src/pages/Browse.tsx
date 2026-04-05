@@ -1,85 +1,65 @@
 import { useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
-import { mockMarkets } from '@/data/mock-markets';
+import { useMarkets } from '@/hooks/useMarkets';
 import { CATEGORIES, MarketCategory } from '@/data/types';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
-const SORT_OPTIONS = ['Popular', 'New', 'Ending Soon', 'Most Credits'];
+const SORT_OPTIONS = ['Trending', 'Popular', 'Newest', 'Ending Soon'];
+
+function dbToCard(m: any) {
+  return {
+    id: m.id, question: m.question, description: m.description, category: m.category,
+    type: m.type, status: m.status, options: m.options, totalParticipants: m.total_participants,
+    totalCredits: m.total_credits, endDate: m.end_date, createdAt: m.created_at,
+    resolutionSource: m.resolution_source || '', resolutionRules: m.resolution_rules || '',
+    featured: m.featured, trending: m.trending,
+  };
+}
 
 export default function BrowsePage() {
   const [searchParams] = useSearchParams();
-  const filter = searchParams.get('filter');
-  const [selectedCategory, setSelectedCategory] = useState<MarketCategory | 'all'>('all');
-  const [sortBy, setSortBy] = useState(filter === 'ending' ? 'Ending Soon' : 'Popular');
+  const initialFilter = searchParams.get('filter') || '';
+  const [sortBy, setSortBy] = useState(initialFilter === 'trending' ? 'Trending' : initialFilter === 'popular' ? 'Popular' : initialFilter === 'ending' ? 'Ending Soon' : 'Trending');
+  const [categoryFilter, setCategoryFilter] = useState<MarketCategory | 'all'>('all');
 
-  let markets = [...mockMarkets];
-  if (selectedCategory !== 'all') {
-    markets = markets.filter(m => m.category === selectedCategory);
-  }
-  if (filter === 'trending') markets = markets.filter(m => m.trending);
+  const { data: allMarkets, isLoading } = useMarkets(categoryFilter !== 'all' ? { category: categoryFilter } : undefined);
 
-  if (sortBy === 'Popular') markets.sort((a, b) => b.totalParticipants - a.totalParticipants);
-  else if (sortBy === 'New') markets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  else if (sortBy === 'Ending Soon') markets.sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
-  else if (sortBy === 'Most Credits') markets.sort((a, b) => b.totalCredits - a.totalCredits);
+  let markets = allMarkets || [];
+  if (sortBy === 'Trending') markets = markets.filter(m => m.trending).concat(markets.filter(m => !m.trending));
+  else if (sortBy === 'Popular') markets = [...markets].sort((a, b) => b.total_participants - a.total_participants);
+  else if (sortBy === 'Newest') markets = [...markets].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  else if (sortBy === 'Ending Soon') markets = [...markets].sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
 
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <h1 className="font-display text-3xl font-bold text-foreground mb-6">Browse markets</h1>
+        <h1 className="font-display text-3xl font-bold text-foreground mb-2">Browse Markets</h1>
+        <p className="text-muted-foreground mb-6">Explore prediction markets across all categories.</p>
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
-              selectedCategory === 'all' ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground hover:text-foreground'
-            )}
-          >
-            All
-          </button>
+          <button onClick={() => setCategoryFilter('all')} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors', categoryFilter === 'all' ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground')}>All</button>
           {CATEGORIES.map(cat => (
-            <button
-              key={cat.key}
-              onClick={() => setSelectedCategory(cat.key)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
-                selectedCategory === cat.key ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {cat.emoji} {cat.label}
-            </button>
+            <button key={cat.key} onClick={() => setCategoryFilter(cat.key)} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors', categoryFilter === cat.key ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground')}>{cat.emoji} {cat.label}</button>
           ))}
         </div>
-
-        <div className="flex gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-8">
           {SORT_OPTIONS.map(opt => (
-            <button
-              key={opt}
-              onClick={() => setSortBy(opt)}
-              className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                sortBy === opt ? 'bg-surface-700 text-foreground' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {opt}
-            </button>
+            <button key={opt} onClick={() => setSortBy(opt)} className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-colors', sortBy === opt ? 'bg-surface-700 text-foreground' : 'text-muted-foreground hover:text-foreground')}>{opt}</button>
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {markets.map(m => (
-            <MarketCard key={m.id} market={m} />
-          ))}
-        </div>
-
-        {markets.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground">No markets found.</p>
+        {isLoading ? (
+          <div className="text-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {markets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
           </div>
+        )}
+        {!isLoading && markets.length === 0 && (
+          <div className="text-center py-20"><p className="text-muted-foreground">No markets found.</p></div>
         )}
       </div>
     </Layout>
