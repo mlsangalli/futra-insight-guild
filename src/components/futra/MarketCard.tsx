@@ -35,9 +35,8 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
     <Link
       to={`/market/${market.id}`}
       className={cn(
-        'block rounded-xl border border-border bg-card p-5 transition-all duration-200',
-        'hover:border-primary/30 hover:glow-blue',
-        featured && 'border-primary/20',
+        'block rounded-xl glass-card p-5 transition-all duration-300',
+        featured && 'gradient-border',
         className
       )}
     >
@@ -49,13 +48,26 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
         </span>
       </div>
 
-      <h3 className="font-display font-semibold text-foreground leading-snug mb-4 line-clamp-2">
+      <h3 className="font-display font-semibold text-foreground leading-snug mb-2 line-clamp-2">
         {market.question}
       </h3>
 
+      {/* Big leader percentage */}
+      <div className="mb-3">
+        <span className={cn(
+          'font-display text-2xl font-bold',
+          leader.label.toLowerCase() === 'yes' || leader.label.toLowerCase() === 'sim'
+            ? 'text-emerald glow-text-emerald'
+            : 'text-neon-blue glow-text'
+        )}>
+          {leader.percentage}%
+        </span>
+        <span className="text-xs text-muted-foreground ml-1.5">{leader.label}</span>
+      </div>
+
       <VoteBar options={market.options} type={market.type} compact />
 
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
@@ -66,9 +78,6 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
             {formatNumber(market.totalCredits)}
           </span>
         </div>
-        <span className="text-xs font-medium text-emerald">
-          {leader.label} leads
-        </span>
       </div>
     </Link>
   );
