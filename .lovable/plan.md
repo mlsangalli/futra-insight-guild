@@ -1,84 +1,60 @@
 
 
-# FUTRA — Social Forecasting Platform
+# Aplicar Moodboard Visual ao FUTRA
 
-## Visão Geral
-Plataforma social de forecasting onde usuários fazem palpites simples (SIM/NÃO ou múltipla escolha), alocam Futra Credits, e constroem reputação baseada em acertos. Visual dark premium, inspirado na clareza do Polymarket mas com identidade própria.
+## Análise do Moodboard
+A imagem mostra um visual **sci-fi/futurista** com: fundo escuro com partículas/estrelas brilhantes, cards com glassmorphism mais pronunciado e bordas sutis com glow, percentuais grandes e destacados em verde/azul neon, efeitos de brilho e profundidade, globo de rede neural no hero.
 
-## Design System
-- Paleta dark premium conforme especificado (Night 950 #05070C, Neon Blue #2D7CFF, Emerald #19E6A7, etc.)
-- Tipografia: Inter + Space Grotesk
-- Componentes: MarketCard, VoteBar, LeaderboardRow, ProfileCard, CategoryBadge, StatCard, InfluenceBadge
+## Mudanças Planejadas
 
-## Páginas (15 telas)
+### 1. Background com partículas animadas (CSS)
+- Adicionar um campo de estrelas/partículas animadas no `body` via CSS puro (pseudo-elements com radial gradients e animação)
+- Adicionar um sutil grid pattern de fundo nas sections
 
-### 1. Homepage
-- Header com logo FUTRA, navegação (Browse, Trending, Popular, New, Ending Soon, Leaderboard), categorias, busca, Login/Sign up
-- Hero section com headline forte + cards de mercado animados
-- Seções: mercados em destaque, trending, popular this week, ending soon, top players, como funciona, rodapé
+### 2. Hero Section redesenhada (`Index.tsx`)
+- Adicionar efeito de glow radial atrás do título (gradiente circular neon blue/emerald)
+- Percentual grande em destaque no hero (ex: "78% Yes" estilo moodboard) usando o mercado featured principal
+- Layout mais dramático com o mercado principal em destaque grande à esquerda
 
-### 2. Browse Markets
-- Grid de market cards com filtros por categoria e ordenação
-- Cards mostram: pergunta, categoria, prazo, opções, líder atual, participantes, créditos alocados
+### 3. MarketCard com visual glass aprimorado
+- Bordas com gradiente sutil (border-image ou pseudo-element)
+- Hover com glow mais intenso
+- Percentual do líder em tamanho grande e cor neon (estilo "62% Yes" do moodboard)
+- Background com gradiente sutil interno
 
-### 3. Category Page
-- Página filtrada por categoria (Política, Economia, Cripto, Futebol, Cultura, Tecnologia)
+### 4. VoteBar mais visual
+- Barras mais grossas com glow effect
+- Labels com percentuais maiores e mais bold
+- Adicionar animação de pulse sutil na barra líder
 
-### 4. Market Detail Page
-- Pergunta em destaque, opções de resposta, distribuição de votos, participantes, créditos totais
-- Painel lateral de participação: escolher lado → alocar créditos → ver recompensa potencial → confirmar
-- Regras de resolução, fonte oficial, data de encerramento
-- Activity feed, comentários, mercados relacionados
+### 5. CSS utilities e efeitos globais (`index.css`)
+- Nova classe `.glass-card` com backdrop-blur mais forte, borda com gradiente, sombra neon
+- Classe `.glow-text` para texto com text-shadow neon
+- Classe `.particle-bg` com pseudo-elements para efeito de partículas
+- Animação `@keyframes float` e `@keyframes twinkle` para elementos decorativos
+- Glow mais intenso no `.glow-blue` e `.glow-emerald`
 
-### 5. Leaderboard
-- Rankings: global, semanal, mensal, por categoria
-- Destaque para top forecasters com Futra Score e taxa de acerto
+### 6. StatCard com efeito de brilho
+- Borda com gradiente sutil
+- Valor com glow text
+- Ícone com cor neon
 
-### 6. Public Profile
-- Avatar, username, bio, Futra Score, taxa de acerto, especialidade por categoria, badges, posição no ranking
+### 7. Header com glass mais pronunciado
+- Aumentar blur do backdrop-filter
+- Adicionar borda inferior com gradiente sutil
 
-### 7. User Dashboard
-- Portfolio de palpites (abertos/resolvidos), Futra Credits, Futra Score, ranking, badges, watchlist, estatísticas
+### 8. Tailwind config — novas animações
+- `float`, `twinkle`, `glow-pulse` keyframes
 
-### 8. Login & Sign Up
-- Formulários clean com branding FUTRA
+## Arquivos a modificar
+1. `src/index.css` — novas utilities CSS (glass-card, glow-text, particle effects, star field)
+2. `tailwind.config.ts` — novas animações (float, twinkle)
+3. `src/components/futra/MarketCard.tsx` — glass-card, percentual grande em destaque
+4. `src/components/futra/VoteBar.tsx` — barras com glow, percentuais maiores
+5. `src/components/futra/StatCard.tsx` — borda gradiente, glow text
+6. `src/components/layout/Header.tsx` — glass mais forte
+7. `src/pages/Index.tsx` — hero redesenhado com glow radial, mercado destaque grande, efeito de partículas no background
 
-### 9. Onboarding
-- Flow de 4 steps explicando: escolha um lado → aloque créditos → ganhe se acertar → suba no ranking
-
-### 10. How It Works
-- Página explicativa do sistema de créditos, reputação e níveis de influência
-
-### 11. Create Market (bloqueada para baixa reputação)
-- Form para criar mercado com pergunta, opções, categoria, data de encerramento, fonte de resolução
-- Gate de reputação mínima
-
-### 12. Watchlist
-- Mercados salvos pelo usuário
-
-### 13. Search Results
-- Resultados de busca com filtros
-
-### 14. Notifications Panel
-- Painel de notificações (resultados, créditos, ranking)
-
-## Dados Mockados
-- ~20 mercados realistas nas categorias especificadas (política BR, economia, cripto, futebol, cultura, tech)
-- Usuários mock com scores, rankings e históricos
-- Distribuições de votos realistas
-
-## Sistema de Reputação (visual)
-- 4 níveis: Low / Medium / High / Elite Influence
-- Badges e indicadores visuais nos perfis e leaderboard
-
-## Responsividade
-- Desktop: grids elegantes, cards ricos
-- Mobile: navegação fluida, votação simplificada, cards legíveis
-
-## Stack
-- React 18 + TypeScript + Vite + Tailwind CSS
-- React Router para navegação
-- Dados mockados em arquivos de dados
-- Componentes reutilizáveis organizados por feature
-- Dark mode nativo (tema principal)
+## Abordagem
+Todas as mudanças são puramente visuais (CSS + Tailwind classes). Sem alterações em lógica, dados ou backend.
 
