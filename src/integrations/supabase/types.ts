@@ -14,16 +14,224 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      markets: {
+        Row: {
+          category: Database["public"]["Enums"]["market_category"]
+          created_at: string
+          created_by: string | null
+          description: string
+          end_date: string
+          featured: boolean
+          id: string
+          options: Json
+          question: string
+          resolution_rules: string | null
+          resolution_source: string | null
+          resolved_option: string | null
+          status: Database["public"]["Enums"]["market_status"]
+          total_credits: number
+          total_participants: number
+          trending: boolean
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["market_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          end_date: string
+          featured?: boolean
+          id?: string
+          options?: Json
+          question: string
+          resolution_rules?: string | null
+          resolution_source?: string | null
+          resolved_option?: string | null
+          status?: Database["public"]["Enums"]["market_status"]
+          total_credits?: number
+          total_participants?: number
+          trending?: boolean
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["market_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          end_date?: string
+          featured?: boolean
+          id?: string
+          options?: Json
+          question?: string
+          resolution_rules?: string | null
+          resolution_source?: string | null
+          resolved_option?: string | null
+          status?: Database["public"]["Enums"]["market_status"]
+          total_credits?: number
+          total_participants?: number
+          trending?: boolean
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      predictions: {
+        Row: {
+          created_at: string
+          credits_allocated: number
+          id: string
+          market_id: string
+          reward: number | null
+          selected_option: string
+          status: Database["public"]["Enums"]["prediction_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_allocated: number
+          id?: string
+          market_id: string
+          reward?: number | null
+          selected_option: string
+          status?: Database["public"]["Enums"]["prediction_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_allocated?: number
+          id?: string
+          market_id?: string
+          reward?: number | null
+          selected_option?: string
+          status?: Database["public"]["Enums"]["prediction_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "predictions_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          accuracy_rate: number
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string
+          futra_credits: number
+          futra_score: number
+          global_rank: number
+          id: string
+          influence_level: Database["public"]["Enums"]["influence_level"]
+          resolved_predictions: number
+          specialties: string[] | null
+          streak: number
+          total_predictions: number
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          accuracy_rate?: number
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          futra_credits?: number
+          futra_score?: number
+          global_rank?: number
+          id?: string
+          influence_level?: Database["public"]["Enums"]["influence_level"]
+          resolved_predictions?: number
+          specialties?: string[] | null
+          streak?: number
+          total_predictions?: number
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          accuracy_rate?: number
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          futra_credits?: number
+          futra_score?: number
+          global_rank?: number
+          id?: string
+          influence_level?: Database["public"]["Enums"]["influence_level"]
+          resolved_predictions?: number
+          specialties?: string[] | null
+          streak?: number
+          total_predictions?: number
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      place_prediction: {
+        Args: {
+          p_credits: number
+          p_market_id: string
+          p_selected_option: string
+        }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
+      influence_level: "low" | "medium" | "high" | "elite"
+      market_category:
+        | "politics"
+        | "economy"
+        | "crypto"
+        | "football"
+        | "culture"
+        | "technology"
+      market_status: "open" | "closed" | "resolved"
+      prediction_status: "pending" | "won" | "lost"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +358,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+      influence_level: ["low", "medium", "high", "elite"],
+      market_category: [
+        "politics",
+        "economy",
+        "crypto",
+        "football",
+        "culture",
+        "technology",
+      ],
+      market_status: ["open", "closed", "resolved"],
+      prediction_status: ["pending", "won", "lost"],
+    },
   },
 } as const
