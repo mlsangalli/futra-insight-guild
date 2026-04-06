@@ -108,6 +108,7 @@ const App = () => (
                     <Route path="/admin/content" element={<AdminRoute><AdminContent /></AdminRoute>} />
                     <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
                     <Route path="/admin/logs" element={<AdminRoute><AdminLogs /></AdminRoute>} />
+                    <Route path="/health" element={<AdminRoute><HealthCheck /></AdminRoute>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </ErrorBoundary>

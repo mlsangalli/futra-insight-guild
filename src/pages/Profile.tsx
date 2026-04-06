@@ -1,17 +1,31 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { StatCard } from '@/components/futra/StatCard';
 import { useProfile } from '@/hooks/useMarkets';
-import { Target, Coins, Trophy, Zap, UserX } from 'lucide-react';
+import { usePublicPredictions } from '@/hooks/useProfilePredictions';
+import { useAuth } from '@/contexts/AuthContext';
+import { Target, Coins, Trophy, Zap, UserX, Share2, CheckCircle, XCircle } from 'lucide-react';
 import { MarketCategory } from '@/types';
 import { ProfileSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import EditProfileDialog from '@/components/EditProfileDialog';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { data: user, isLoading, isError, refetch } = useProfile(username || '');
+  const { user: currentUser } = useAuth();
+  const isOwn = !!currentUser && !!user && currentUser.id === user.user_id;
+  const { data: predictions } = usePublicPredictions(user?.user_id);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/profile/${username}`);
+    toast.success('Profile link copied!');
+  };
 
   if (isLoading) return <Layout><div className="container mx-auto px-4 py-8"><ProfileSkeleton /></div></Layout>;
   if (isError) return <Layout><div className="container mx-auto px-4 py-8"><ErrorState onRetry={() => refetch()} /></div></Layout>;
@@ -52,9 +66,18 @@ export default function ProfilePage() {
                 ))}
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Global Rank</p>
-              <p className="font-display text-3xl font-bold text-foreground">#{user.global_rank || '—'}</p>
+            <div className="flex flex-col items-end gap-2">
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Global Rank</p>
+                <p className="font-display text-3xl font-bold text-foreground">#{user.global_rank || '—'}</p>
+              </div>
+              {isOwn ? (
+                <EditProfileDialog />
+              ) : (
+                <Button variant="outline" size="sm" onClick={copyLink}>
+                  <Share2 className="h-4 w-4 mr-1" /> Share
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -69,12 +92,32 @@ export default function ProfilePage() {
         <div className="grid md:grid-cols-2 gap-6 mt-6">
           <div className="rounded-xl border border-border bg-card p-6">
             <h2 className="font-semibold text-foreground mb-4">Prediction history</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total predictions</span><span className="text-foreground font-medium">{user.total_predictions}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Resolved</span><span className="text-foreground font-medium">{user.resolved_predictions}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pending</span><span className="text-foreground font-medium">{user.total_predictions - user.resolved_predictions}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Win rate</span><span className="text-emerald font-medium">{user.accuracy_rate}%</span></div>
-            </div>
+            {predictions && predictions.length > 0 ? (
+              <div className="space-y-3">
+                {predictions.map((p: any) => (
+                  <Link key={p.id} to={`/market/${p.market_id}`} className="flex items-start gap-3 p-3 rounded-lg hover:bg-surface-800/50 transition-colors">
+                    {p.status === 'won'
+                      ? <CheckCircle className="h-4 w-4 text-emerald shrink-0 mt-0.5" />
+                      : <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-foreground truncate">{p.markets?.question || 'Market'}</p>
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                        <span>{p.credits_allocated} FC staked</span>
+                        {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
+                        <span>{new Date(p.updated_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total predictions</span><span className="text-foreground font-medium">{user.total_predictions}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Resolved</span><span className="text-foreground font-medium">{user.resolved_predictions}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pending</span><span className="text-foreground font-medium">{user.total_predictions - user.resolved_predictions}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Win rate</span><span className="text-emerald font-medium">{user.accuracy_rate}%</span></div>
+              </div>
+            )}
           </div>
           <div className="rounded-xl border border-border bg-card p-6">
             <h2 className="font-semibold text-foreground mb-4">About</h2>
