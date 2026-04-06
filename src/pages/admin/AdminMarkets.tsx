@@ -13,8 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['politics', 'economy', 'crypto', 'football', 'culture', 'technology'];
 const STATUSES = ['open', 'closed', 'resolved'];
