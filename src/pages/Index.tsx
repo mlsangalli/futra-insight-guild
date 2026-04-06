@@ -6,6 +6,8 @@ import { ArrowRight, Target, Coins, Trophy, TrendingUp } from 'lucide-react';
 import { useMarkets, useLeaderboard } from '@/hooks/useMarkets';
 import { CATEGORIES } from '@/data/types';
 import { MarketGridSkeleton, HeroMarketSkeleton, LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
+import { SEO } from '@/components/SEO';
+import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';
 
 function dbToCard(m: any) {
   return {
@@ -18,6 +20,7 @@ function dbToCard(m: any) {
 }
 
 export default function HomePage() {
+  useRealtimeMarkets();
   const { data: allMarkets, isLoading, isError, refetch } = useMarkets();
   const { data: topUsers, isLoading: loadingUsers } = useLeaderboard();
 
@@ -35,6 +38,7 @@ export default function HomePage() {
 
   return (
     <Layout>
+      <SEO />
       {/* Hero */}
       <section className="relative overflow-hidden particle-bg">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />
@@ -186,11 +190,11 @@ export default function HomePage() {
             { icon: Coins, title: 'Allocate credits', desc: 'Use your Futra Credits to back your prediction.' },
             { icon: TrendingUp, title: 'Earn rewards', desc: "Win credits when you're right. Earn more for bold calls." },
             { icon: Trophy, title: 'Build reputation', desc: 'Climb the leaderboard and unlock Elite status.' },
-          ].map((step, i) => (
+          ].map((s, i) => (
             <div key={i} className="text-center p-6 rounded-xl glass-card">
-              <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center mx-auto mb-4"><step.icon className="h-6 w-6 text-primary-foreground" /></div>
-              <h3 className="font-display font-semibold text-foreground mb-2">{step.title}</h3>
-              <p className="text-sm text-muted-foreground">{step.desc}</p>
+              <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center mx-auto mb-4"><s.icon className="h-6 w-6 text-primary-foreground" /></div>
+              <h3 className="font-display font-semibold text-foreground mb-2">{s.title}</h3>
+              <p className="text-sm text-muted-foreground">{s.desc}</p>
             </div>
           ))}
         </div>

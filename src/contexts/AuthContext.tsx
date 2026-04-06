@@ -18,6 +18,7 @@ interface Profile {
   global_rank: number;
   specialties: string[];
   streak: number;
+  onboarding_completed: boolean;
 }
 
 interface AuthContextType {

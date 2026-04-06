@@ -1,13 +1,14 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Layout } from '@/components/layout/Layout';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth();
-  const location = useLocation();
+export default function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
+  const { isAdmin, loading: adminLoading } = useAdmin();
 
-  if (loading) {
+  if (authLoading || adminLoading) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-16 flex items-center justify-center">
@@ -22,11 +23,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!user) return <Navigate to="/login" replace />;
-
-  // Redirect to onboarding if not completed (skip if already on /onboarding)
-  if (profile && !profile.onboarding_completed && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />;
-  }
+  if (!isAdmin) return <Navigate to="/forbidden" replace />;
 
   return <>{children}</>;
 }

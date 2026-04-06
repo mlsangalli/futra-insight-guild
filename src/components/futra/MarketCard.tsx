@@ -3,6 +3,7 @@ import { Clock, Users, Coins } from 'lucide-react';
 import { Market } from '@/data/types';
 import { CategoryBadge } from './CategoryBadge';
 import { VoteBar } from './VoteBar';
+import { ShareButton } from './ShareButton';
 import { cn } from '@/lib/utils';
 
 interface MarketCardProps {
@@ -30,6 +31,10 @@ function formatNumber(n: number) {
 
 export function MarketCard({ market, className, featured }: MarketCardProps) {
   const leader = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
+  const shareUrl = `${window.location.origin}/market/${market.id}`;
+  const shareText = leader
+    ? `"${market.question}" — ${leader.percentage}% say ${leader.label} | @fuabordo`
+    : market.question;
 
   return (
     <Link
@@ -42,10 +47,15 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
     >
       <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
         <CategoryBadge category={market.category} />
-        <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground shrink-0">
-          <Clock className="h-3 w-3" />
-          {timeRemaining(market.endDate)}
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {timeRemaining(market.endDate)}
+          </span>
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+            <ShareButton title={market.question} text={shareText} url={shareUrl} />
+          </div>
+        </div>
       </div>
 
       <h3 className="font-display font-semibold text-foreground leading-snug mb-2 line-clamp-2 text-sm sm:text-base">

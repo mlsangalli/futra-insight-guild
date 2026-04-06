@@ -7,6 +7,7 @@ import { useProfile } from '@/hooks/useMarkets';
 import { Target, Coins, Trophy, Zap, UserX } from 'lucide-react';
 import { MarketCategory } from '@/data/types';
 import { ProfileSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
+import { SEO } from '@/components/SEO';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -31,6 +32,7 @@ export default function ProfilePage() {
 
   return (
     <Layout>
+      <SEO title={`${user.display_name} (@${user.username})`} description={`${user.display_name} — Futra Score: ${user.futra_score} · Accuracy: ${user.accuracy_rate}%`} />
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start gap-6">

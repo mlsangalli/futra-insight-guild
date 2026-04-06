@@ -104,6 +104,44 @@ export type Database = {
         }
         Relationships: []
       }
+      market_options: {
+        Row: {
+          created_at: string | null
+          id: string
+          label: string
+          market_id: string
+          percentage: number | null
+          total_credits: number | null
+          total_votes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          label: string
+          market_id: string
+          percentage?: number | null
+          total_credits?: number | null
+          total_votes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label?: string
+          market_id?: string
+          percentage?: number | null
+          total_credits?: number | null
+          total_votes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_options_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       markets: {
         Row: {
           category: Database["public"]["Enums"]["market_category"]
@@ -226,6 +264,7 @@ export type Database = {
           global_rank: number
           id: string
           influence_level: Database["public"]["Enums"]["influence_level"]
+          onboarding_completed: boolean | null
           resolved_predictions: number
           specialties: string[] | null
           streak: number
@@ -245,6 +284,7 @@ export type Database = {
           global_rank?: number
           id?: string
           influence_level?: Database["public"]["Enums"]["influence_level"]
+          onboarding_completed?: boolean | null
           resolved_predictions?: number
           specialties?: string[] | null
           streak?: number
@@ -264,6 +304,7 @@ export type Database = {
           global_rank?: number
           id?: string
           influence_level?: Database["public"]["Enums"]["influence_level"]
+          onboarding_completed?: boolean | null
           resolved_predictions?: number
           specialties?: string[] | null
           streak?: number
