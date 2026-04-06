@@ -198,6 +198,9 @@ export default function MarketDetailPage() {
               )}
               <p className="text-xs text-muted-foreground mt-2">Ends: {new Date(market.end_date).toLocaleDateString()}</p>
             </div>
+
+            {/* Comments */}
+            <CommentSection marketId={market.id} />
           </div>
 
           {/* Voting panel - desktop */}
