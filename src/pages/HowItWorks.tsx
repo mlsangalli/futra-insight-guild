@@ -2,10 +2,12 @@ import { Layout } from '@/components/layout/Layout';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Target, Coins, TrendingUp, Trophy, Shield, ArrowRight } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 
 export default function HowItWorksPage() {
   return (
     <Layout>
+      <SEO title="Como Funciona" description="Entenda como funcionam os mercados de previsão da FUTRA. Faça previsões, ganhe créditos e construa reputação." />
       <div className="container mx-auto px-4 py-12 max-w-3xl">
         <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground text-center mb-4">
           Como a FUTRA funciona

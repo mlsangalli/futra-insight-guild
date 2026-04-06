@@ -22,8 +22,16 @@ export default function ProfilePage() {
   const isOwn = !!currentUser && !!user && currentUser.id === user.user_id;
   const { data: predictions } = usePublicPredictions(user?.user_id);
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/profile/${username}`);
+  const handleShareProfile = async () => {
+    const text = `Meu perfil na FUTRA:\n🏆 Rank #${user?.global_rank}\n⭐ Score: ${user?.futra_score}\n🎯 Precisão: ${Math.round(user?.accuracy_rate || 0)}%\n\nVeja meu histórico de previsões:`;
+    const url = `${window.location.origin}/profile/${username}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${user?.display_name} na FUTRA`, text, url });
+        return;
+      } catch {}
+    }
+    navigator.clipboard.writeText(`${text}\n${url}`);
     toast.success('Link do perfil copiado!');
   };
 
@@ -46,7 +54,7 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <SEO title={`${user.display_name} (@${user.username})`} description={`${user.display_name} — Futra Score: ${user.futra_score} · Precisão: ${user.accuracy_rate}%`} />
+      <SEO title={`${user.display_name} (@${user.username})`} description={`🏆 Rank #${user.global_rank} | ⭐ Score: ${user.futra_score} | 🎯 Precisão: ${Math.round(user.accuracy_rate)}% | 🔥 Sequência: ${user.streak} — Perfil de previsor na FUTRA`} />
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start gap-6">
@@ -74,7 +82,7 @@ export default function ProfilePage() {
               {isOwn ? (
                 <EditProfileDialog />
               ) : (
-                <Button variant="outline" size="sm" onClick={copyLink}>
+                <Button variant="outline" size="sm" onClick={handleShareProfile}>
                   <Share2 className="h-4 w-4 mr-1" /> Compartilhar
                 </Button>
               )}

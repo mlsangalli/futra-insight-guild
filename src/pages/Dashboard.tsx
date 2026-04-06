@@ -1,4 +1,5 @@
 import { Layout } from '@/components/layout/Layout';
+import { SEO } from '@/components/SEO';
 import { StatCard } from '@/components/futra/StatCard';
 import { StatusBadge } from '@/components/futra/StatusBadge';
 import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
@@ -51,6 +52,7 @@ export default function DashboardPage() {
 
   return (
     <Layout>
+      <SEO title="Painel" description="Seu painel de controle na FUTRA." />
       <div className="container mx-auto px-4 py-8">
         <DailyBonusBanner />
         <div className="flex items-center justify-between mb-8 mt-4">

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { SEO } from '@/components/SEO';
 
 const signupSchema = z.object({
   username: z.string().trim()
@@ -76,6 +77,7 @@ export default function SignupPage() {
 
   return (
     <Layout hideFooter>
+      <SEO title="Criar Conta" description="Crie sua conta na FUTRA e comece a fazer previsões." />
       <div className="min-h-[80vh] flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">

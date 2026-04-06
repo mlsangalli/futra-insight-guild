@@ -7,6 +7,7 @@ import { FolderOpen } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { SEO } from '@/components/SEO';
 
 function dbToCard(m: any) {
   return {
@@ -32,6 +33,7 @@ export default function CategoryPage() {
 
   return (
     <Layout>
+      <SEO title={`${cat?.label || category} — Mercados`} description={`Mercados de previsão na categoria ${cat?.label || category}. Faça suas previsões e construa reputação.`} />
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-6">
           {cat && <span className="text-4xl">{cat.emoji}</span>}

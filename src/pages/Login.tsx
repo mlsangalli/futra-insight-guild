@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { SEO } from '@/components/SEO';
 
 const loginSchema = z.object({
   email: z.string().trim().min(1, 'Email é obrigatório').email('Email inválido'),
@@ -63,6 +64,7 @@ export default function LoginPage() {
 
   return (
     <Layout hideFooter>
+      <SEO title="Entrar" description="Acesse sua conta FUTRA." />
       <div className="min-h-[80vh] flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
