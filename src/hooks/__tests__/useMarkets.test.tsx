@@ -72,7 +72,7 @@ describe('useMarkets', () => {
     const { useMarkets } = await import('@/hooks/useMarkets');
     const { result } = renderHook(() => useMarkets(), { wrapper: createWrapper() });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toHaveLength(1);
     expect(result.current.data![0].question).toBe('Will BTC hit 100k?');
   });
@@ -81,7 +81,7 @@ describe('useMarkets', () => {
     const { useMarkets } = await import('@/hooks/useMarkets');
     const { result } = renderHook(() => useMarkets(), { wrapper: createWrapper() });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
     const options = result.current.data![0].options;
     expect(options[0]).toHaveProperty('id');
     expect(options[0]).toHaveProperty('label');
@@ -94,7 +94,7 @@ describe('useMarkets', () => {
     const { useMarket } = await import('@/hooks/useMarkets');
     const { result } = renderHook(() => useMarket('test-1'), { wrapper: createWrapper() });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.id).toBe('test-1');
   });
 });
