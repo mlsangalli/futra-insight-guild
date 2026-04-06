@@ -354,16 +354,52 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
     );
   }
 
+  const isBinary = market.options.length === 2;
+  const yesOpt = isBinary ? market.options.find((o: any) => ['sim','yes','s'].includes(o.label.toLowerCase())) || market.options[0] : null;
+  const noOpt = isBinary ? market.options.find((o: any) => o.id !== yesOpt?.id) : null;
+
   return (
     <>
       <h3 className="font-display font-semibold text-foreground">Faça sua previsão</h3>
-      <div className="space-y-2">
-        {market.options.map((opt: any) => (
-          <button key={opt.id} onClick={() => setSelectedOption(opt.id)} className={cn('w-full text-left p-3 rounded-lg border transition-all text-sm', selectedOption === opt.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:border-primary/30 text-muted-foreground hover:text-foreground')}>
-            <div className="flex justify-between"><span className="font-medium">{opt.label}</span><span>{opt.percentage}%</span></div>
+
+      {isBinary && yesOpt && noOpt ? (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setSelectedOption(yesOpt.id)}
+            className={cn(
+              'py-4 rounded-xl font-bold text-lg transition-all text-primary-foreground',
+              selectedOption === yesOpt.id ? 'bg-buy-yes ring-2 ring-buy-yes/50' : 'bg-buy-yes/80 hover:bg-buy-yes'
+            )}
+          >
+            {yesOpt.label}
+            <span className="block text-xs font-normal opacity-80 mt-0.5">{(yesOpt.percentage / 100).toFixed(2)}</span>
           </button>
-        ))}
-      </div>
+          <button
+            onClick={() => setSelectedOption(noOpt.id)}
+            className={cn(
+              'py-4 rounded-xl font-bold text-lg transition-all text-primary-foreground',
+              selectedOption === noOpt.id ? 'bg-buy-no ring-2 ring-buy-no/50' : 'bg-buy-no/80 hover:bg-buy-no'
+            )}
+          >
+            {noOpt.label}
+            <span className="block text-xs font-normal opacity-80 mt-0.5">{(noOpt.percentage / 100).toFixed(2)}</span>
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {market.options.map((opt: any) => (
+            <button key={opt.id} onClick={() => setSelectedOption(opt.id)} className={cn('w-full text-left p-4 rounded-xl border transition-all text-sm', selectedOption === opt.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:border-primary/30 text-muted-foreground hover:text-foreground')}>
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{opt.label}</span>
+                <div className="text-right">
+                  <span className="font-display font-bold">{opt.percentage}%</span>
+                  <span className="block text-xs text-muted-foreground">{(opt.percentage / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {selectedOption && (
         <div className="space-y-3 animate-fade-in">
