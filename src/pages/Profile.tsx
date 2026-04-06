@@ -54,7 +54,7 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <SEO title={`${user.display_name} (@${user.username})`} description={`${user.display_name} — Futra Score: ${user.futra_score} · Precisão: ${user.accuracy_rate}%`} />
+      <SEO title={`${user.display_name} (@${user.username})`} description={`🏆 Rank #${user.global_rank} | ⭐ Score: ${user.futra_score} | 🎯 Precisão: ${Math.round(user.accuracy_rate)}% | 🔥 Sequência: ${user.streak} — Perfil de previsor na FUTRA`} />
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start gap-6">
