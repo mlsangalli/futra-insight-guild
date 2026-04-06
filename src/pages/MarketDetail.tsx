@@ -151,31 +151,45 @@ export default function MarketDetailPage() {
             {/* Option cards */}
             <div className="space-y-3">
               <h2 className="font-semibold text-foreground text-sm uppercase tracking-wider text-muted-foreground">Probabilidades atuais</h2>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {market.options.map(opt => {
+              <div className="space-y-0 rounded-xl border border-border/30 bg-card overflow-hidden">
+                {market.options.map((opt, idx) => {
                   const isWinner = isResolved && opt.id === market.resolved_option;
                   const isLoser = isResolved && opt.id !== market.resolved_option;
+                  const isLeader = opt.id === topOption.id;
                   return (
                     <div key={opt.id} className={cn(
-                      'p-4 rounded-xl border transition-all',
-                      isWinner ? 'border-emerald-500/50 bg-emerald-500/10' :
-                      isLoser ? 'border-border/30 bg-card opacity-50' :
-                      'border-border bg-card'
+                      'relative p-4 overflow-hidden transition-all',
+                      idx < market.options.length - 1 && 'border-b border-border/20',
+                      isWinner && 'bg-emerald/10',
+                      isLoser && 'opacity-50',
                     )}>
-                      <div className="flex items-center justify-between">
+                      {/* Background fill bar */}
+                      <div
+                        className={cn(
+                          'absolute inset-0 transition-all duration-500',
+                          isWinner ? 'bg-emerald/10' : isLeader ? 'bg-primary/8' : 'bg-primary/4'
+                        )}
+                        style={{ width: `${opt.percentage}%` }}
+                      />
+                      <div className="relative flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                            {isWinner && <CheckCircle className="h-4 w-4 text-emerald-400" />}
+                            {isWinner && <CheckCircle className="h-4 w-4 text-emerald" />}
                             {opt.label}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">{formatNumber(opt.votes)} votos · {formatNumber(opt.creditsAllocated)} FC</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{formatNumber(opt.votes)} votos · {formatNumber(opt.creditsAllocated)} FC</p>
                         </div>
-                        <span className={cn(
-                          'font-display text-3xl font-bold',
-                          isWinner ? 'text-emerald glow-text-emerald' : 'text-foreground'
-                        )}>
-                          {opt.percentage}%
-                        </span>
+                        <div className="text-right">
+                          <span className={cn(
+                            'font-display text-3xl font-bold',
+                            isWinner ? 'text-emerald glow-text-emerald' : isLeader ? 'text-foreground glow-text' : 'text-muted-foreground'
+                          )}>
+                            {opt.percentage}%
+                          </span>
+                          <p className="text-xs text-muted-foreground font-display">
+                            {(opt.percentage / 100).toFixed(2)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   );
