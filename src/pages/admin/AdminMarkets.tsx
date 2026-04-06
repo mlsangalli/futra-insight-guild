@@ -240,6 +240,16 @@ export default function AdminMarkets() {
                       </Select>
                     </TableCell>
                     <TableCell className="text-sm">{m.total_participants}</TableCell>
+                    <TableCell className="text-xs">
+                      {m.lock_date ? (
+                        <span className={m.lock_date && new Date(m.lock_date) <= new Date() ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
+                          {format(new Date(m.lock_date), 'dd/MM/yy HH:mm')}
+                          {new Date(m.lock_date) <= new Date() && <Badge variant="outline" className="ml-1 text-[10px] border-destructive text-destructive">Travado</Badge>}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <button onClick={() => toggleFeatured.mutate({ id: m.id, featured: !m.featured })} className="hover:text-primary transition-colors">
                         <Star className={`h-4 w-4 ${m.featured ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
@@ -247,6 +257,17 @@ export default function AdminMarkets() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {m.status === 'open' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setSchedulingMarket(m)}
+                            title="Agendar travamento"
+                          >
+                            <Clock className={cn("h-3.5 w-3.5", m.lock_date ? 'text-primary' : 'text-muted-foreground')} />
+                          </Button>
+                        )}
                         {m.status !== 'resolved' && (
                           <Button
                             variant="ghost"
