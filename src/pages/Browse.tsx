@@ -5,7 +5,8 @@ import { MarketCard } from '@/components/futra/MarketCard';
 import { useMarkets } from '@/hooks/useMarkets';
 import { CATEGORIES, MarketCategory } from '@/data/types';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 
 const SORT_OPTIONS = ['Trending', 'Popular', 'Newest', 'Ending Soon'];
 
@@ -25,7 +26,7 @@ export default function BrowsePage() {
   const [sortBy, setSortBy] = useState(initialFilter === 'trending' ? 'Trending' : initialFilter === 'popular' ? 'Popular' : initialFilter === 'ending' ? 'Ending Soon' : 'Trending');
   const [categoryFilter, setCategoryFilter] = useState<MarketCategory | 'all'>('all');
 
-  const { data: allMarkets, isLoading } = useMarkets(categoryFilter !== 'all' ? { category: categoryFilter } : undefined);
+  const { data: allMarkets, isLoading, isError, refetch } = useMarkets(categoryFilter !== 'all' ? { category: categoryFilter } : undefined);
 
   let markets = allMarkets || [];
   if (sortBy === 'Trending') markets = markets.filter(m => m.trending).concat(markets.filter(m => !m.trending));
@@ -51,15 +52,20 @@ export default function BrowsePage() {
           ))}
         </div>
 
-        {isLoading ? (
-          <div className="text-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>
-        ) : (
+        {isError ? (
+          <ErrorState onRetry={() => refetch()} />
+        ) : isLoading ? (
+          <MarketGridSkeleton count={6} />
+        ) : markets.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {markets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
           </div>
-        )}
-        {!isLoading && markets.length === 0 && (
-          <div className="text-center py-20"><p className="text-muted-foreground">No markets found.</p></div>
+        ) : (
+          <EmptyState
+            icon={<Search className="h-10 w-10 text-muted-foreground" />}
+            title="Nenhum mercado encontrado"
+            description="Tente mudar os filtros ou explore outra categoria."
+          />
         )}
       </div>
     </Layout>
