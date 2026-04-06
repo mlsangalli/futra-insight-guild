@@ -72,10 +72,10 @@ export function useToggleWatchlist() {
       }
     },
     onSuccess: (result, marketId) => {
-      toast.success(result.added ? 'Added to watchlist' : 'Removed from watchlist');
+      toast.success(result.added ? 'Adicionado à watchlist' : 'Removido da watchlist');
       queryClient.invalidateQueries({ queryKey: ['watchlist'] });
       queryClient.invalidateQueries({ queryKey: ['watching', marketId] });
     },
-    onError: () => toast.error('Failed to update watchlist'),
+    onError: () => toast.error('Falha ao atualizar watchlist'),
   });
 }

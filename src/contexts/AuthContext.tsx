@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         if (mountedRef.current) {
-          toast.error('Could not load your profile. Please refresh.');
+          toast.error('Não foi possível carregar seu perfil. Atualize a página.');
         }
       }
     }
