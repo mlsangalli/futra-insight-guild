@@ -4,17 +4,29 @@ import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { StatCard } from '@/components/futra/StatCard';
 import { useProfile } from '@/hooks/useMarkets';
-import { Target, Coins, Trophy, Zap, Loader2 } from 'lucide-react';
+import { Target, Coins, Trophy, Zap, UserX } from 'lucide-react';
 import { MarketCategory } from '@/data/types';
+import { ProfileSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const { data: user, isLoading } = useProfile(username || '');
+  const { data: user, isLoading, isError, refetch } = useProfile(username || '');
 
-  if (isLoading) return <Layout><div className="container mx-auto px-4 py-20 text-center"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div></Layout>;
+  if (isLoading) return <Layout><div className="container mx-auto px-4 py-8"><ProfileSkeleton /></div></Layout>;
+  if (isError) return <Layout><div className="container mx-auto px-4 py-8"><ErrorState onRetry={() => refetch()} /></div></Layout>;
 
   if (!user) {
-    return <Layout><div className="container mx-auto px-4 py-20 text-center"><p className="text-muted-foreground">User not found.</p></div></Layout>;
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8">
+          <EmptyState
+            icon={<UserX className="h-10 w-10 text-muted-foreground" />}
+            title="Usuário não encontrado"
+            description={`O perfil @${username} não existe ou foi removido.`}
+          />
+        </div>
+      </Layout>
+    );
   }
 
   return (

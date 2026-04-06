@@ -3,7 +3,8 @@ import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
 import { useMarkets } from '@/hooks/useMarkets';
 import { CATEGORIES } from '@/data/types';
-import { Loader2 } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
+import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 
 function dbToCard(m: any) {
   return {
@@ -18,7 +19,7 @@ function dbToCard(m: any) {
 export default function CategoryPage() {
   const { category } = useParams<{ category: string }>();
   const cat = CATEGORIES.find(c => c.key === category);
-  const { data: markets, isLoading } = useMarkets({ category });
+  const { data: markets, isLoading, isError, refetch } = useMarkets({ category });
 
   return (
     <Layout>
@@ -30,15 +31,21 @@ export default function CategoryPage() {
             <p className="text-muted-foreground">All markets in this category</p>
           </div>
         </div>
-        {isLoading ? (
-          <div className="text-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>
-        ) : (
+
+        {isError ? (
+          <ErrorState onRetry={() => refetch()} />
+        ) : isLoading ? (
+          <MarketGridSkeleton count={6} />
+        ) : (markets || []).length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(markets || []).map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
           </div>
-        )}
-        {!isLoading && (!markets || markets.length === 0) && (
-          <div className="text-center py-20"><p className="text-muted-foreground">No markets in this category yet.</p></div>
+        ) : (
+          <EmptyState
+            icon={<FolderOpen className="h-10 w-10 text-muted-foreground" />}
+            title="Nenhum mercado nesta categoria"
+            description="Novos mercados aparecerão aqui quando forem criados."
+          />
         )}
       </div>
     </Layout>

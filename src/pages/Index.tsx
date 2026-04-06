@@ -2,33 +2,24 @@ import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Target, Coins, Trophy, TrendingUp, Loader2 } from 'lucide-react';
+import { ArrowRight, Target, Coins, Trophy, TrendingUp } from 'lucide-react';
 import { useMarkets, useLeaderboard } from '@/hooks/useMarkets';
 import { CATEGORIES } from '@/data/types';
+import { MarketGridSkeleton, HeroMarketSkeleton, LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 
 function dbToCard(m: any) {
   return {
-    id: m.id,
-    question: m.question,
-    description: m.description,
-    category: m.category,
-    type: m.type,
-    status: m.status,
-    options: m.options,
-    totalParticipants: m.total_participants,
-    totalCredits: m.total_credits,
-    endDate: m.end_date,
-    createdAt: m.created_at,
-    resolutionSource: m.resolution_source || '',
-    resolutionRules: m.resolution_rules || '',
-    featured: m.featured,
-    trending: m.trending,
+    id: m.id, question: m.question, description: m.description, category: m.category,
+    type: m.type, status: m.status, options: m.options, totalParticipants: m.total_participants,
+    totalCredits: m.total_credits, endDate: m.end_date, createdAt: m.created_at,
+    resolutionSource: m.resolution_source || '', resolutionRules: m.resolution_rules || '',
+    featured: m.featured, trending: m.trending,
   };
 }
 
 export default function HomePage() {
-  const { data: allMarkets, isLoading } = useMarkets();
-  const { data: topUsers } = useLeaderboard();
+  const { data: allMarkets, isLoading, isError, refetch } = useMarkets();
+  const { data: topUsers, isLoading: loadingUsers } = useLeaderboard();
 
   const markets = allMarkets || [];
   const featured = markets.filter(m => m.featured);
@@ -42,15 +33,10 @@ export default function HomePage() {
     ? [...heroCard.options].sort((a: any, b: any) => b.percentage - a.percentage)[0]
     : null;
 
-  if (isLoading) {
-    return <Layout><div className="container mx-auto px-4 py-20 text-center"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div></Layout>;
-  }
-
   return (
     <Layout>
       {/* Hero */}
       <section className="relative overflow-hidden particle-bg">
-        {/* Radial glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />
         <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -65,9 +51,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Hero featured market — big highlight */}
             <div className="hidden lg:block">
-              {heroCard && heroLeader ? (
+              {isLoading ? (
+                <HeroMarketSkeleton />
+              ) : heroCard && heroLeader ? (
                 <div className="glass-card gradient-border rounded-2xl p-8 animate-fade-in">
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Featured Market</p>
                   <h3 className="font-display text-xl font-bold text-foreground mb-6 leading-snug">{heroCard.question}</h3>
@@ -97,38 +84,58 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Trending */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-display text-2xl font-bold text-foreground flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> Trending</h2>
-          <Link to="/browse?filter=trending" className="text-sm text-primary hover:underline">View all →</Link>
+      {isError ? (
+        <div className="container mx-auto px-4 py-12">
+          <ErrorState onRetry={() => refetch()} />
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {trending.slice(0, 6).map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
-        </div>
-      </section>
+      ) : (
+        <>
+          {/* Trending */}
+          <section className="container mx-auto px-4 py-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-2xl font-bold text-foreground flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> Trending</h2>
+              <Link to="/browse?filter=trending" className="text-sm text-primary hover:underline">View all →</Link>
+            </div>
+            {isLoading ? <MarketGridSkeleton count={3} /> : trending.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trending.slice(0, 6).map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
+              </div>
+            ) : (
+              <EmptyState title="Nenhum mercado em alta" description="Novos mercados em alta aparecerão aqui." />
+            )}
+          </section>
 
-      {/* Popular */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-display text-2xl font-bold text-foreground">Popular this week</h2>
-          <Link to="/browse?filter=popular" className="text-sm text-primary hover:underline">View all →</Link>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {popular.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
-        </div>
-      </section>
+          {/* Popular */}
+          <section className="container mx-auto px-4 py-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-2xl font-bold text-foreground">Popular this week</h2>
+              <Link to="/browse?filter=popular" className="text-sm text-primary hover:underline">View all →</Link>
+            </div>
+            {isLoading ? <MarketGridSkeleton count={6} /> : popular.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {popular.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
+              </div>
+            ) : (
+              <EmptyState title="Nenhum mercado popular ainda" description="Mercados com mais participantes aparecerão aqui." />
+            )}
+          </section>
 
-      {/* Ending Soon */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-display text-2xl font-bold text-foreground">⏰ Ending soon</h2>
-          <Link to="/browse?filter=ending" className="text-sm text-primary hover:underline">View all →</Link>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ending.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
-        </div>
-      </section>
+          {/* Ending Soon */}
+          <section className="container mx-auto px-4 py-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-2xl font-bold text-foreground">⏰ Ending soon</h2>
+              <Link to="/browse?filter=ending" className="text-sm text-primary hover:underline">View all →</Link>
+            </div>
+            {isLoading ? <MarketGridSkeleton count={3} /> : ending.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {ending.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
+              </div>
+            ) : (
+              <EmptyState title="Nenhum mercado encerrando" description="Mercados próximos do prazo aparecerão aqui." />
+            )}
+          </section>
+        </>
+      )}
 
       {/* Top Forecasters */}
       <section className="container mx-auto px-4 py-12">
@@ -136,22 +143,25 @@ export default function HomePage() {
           <h2 className="font-display text-2xl font-bold text-foreground flex items-center gap-2"><Trophy className="h-5 w-5 text-emerald" /> Top forecasters</h2>
           <Link to="/leaderboard" className="text-sm text-primary hover:underline">Full leaderboard →</Link>
         </div>
-        <div className="rounded-xl glass-card divide-y divide-border/50">
-          {(topUsers || []).slice(0, 5).map((user: any, i: number) => (
-            <Link key={user.id} to={`/profile/${user.username}`} className="flex items-center gap-3 p-4 hover:bg-surface-800/50 transition-colors">
-              <span className="font-display font-bold text-lg w-8 text-center">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</span>
-              <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shrink-0">{user.display_name?.charAt(0) || '?'}</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground text-sm truncate">{user.display_name}</p>
-                <p className="text-xs text-muted-foreground">@{user.username}</p>
-              </div>
-              <div className="text-right shrink-0"><p className="font-display font-bold text-foreground glow-text">{user.futra_score}</p></div>
-            </Link>
-          ))}
-          {(!topUsers || topUsers.length === 0) && (
-            <div className="p-8 text-center text-muted-foreground">No forecasters yet. Be the first!</div>
-          )}
-        </div>
+        {loadingUsers ? (
+          <LeaderboardSkeleton count={5} />
+        ) : (topUsers || []).length > 0 ? (
+          <div className="rounded-xl glass-card divide-y divide-border/50">
+            {(topUsers || []).slice(0, 5).map((user: any, i: number) => (
+              <Link key={user.id} to={`/profile/${user.username}`} className="flex items-center gap-3 p-4 hover:bg-surface-800/50 transition-colors">
+                <span className="font-display font-bold text-lg w-8 text-center">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</span>
+                <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shrink-0">{user.display_name?.charAt(0) || '?'}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground text-sm truncate">{user.display_name}</p>
+                  <p className="text-xs text-muted-foreground">@{user.username}</p>
+                </div>
+                <div className="text-right shrink-0"><p className="font-display font-bold text-foreground glow-text">{user.futra_score}</p></div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="Nenhum forecaster ainda" description="Seja o primeiro a fazer previsões!" action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>} />
+        )}
       </section>
 
       {/* Categories */}

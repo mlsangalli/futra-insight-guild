@@ -4,14 +4,15 @@ import { Layout } from '@/components/layout/Layout';
 import { VoteBar } from '@/components/futra/VoteBar';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { Button } from '@/components/ui/button';
-import { Clock, Users, Coins, Shield, ExternalLink, CheckCircle, Loader2 } from 'lucide-react';
-import { useMarket, useMarkets } from '@/hooks/useMarkets';
+import { Clock, Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion } from 'lucide-react';
+import { useMarket } from '@/hooks/useMarkets';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { MarketCard } from '@/components/futra/MarketCard';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState, EmptyState } from '@/components/futra/Skeletons';
 
 function formatNumber(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -19,9 +20,49 @@ function formatNumber(n: number) {
   return n.toString();
 }
 
+function MarketDetailSkeleton() {
+  return (
+    <div className="grid lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-20 rounded-full" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+        <div className="flex gap-4">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-full rounded-full" />
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-16 rounded-lg" />
+            <Skeleton className="h-16 rounded-lg" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-6 space-y-3">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      </div>
+      <div className="lg:col-span-1">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MarketDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: market, isLoading } = useMarket(id || '');
+  const { data: market, isLoading, isError, refetch } = useMarket(id || '');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [credits, setCredits] = useState(100);
   const [confirmed, setConfirmed] = useState(false);
@@ -30,11 +71,26 @@ export default function MarketDetailPage() {
   const queryClient = useQueryClient();
 
   if (isLoading) {
-    return <Layout><div className="container mx-auto px-4 py-20 text-center"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div></Layout>;
+    return <Layout><div className="container mx-auto px-4 py-8"><MarketDetailSkeleton /></div></Layout>;
+  }
+
+  if (isError) {
+    return <Layout><div className="container mx-auto px-4 py-8"><ErrorState onRetry={() => refetch()} /></div></Layout>;
   }
 
   if (!market) {
-    return <Layout><div className="container mx-auto px-4 py-20 text-center"><p className="text-muted-foreground">Market not found.</p></div></Layout>;
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8">
+          <EmptyState
+            icon={<FileQuestion className="h-10 w-10 text-muted-foreground" />}
+            title="Mercado não encontrado"
+            description="Este mercado pode ter sido removido ou o link está incorreto."
+            action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
+          />
+        </div>
+      </Layout>
+    );
   }
 
   const selectedOpt = market.options.find(o => o.id === selectedOption);
@@ -59,25 +115,6 @@ export default function MarketDetailPage() {
       refreshProfile();
     }
   };
-
-  // Convert DB market to MarketCard format
-  const toCardMarket = (m: typeof market) => ({
-    id: m.id,
-    question: m.question,
-    description: m.description,
-    category: m.category as any,
-    type: m.type as any,
-    status: m.status as any,
-    options: m.options,
-    totalParticipants: m.total_participants,
-    totalCredits: m.total_credits,
-    endDate: m.end_date,
-    createdAt: m.created_at,
-    resolutionSource: m.resolution_source || '',
-    resolutionRules: m.resolution_rules || '',
-    featured: m.featured,
-    trending: m.trending,
-  });
 
   return (
     <Layout>

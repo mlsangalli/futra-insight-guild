@@ -1,15 +1,27 @@
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
-import { mockMarkets } from '@/data/mock-markets';
+import { useMarkets } from '@/hooks/useMarkets';
 import { Search } from 'lucide-react';
+import { MarketGridSkeleton, EmptyState, ErrorState } from '@/components/futra/Skeletons';
+
+function dbToCard(m: any) {
+  return {
+    id: m.id, question: m.question, description: m.description, category: m.category,
+    type: m.type, status: m.status, options: m.options, totalParticipants: m.total_participants,
+    totalCredits: m.total_credits, endDate: m.end_date, createdAt: m.created_at,
+    resolutionSource: m.resolution_source || '', resolutionRules: m.resolution_rules || '',
+    featured: m.featured, trending: m.trending,
+  };
+}
 
 export default function SearchPage() {
   const [params] = useSearchParams();
   const query = params.get('q') || '';
+  const { data: allMarkets, isLoading, isError, refetch } = useMarkets();
 
-  const results = query
-    ? mockMarkets.filter(m => m.question.toLowerCase().includes(query.toLowerCase()))
+  const results = query && allMarkets
+    ? allMarkets.filter(m => m.question.toLowerCase().includes(query.toLowerCase())).map(dbToCard)
     : [];
 
   return (
@@ -18,19 +30,22 @@ export default function SearchPage() {
         <h1 className="font-display text-3xl font-bold text-foreground mb-2">
           {query ? `Results for "${query}"` : 'Search'}
         </h1>
-        <p className="text-muted-foreground mb-6">{results.length} markets found</p>
+        <p className="text-muted-foreground mb-6">{isLoading ? 'Searching...' : `${results.length} markets found`}</p>
 
-        {results.length > 0 ? (
+        {isError ? (
+          <ErrorState onRetry={() => refetch()} />
+        ) : isLoading ? (
+          <MarketGridSkeleton count={3} />
+        ) : results.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {results.map(m => <MarketCard key={m.id} market={m} />)}
           </div>
         ) : (
-          <div className="text-center py-20">
-            <Search className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">
-              {query ? 'No markets match your search.' : 'Type something to search.'}
-            </p>
-          </div>
+          <EmptyState
+            icon={<Search className="h-10 w-10 text-muted-foreground" />}
+            title={query ? 'Nenhum mercado encontrado' : 'Digite algo para pesquisar'}
+            description={query ? 'Tente termos diferentes ou explore os mercados disponíveis.' : 'Use a barra de pesquisa para encontrar mercados.'}
+          />
         )}
       </div>
     </Layout>

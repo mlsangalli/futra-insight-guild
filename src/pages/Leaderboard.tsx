@@ -5,14 +5,16 @@ import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { CATEGORIES } from '@/data/types';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
-import { Loader2, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
+import { LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
+import { Button } from '@/components/ui/button';
 
 const TIME_FILTERS = ['All Time', 'This Week', 'This Month'];
 
 export default function LeaderboardPage() {
   const [timeFilter, setTimeFilter] = useState('All Time');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const { data: users, isLoading } = useLeaderboard();
+  const { data: users, isLoading, isError, refetch } = useLeaderboard();
 
   return (
     <Layout>
@@ -36,10 +38,17 @@ export default function LeaderboardPage() {
           ))}
         </div>
 
-        {isLoading ? (
-          <div className="text-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>
+        {isError ? (
+          <ErrorState onRetry={() => refetch()} />
+        ) : isLoading ? (
+          <LeaderboardSkeleton count={10} />
         ) : !users?.length ? (
-          <div className="text-center py-20"><p className="text-muted-foreground">No forecasters yet. Be the first!</p></div>
+          <EmptyState
+            icon={<Trophy className="h-10 w-10 text-muted-foreground" />}
+            title="Nenhum forecaster ainda"
+            description="Seja o primeiro a fazer previsões e aparecer no ranking!"
+            action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
+          />
         ) : (
           <div className="rounded-xl border border-border bg-card divide-y divide-border">
             {users.map((user: any, i: number) => (
