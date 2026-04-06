@@ -39,6 +39,7 @@ const AdminContent = React.lazy(() => import("./pages/admin/AdminContent"));
 const AdminUsers = React.lazy(() => import("./pages/admin/AdminUsers"));
 const AdminLogs = React.lazy(() => import("./pages/admin/AdminLogs"));
 const Forbidden = React.lazy(() => import("./pages/admin/Forbidden"));
+const HealthCheck = React.lazy(() => import("./pages/HealthCheck"));
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
