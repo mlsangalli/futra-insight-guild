@@ -54,7 +54,10 @@ export default function DashboardPage() {
             <h1 className="font-display text-3xl font-bold text-foreground">Painel</h1>
             <p className="text-muted-foreground mt-1">Bem-vindo de volta, {profile?.display_name || profile?.username}</p>
           </div>
-          {profile && <InfluenceBadge level={profile.influence_level} />}
+          <div className="flex items-center gap-3">
+            <EditProfileDialog />
+            {profile && <InfluenceBadge level={profile.influence_level} />}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

@@ -62,7 +62,7 @@ export default function SignupPage() {
       }
     } else {
       toast.success('Conta criada! Verifique seu email para confirmar.');
-      navigate('/dashboard');
+      navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
     }
   };
 
