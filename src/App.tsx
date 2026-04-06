@@ -41,6 +41,21 @@ const AdminLogs = React.lazy(() => import("./pages/admin/AdminLogs"));
 const Forbidden = React.lazy(() => import("./pages/admin/Forbidden"));
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      const message = (query.meta?.errorMessage as string) || error.message || 'An error occurred';
+      logger.error('Query error', { queryKey: JSON.stringify(query.queryKey), error: error.message });
+      if (query.state.data !== undefined) {
+        // Only show toast for background refetch failures, not initial loads
+        toast.error(message);
+      }
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      logger.error('Mutation error', { error: error.message });
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,
