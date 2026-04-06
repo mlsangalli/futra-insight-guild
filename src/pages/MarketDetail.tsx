@@ -99,21 +99,10 @@ export default function MarketDetailPage() {
 
   const handleConfirm = async () => {
     if (!user || !selectedOption) return;
-    setSubmitting(true);
-    const { error } = await supabase.rpc('place_prediction', {
-      p_market_id: market.id,
-      p_selected_option: selectedOption,
-      p_credits: credits,
-    });
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setConfirmed(true);
-      toast.success('Prediction confirmed!');
-      queryClient.invalidateQueries({ queryKey: ['market', id] });
-      refreshProfile();
-    }
+    createPrediction.mutate(
+      { marketId: market.id, selectedOption, credits },
+      { onSuccess: () => setConfirmed(true) }
+    );
   };
 
   return (
