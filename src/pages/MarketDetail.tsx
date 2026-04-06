@@ -6,6 +6,8 @@ import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { StatusBadge } from '@/components/futra/StatusBadge';
 import { CountdownTimer } from '@/components/futra/CountdownTimer';
 import { ShareButton } from '@/components/futra/ShareButton';
+import { WatchlistButton } from '@/components/futra/WatchlistButton';
+import { CommentSection } from '@/components/futra/CommentSection';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy } from 'lucide-react';
@@ -134,7 +136,8 @@ export default function MarketDetailPage() {
         <div className="flex flex-wrap gap-4 text-sm mb-8">
           <span className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {formatNumber(market.total_participants)} participants</span>
           <span className="flex items-center gap-1.5 text-muted-foreground"><Coins className="h-4 w-4" /> {formatNumber(market.total_credits)} credits staked</span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <WatchlistButton marketId={market.id} compact />
             <ShareButton title={market.question} text={shareText} url={shareUrl} />
           </div>
         </div>
@@ -195,6 +198,9 @@ export default function MarketDetailPage() {
               )}
               <p className="text-xs text-muted-foreground mt-2">Ends: {new Date(market.end_date).toLocaleDateString()}</p>
             </div>
+
+            {/* Comments */}
+            <CommentSection marketId={market.id} />
           </div>
 
           {/* Voting panel - desktop */}
