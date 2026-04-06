@@ -116,6 +116,23 @@ export default function AdminMarkets() {
     onError: (e: Error) => toast({ title: 'Erro ao resolver', description: e.message, variant: 'destructive' }),
   });
 
+  const scheduleMutation = useMutation({
+    mutationFn: ({ market_id, lock_date }: { market_id: string; lock_date: string | null }) =>
+      invokeAdmin({
+        action: 'schedule_lock',
+        market_id,
+        lock_date,
+        entity_type: 'market',
+        description: lock_date ? `Scheduled lock: ${lock_date}` : 'Removed lock schedule',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+      setSchedulingMarket(null);
+      toast({ title: 'Agendamento salvo' });
+    },
+    onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (market: any) => {
       if (market.id) {
