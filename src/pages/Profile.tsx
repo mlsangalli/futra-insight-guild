@@ -82,7 +82,7 @@ export default function ProfilePage() {
               {isOwn ? (
                 <EditProfileDialog />
               ) : (
-                <Button variant="outline" size="sm" onClick={copyLink}>
+                <Button variant="outline" size="sm" onClick={handleShareProfile}>
                   <Share2 className="h-4 w-4 mr-1" /> Compartilhar
                 </Button>
               )}
