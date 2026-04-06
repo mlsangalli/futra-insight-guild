@@ -25,7 +25,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(getByText('Something went wrong')).toBeInTheDocument();
+    expect(getByText('Algo deu errado')).toBeInTheDocument();
     spy.mockRestore();
   });
 

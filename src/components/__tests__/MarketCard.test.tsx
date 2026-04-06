@@ -44,6 +44,7 @@ describe('MarketCard', () => {
   it('renders participant and credit counts', () => {
     renderWithProviders(<MarketCard market={baseMarket} />);
     expect(screen.getByText('100')).toBeInTheDocument();
+    expect(screen.getByText('1.0K')).toBeInTheDocument();
     expect(screen.getByText('1K')).toBeInTheDocument();
   });
 
