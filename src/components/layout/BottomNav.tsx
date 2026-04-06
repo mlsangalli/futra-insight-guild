@@ -6,11 +6,11 @@ import { useScrollDirection } from '@/hooks/useScrollDirection';
 import { useUnreadCount } from '@/hooks/useNotifications';
 
 const NAV_ITEMS = [
-  { icon: Home, label: 'Home', path: '/' },
-  { icon: Search, label: 'Browse', path: '/browse' },
-  { icon: PlusCircle, label: 'Create', path: '/create-market', highlight: true },
+  { icon: Home, label: 'Início', path: '/' },
+  { icon: Search, label: 'Explorar', path: '/browse' },
+  { icon: PlusCircle, label: 'Criar', path: '/create-market', highlight: true },
   { icon: Trophy, label: 'Ranking', path: '/leaderboard' },
-  { icon: User, label: 'Profile', path: '/login' },
+  { icon: User, label: 'Perfil', path: '/login' },
 ];
 
 export function BottomNav() {
@@ -20,20 +20,19 @@ export function BottomNav() {
   const { data: unreadCount } = useUnreadCount();
 
   const items = NAV_ITEMS.map(item => {
-    if (item.label === 'Profile' && user) {
-      return { ...item, path: '/dashboard', label: 'Profile', icon: User };
+    if (item.label === 'Perfil' && user) {
+      return { ...item, path: '/dashboard', label: 'Perfil', icon: User };
     }
-    if (item.label === 'Profile') {
-      return { ...item, path: '/login', label: 'Login' };
+    if (item.label === 'Perfil') {
+      return { ...item, path: '/login', label: 'Entrar' };
     }
     return item;
   });
 
-  // Insert notifications before Profile for logged-in users
   const finalItems = user
     ? [
         ...items.slice(0, 4),
-        { icon: Bell, label: 'Alerts', path: '/notifications', highlight: false },
+        { icon: Bell, label: 'Alertas', path: '/notifications', highlight: false },
       ]
     : items;
 
@@ -70,7 +69,7 @@ export function BottomNav() {
               <>
                 <div className="relative">
                   <item.icon className={cn('h-5 w-5', isActive(item.path) && 'drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]')} />
-                  {item.label === 'Alerts' && !!unreadCount && unreadCount > 0 && (
+                  {item.label === 'Alertas' && !!unreadCount && unreadCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>

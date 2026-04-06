@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { MessageCircle, Send, Loader2, Reply } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Props {
   marketId: string;
@@ -36,13 +37,13 @@ export function CommentSection({ marketId }: Props) {
     <div className="rounded-xl border border-border bg-card p-6">
       <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
         <MessageCircle className="h-4 w-4 text-primary" />
-        Discussion ({comments.length})
+        Discussão ({comments.length})
       </h2>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading comments...</p>
+        <p className="text-sm text-muted-foreground">Carregando comentários...</p>
       ) : topLevel.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4 text-center">No comments yet. Be the first to share your analysis.</p>
+        <p className="text-sm text-muted-foreground py-4 text-center">Nenhum comentário ainda. Seja o primeiro a compartilhar sua análise.</p>
       ) : (
         <div className="space-y-4 mb-6">
           {topLevel.map((c: Comment) => (
@@ -63,15 +64,15 @@ export function CommentSection({ marketId }: Props) {
           {replyTo && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Reply className="h-3 w-3" />
-              <span>Replying to comment</span>
-              <button onClick={() => setReplyTo(null)} className="text-primary hover:underline">Cancel</button>
+              <span>Respondendo ao comentário</span>
+              <button onClick={() => setReplyTo(null)} className="text-primary hover:underline">Cancelar</button>
             </div>
           )}
           <div className="flex gap-2">
             <Textarea
               value={body}
               onChange={e => setBody(e.target.value)}
-              placeholder="Add your analysis..."
+              placeholder="Adicione sua análise..."
               className="min-h-[60px] resize-none text-sm"
               maxLength={1000}
             />
@@ -87,7 +88,7 @@ export function CommentSection({ marketId }: Props) {
         </div>
       ) : (
         <p className="text-sm text-muted-foreground text-center py-2">
-          <Link to="/login" className="text-primary hover:underline">Sign in</Link> to join the discussion
+          <Link to="/login" className="text-primary hover:underline">Entre</Link> para participar da discussão
         </p>
       )}
     </div>
@@ -96,7 +97,7 @@ export function CommentSection({ marketId }: Props) {
 
 function CommentItem({ comment, onReply, isReply }: { comment: Comment; onReply?: () => void; isReply?: boolean }) {
   const profile = comment.profiles;
-  const name = profile?.display_name || profile?.username || 'User';
+  const name = profile?.display_name || profile?.username || 'Usuário';
   const username = profile?.username;
 
   return (
@@ -111,12 +112,12 @@ function CommentItem({ comment, onReply, isReply }: { comment: Comment; onReply?
           ) : (
             <span className="font-medium text-foreground">{name}</span>
           )}
-          <span className="text-muted-foreground">{formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}</span>
+          <span className="text-muted-foreground">{formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}</span>
         </div>
         <p className="text-sm text-secondary-foreground mt-1">{comment.body}</p>
         {onReply && (
           <button onClick={onReply} className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1">
-            <Reply className="h-3 w-3" /> Reply
+            <Reply className="h-3 w-3" /> Responder
           </button>
         )}
       </div>
