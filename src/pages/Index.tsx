@@ -100,7 +100,7 @@ export default function HomePage() {
                 {isLoading ? (
                   <HeroMarketSkeleton />
                 ) : (
-                  <Link to={`/market/${heroCard.id}`} className="block glass-card gradient-border rounded-2xl p-6 sm:p-8 animate-fade-in hover:scale-[1.01] transition-transform cursor-pointer">
+                  <Link to={`/market/${heroCard.id}`} className="block glass-card gradient-border hero-card-glow rounded-2xl p-6 sm:p-8 animate-fade-in hover:scale-[1.01] transition-transform cursor-pointer">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
                         <p className="text-xs text-muted-foreground uppercase tracking-widest">Mercado em destaque</p>
