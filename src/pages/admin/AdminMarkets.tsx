@@ -512,8 +512,8 @@ function ScheduleLockDialog({ market, open, onOpenChange, onSchedule, saving }: 
   return (
     <Dialog open={open} onOpenChange={(o) => {
       if (!o) {
-        setDate(market?.lock_date ? new Date(market.lock_date) : undefined);
-        setTime(market?.lock_date ? format(new Date(market.lock_date), 'HH:mm') : '12:00');
+        setDate(undefined);
+        setTime('12:00');
       }
       onOpenChange(o);
     }}>
