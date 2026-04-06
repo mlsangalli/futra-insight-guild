@@ -30,9 +30,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 glass-header">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-8">
-            <Link to="/" className="font-display font-bold text-xl tracking-tight">
+        <div className="flex items-center justify-between h-14 lg:h-16">
+          <div className="flex items-center gap-4 lg:gap-8">
+            <Link to="/" className="font-display font-bold text-lg lg:text-xl tracking-tight">
               <span className="gradient-primary-text">FUTRA</span>
             </Link>
             <nav className="hidden lg:flex items-center gap-1">
@@ -44,7 +44,7 @@ export function Header() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 lg:gap-2">
             <button onClick={() => setSearchOpen(!searchOpen)} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-700 transition-colors">
               <Search className="h-5 w-5" />
             </button>
@@ -84,11 +84,12 @@ export function Header() {
           <div className="pb-3 animate-fade-in">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input type="text" placeholder="Search markets..." className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-800 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" autoFocus onKeyDown={e => { if (e.key === 'Enter') window.location.href = `/search?q=${(e.target as HTMLInputElement).value}`; }} />
+              <input type="text" placeholder="Search markets..." className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-800 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" autoFocus onKeyDown={e => { if (e.key === 'Enter') { navigate(`/search?q=${(e.target as HTMLInputElement).value}`); setSearchOpen(false); } }} />
             </div>
           </div>
         )}
 
+        {/* Category bar - scrollable on mobile when menu is open, always visible on desktop */}
         <div className="hidden lg:flex items-center gap-1 pb-2 -mt-1 overflow-x-auto">
           {CATEGORIES.map(cat => (
             <Link key={cat.key} to={`/category/${cat.key}`} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap', location.pathname === `/category/${cat.key}` ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-surface-800')}>
@@ -106,9 +107,10 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+            {/* Scrollable categories */}
+            <div className="flex gap-2 pt-2 border-t border-border overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
               {CATEGORIES.map(cat => (
-                <Link key={cat.key} to={`/category/${cat.key}`} onClick={() => setMobileOpen(false)} className="px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground bg-surface-800">
+                <Link key={cat.key} to={`/category/${cat.key}`} onClick={() => setMobileOpen(false)} className="px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground bg-surface-800 whitespace-nowrap shrink-0">
                   {cat.emoji} {cat.label}
                 </Link>
               ))}

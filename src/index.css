@@ -203,4 +203,18 @@
     backdrop-filter: blur(24px) saturate(1.2);
     border-bottom: 1px solid hsl(var(--border) / 0.4);
   }
+
+  /* Safe area for bottom nav on notched devices */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
