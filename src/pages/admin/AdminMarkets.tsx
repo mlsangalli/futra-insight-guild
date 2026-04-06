@@ -7,18 +7,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
-import { Plus, Pencil, Trash2, Star, Copy, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 const CATEGORIES = ['politics', 'economy', 'crypto', 'football', 'culture', 'technology'];
 const STATUSES = ['open', 'closed', 'resolved'];
 const PAGE_SIZE = 10;
+
+interface MarketOption {
+  id: string;
+  label: string;
+  votes: number;
+  creditsAllocated: number;
+}
 
 export default function AdminMarkets() {
   const [page, setPage] = useState(0);
@@ -27,6 +34,7 @@ export default function AdminMarkets() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [editingMarket, setEditingMarket] = useState<any>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [resolvingMarket, setResolvingMarket] = useState<any>(null);
   const { toast } = useToast();
   const { log } = useAdminLog();
   const queryClient = useQueryClient();
@@ -82,6 +90,26 @@ export default function AdminMarkets() {
       queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
       toast({ title: 'Status atualizado' });
     },
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: ({ market_id, winning_option }: { market_id: string; winning_option: string }) =>
+      invokeAdmin({
+        action: 'resolve_market',
+        market_id,
+        winning_option,
+        entity_type: 'market',
+        description: `Resolved market with option: ${winning_option}`,
+      }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+      setResolvingMarket(null);
+      const msg = data?.refunded
+        ? `Mercado resolvido! Nenhum vencedor — ${data.total_predictions} participantes reembolsados.`
+        : `Mercado resolvido! ${data?.winners_count || 0} vencedores de ${data?.total_predictions || 0} participantes.`;
+      toast({ title: 'Mercado resolvido', description: msg });
+    },
+    onError: (e: Error) => toast({ title: 'Erro ao resolver', description: e.message, variant: 'destructive' }),
   });
 
   const saveMutation = useMutation({
@@ -197,6 +225,17 @@ export default function AdminMarkets() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {m.status !== 'resolved' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-green-500 hover:text-green-400"
+                            onClick={() => setResolvingMarket(m)}
+                            title="Resolver mercado"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingMarket(m); setFormOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateMarket(m)}><Copy className="h-3.5 w-3.5" /></Button>
                         <AlertDialog>
@@ -238,8 +277,93 @@ export default function AdminMarkets() {
           onSave={(m: any) => saveMutation.mutate(m)}
           saving={saveMutation.isPending}
         />
+
+        <ResolveMarketDialog
+          market={resolvingMarket}
+          open={!!resolvingMarket}
+          onOpenChange={(open) => { if (!open) setResolvingMarket(null); }}
+          onResolve={(marketId, winningOption) => resolveMutation.mutate({ market_id: marketId, winning_option: winningOption })}
+          resolving={resolveMutation.isPending}
+        />
       </div>
     </AdminLayout>
+  );
+}
+
+function ResolveMarketDialog({ market, open, onOpenChange, onResolve, resolving }: {
+  market: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onResolve: (marketId: string, winningOption: string) => void;
+  resolving: boolean;
+}) {
+  const [selectedOption, setSelectedOption] = useState<string>('');
+
+  const options: MarketOption[] = market?.options
+    ? (Array.isArray(market.options) ? market.options : [])
+    : [];
+
+  const totalCredits = options.reduce((sum, o) => sum + (o.creditsAllocated || 0), 0);
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) setSelectedOption(''); onOpenChange(o); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Resolver Mercado</DialogTitle>
+          <DialogDescription className="text-sm">
+            Selecione a opção vencedora para "{market?.question}". Esta ação é irreversível.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2 my-2">
+          <p className="text-xs text-muted-foreground">
+            Pool total: <span className="font-semibold text-foreground">{totalCredits} créditos</span> · {market?.total_participants || 0} participantes
+          </p>
+          <div className="space-y-1.5">
+            {options.map((opt) => {
+              const pct = totalCredits > 0 ? Math.round((opt.creditsAllocated / totalCredits) * 100) : 0;
+              const isSelected = selectedOption === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setSelectedOption(opt.id)}
+                  className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                    isSelected
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-border hover:border-muted-foreground/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{opt.label}</span>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{opt.votes} votos</span>
+                      <span>{opt.creditsAllocated} cr</span>
+                      <span className="font-semibold text-foreground">{pct}%</span>
+                    </div>
+                  </div>
+                  <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={resolving}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => { if (selectedOption && market?.id) onResolve(market.id, selectedOption); }}
+            disabled={!selectedOption || resolving}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {resolving ? 'Resolvendo...' : 'Confirmar Resolução'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify caller is admin
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -31,7 +30,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
@@ -125,6 +123,156 @@ Deno.serve(async (req) => {
           .eq("id", market_id);
         if (error) throw error;
         result = { success: true };
+        break;
+      }
+
+      case "resolve_market": {
+        const { market_id, winning_option } = body;
+        if (!market_id || !winning_option) throw new Error("market_id and winning_option required");
+
+        // 1. Fetch market and validate
+        const { data: market, error: mErr } = await adminClient
+          .from("markets")
+          .select("*")
+          .eq("id", market_id)
+          .single();
+        if (mErr || !market) throw new Error("Market not found");
+        if (market.status === "resolved") throw new Error("Market already resolved");
+
+        // Validate winning_option exists in market options
+        const options = market.options as Array<{ id: string; label: string; votes: number; creditsAllocated: number }>;
+        const validOption = options.find((o) => o.id === winning_option);
+        if (!validOption) throw new Error("Invalid winning option");
+
+        // 2. Fetch all predictions for this market
+        const { data: predictions, error: pErr } = await adminClient
+          .from("predictions")
+          .select("*")
+          .eq("market_id", market_id);
+        if (pErr) throw pErr;
+
+        const allPredictions = predictions || [];
+        const totalPool = allPredictions.reduce((sum: number, p: any) => sum + p.credits_allocated, 0);
+        const winners = allPredictions.filter((p: any) => p.selected_option === winning_option);
+        const losers = allPredictions.filter((p: any) => p.selected_option !== winning_option);
+        const totalWinningCredits = winners.reduce((sum: number, p: any) => sum + p.credits_allocated, 0);
+
+        if (winners.length > 0 && totalPool > 0) {
+          // 3a. Distribute rewards proportionally to winners
+          for (const pred of winners) {
+            const reward = Math.floor((pred.credits_allocated / totalWinningCredits) * totalPool);
+
+            // Update prediction status and reward
+            await adminClient
+              .from("predictions")
+              .update({ status: "won", reward })
+              .eq("id", pred.id);
+
+            // Update winner profile
+            const { data: profile } = await adminClient
+              .from("profiles")
+              .select("futra_credits, resolved_predictions, total_predictions")
+              .eq("user_id", pred.user_id)
+              .single();
+
+            if (profile) {
+              const newResolved = profile.resolved_predictions + 1;
+              // Count total wins for this user (current win + previous wins)
+              const { count: totalWins } = await adminClient
+                .from("predictions")
+                .select("*", { count: "exact", head: true })
+                .eq("user_id", pred.user_id)
+                .eq("status", "won");
+
+              const accuracyRate = profile.total_predictions > 0
+                ? Math.round(((totalWins || 0) / Math.max(newResolved, 1)) * 100 * 100) / 100
+                : 0;
+
+              await adminClient
+                .from("profiles")
+                .update({
+                  futra_credits: profile.futra_credits + reward,
+                  resolved_predictions: newResolved,
+                  accuracy_rate: accuracyRate,
+                })
+                .eq("user_id", pred.user_id);
+            }
+          }
+
+          // 3b. Mark losers
+          for (const pred of losers) {
+            await adminClient
+              .from("predictions")
+              .update({ status: "lost", reward: 0 })
+              .eq("id", pred.id);
+
+            const { data: profile } = await adminClient
+              .from("profiles")
+              .select("resolved_predictions, total_predictions")
+              .eq("user_id", pred.user_id)
+              .single();
+
+            if (profile) {
+              const newResolved = profile.resolved_predictions + 1;
+              const { count: totalWins } = await adminClient
+                .from("predictions")
+                .select("*", { count: "exact", head: true })
+                .eq("user_id", pred.user_id)
+                .eq("status", "won");
+
+              const accuracyRate = profile.total_predictions > 0
+                ? Math.round(((totalWins || 0) / Math.max(newResolved, 1)) * 100 * 100) / 100
+                : 0;
+
+              await adminClient
+                .from("profiles")
+                .update({
+                  resolved_predictions: newResolved,
+                  accuracy_rate: accuracyRate,
+                })
+                .eq("user_id", pred.user_id);
+            }
+          }
+        } else if (allPredictions.length > 0) {
+          // 3c. No winners — refund all participants
+          for (const pred of allPredictions) {
+            await adminClient
+              .from("predictions")
+              .update({ status: "lost", reward: 0 })
+              .eq("id", pred.id);
+
+            const { data: profile } = await adminClient
+              .from("profiles")
+              .select("futra_credits, resolved_predictions")
+              .eq("user_id", pred.user_id)
+              .single();
+
+            if (profile) {
+              await adminClient
+                .from("profiles")
+                .update({
+                  futra_credits: profile.futra_credits + pred.credits_allocated,
+                  resolved_predictions: profile.resolved_predictions + 1,
+                })
+                .eq("user_id", pred.user_id);
+            }
+          }
+        }
+
+        // 4. Update market status
+        const { error: updateErr } = await adminClient
+          .from("markets")
+          .update({ status: "resolved", resolved_option: winning_option })
+          .eq("id", market_id);
+        if (updateErr) throw updateErr;
+
+        result = {
+          success: true,
+          total_predictions: allPredictions.length,
+          winners_count: winners.length,
+          total_pool: totalPool,
+          refunded: winners.length === 0 && allPredictions.length > 0,
+        };
         break;
       }
 
