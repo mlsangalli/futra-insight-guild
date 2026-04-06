@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MarketOption {
@@ -37,8 +37,6 @@ function parseMarket(row: any): DbMarket {
   };
 }
 
-const PAGE_SIZE = 18;
-
 export function useMarkets(filters?: { category?: string; featured?: boolean; trending?: boolean; status?: string }) {
   return useQuery({
     queryKey: ['markets', filters],
@@ -51,35 +49,6 @@ export function useMarkets(filters?: { category?: string; featured?: boolean; tr
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []).map(parseMarket);
-    },
-  });
-}
-
-export type SortOption = 'Trending' | 'Popular' | 'Newest' | 'Ending Soon';
-
-export function useInfiniteMarkets(filters?: { category?: string; sort?: SortOption }) {
-  return useInfiniteQuery({
-    queryKey: ['markets-infinite', filters],
-    queryFn: async ({ pageParam = 0 }) => {
-      let query = supabase.from('markets').select('*');
-      if (filters?.category) query = query.eq('category', filters.category as any);
-
-      const sort = filters?.sort || 'Newest';
-      if (sort === 'Trending') query = query.order('trending', { ascending: false }).order('created_at', { ascending: false });
-      else if (sort === 'Popular') query = query.order('total_participants', { ascending: false });
-      else if (sort === 'Ending Soon') query = query.order('end_date', { ascending: true });
-      else query = query.order('created_at', { ascending: false });
-
-      const from = pageParam * PAGE_SIZE;
-      query = query.range(from, from + PAGE_SIZE - 1);
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []).map(parseMarket);
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      return lastPage.length === PAGE_SIZE ? allPages.length : undefined;
     },
   });
 }

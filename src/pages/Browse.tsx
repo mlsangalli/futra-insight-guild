@@ -1,14 +1,14 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
-import { useInfiniteMarkets, SortOption } from '@/hooks/useMarkets';
+import { useMarkets } from '@/hooks/useMarkets';
 import { CATEGORIES, MarketCategory } from '@/data/types';
 import { cn } from '@/lib/utils';
-import { Search, Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 
-const SORT_OPTIONS: SortOption[] = ['Trending', 'Popular', 'Newest', 'Ending Soon'];
+const SORT_OPTIONS = ['Trending', 'Popular', 'Newest', 'Ending Soon'];
 
 function dbToCard(m: any) {
   return {
@@ -23,54 +23,25 @@ function dbToCard(m: any) {
 export default function BrowsePage() {
   const [searchParams] = useSearchParams();
   const initialFilter = searchParams.get('filter') || '';
-  const [sortBy, setSortBy] = useState<SortOption>(
-    initialFilter === 'trending' ? 'Trending' : initialFilter === 'popular' ? 'Popular' : initialFilter === 'ending' ? 'Ending Soon' : 'Trending'
-  );
+  const [sortBy, setSortBy] = useState(initialFilter === 'trending' ? 'Trending' : initialFilter === 'popular' ? 'Popular' : initialFilter === 'ending' ? 'Ending Soon' : 'Trending');
   const [categoryFilter, setCategoryFilter] = useState<MarketCategory | 'all'>('all');
 
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteMarkets({
-    category: categoryFilter !== 'all' ? categoryFilter : undefined,
-    sort: sortBy,
-  });
+  const { data: allMarkets, isLoading, isError, refetch } = useMarkets(categoryFilter !== 'all' ? { category: categoryFilter } : undefined);
 
-  const markets = data?.pages.flat() || [];
-
-  // Intersection observer for infinite scroll
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { rootMargin: '200px' }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  let markets = allMarkets || [];
+  if (sortBy === 'Trending') markets = markets.filter(m => m.trending).concat(markets.filter(m => !m.trending));
+  else if (sortBy === 'Popular') markets = [...markets].sort((a, b) => b.total_participants - a.total_participants);
+  else if (sortBy === 'Newest') markets = [...markets].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  else if (sortBy === 'Ending Soon') markets = [...markets].sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
 
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <h1 className="font-display text-3xl font-bold text-foreground mb-2">Explorar Mercados</h1>
-        <p className="text-muted-foreground mb-6">Explore mercados de previsão em todas as categorias.</p>
+        <h1 className="font-display text-3xl font-bold text-foreground mb-2">Browse Markets</h1>
+        <p className="text-muted-foreground mb-6">Explore prediction markets across all categories.</p>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <button onClick={() => setCategoryFilter('all')} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors', categoryFilter === 'all' ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground')}>Todos</button>
+          <button onClick={() => setCategoryFilter('all')} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors', categoryFilter === 'all' ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground')}>All</button>
           {CATEGORIES.map(cat => (
             <button key={cat.key} onClick={() => setCategoryFilter(cat.key)} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors', categoryFilter === cat.key ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground')}>{cat.emoji} {cat.label}</button>
           ))}
@@ -86,18 +57,9 @@ export default function BrowsePage() {
         ) : isLoading ? (
           <MarketGridSkeleton count={6} />
         ) : markets.length > 0 ? (
-          <>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {markets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
-            </div>
-
-            {/* Sentinel for infinite scroll */}
-            <div ref={sentinelRef} className="flex justify-center py-8">
-              {isFetchingNextPage && (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              )}
-            </div>
-          </>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {markets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
+          </div>
         ) : (
           <EmptyState
             icon={<Search className="h-10 w-10 text-muted-foreground" />}
