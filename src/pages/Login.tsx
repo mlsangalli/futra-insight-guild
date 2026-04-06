@@ -48,7 +48,7 @@ export default function LoginPage() {
         ? 'Email ou senha incorretos'
         : error.message);
     } else {
-      toast.success('Welcome back!');
+      toast.success('Bem-vindo de volta!');
       navigate('/dashboard');
     }
   };
@@ -57,7 +57,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      toast.error(err.message || 'Google sign-in failed');
+      toast.error(err.message || 'Falha ao entrar com Google');
     }
   };
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <h1 className="font-display text-3xl font-bold gradient-primary-text">FUTRA</h1>
-            <p className="text-muted-foreground mt-2">Welcome back</p>
+            <p className="text-muted-foreground mt-2">Bem-vindo de volta</p>
           </div>
 
           <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-6 space-y-4">
@@ -75,7 +75,7 @@ export default function LoginPage() {
               <label className="text-sm font-medium text-foreground">Email</label>
               <Input
                 type="email"
-                placeholder="you@example.com"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(p => ({ ...p, email: undefined })); }}
                 className={`mt-1 bg-surface-800 ${errors.email ? 'border-destructive' : ''}`}
@@ -83,7 +83,7 @@ export default function LoginPage() {
               {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Password</label>
+              <label className="text-sm font-medium text-foreground">Senha</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -94,20 +94,24 @@ export default function LoginPage() {
               {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
             </div>
             <Button type="submit" className="w-full gradient-primary border-0" disabled={loading}>
-              {loading ? 'Logging in...' : 'Log in'}
+              {loading ? 'Entrando...' : 'Entrar'}
             </Button>
+
+            <p className="text-xs text-center">
+              <Link to="/forgot-password" className="text-primary hover:underline">Esqueceu a senha?</Link>
+            </p>
             
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-              <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">or</span></div>
+              <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
             </div>
 
             <Button type="button" variant="outline" className="w-full" onClick={handleGoogle}>
-              Sign in with Google
+              Entrar com Google
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              Don't have an account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
+              Não tem conta? <Link to="/signup" className="text-primary hover:underline">Cadastre-se</Link>
             </p>
           </form>
         </div>

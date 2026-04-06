@@ -14,6 +14,8 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import HowItWorks from "./pages/HowItWorks";
 import CreateMarket from "./pages/CreateMarket";
 import Watchlist from "./pages/Watchlist";
@@ -48,6 +50,8 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/create-market" element={<CreateMarket />} />
             <Route path="/watchlist" element={<Watchlist />} />

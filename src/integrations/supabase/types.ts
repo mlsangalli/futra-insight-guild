@@ -351,6 +351,7 @@ export type Database = {
         }
         Returns: string
       }
+      recalculate_global_ranks: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
