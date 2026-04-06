@@ -3,9 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { VoteBar } from '@/components/futra/VoteBar';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
+import { ShareButton } from '@/components/futra/ShareButton';
 import { Button } from '@/components/ui/button';
 import { Clock, Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy, XCircle } from 'lucide-react';
 import { useMarket } from '@/hooks/useMarkets';
+import { useRealtimeMarket } from '@/hooks/useRealtimeMarket';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -14,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { Badge } from '@/components/ui/badge';
+import { SEO } from '@/components/SEO';
 
 function formatNumber(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -58,6 +61,7 @@ function MarketDetailSkeleton() {
 
 export default function MarketDetailPage() {
   const { id } = useParams<{ id: string }>();
+  useRealtimeMarket(id || '');
   const { data: market, isLoading, isError, refetch } = useMarket(id || '');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [credits, setCredits] = useState(100);
@@ -98,9 +102,15 @@ export default function MarketDetailPage() {
     ? market.options.find(o => o.id === market.resolved_option)
     : null;
 
+  const topOption = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
   const selectedOpt = market.options.find(o => o.id === selectedOption);
   const potentialReward = selectedOpt ? Math.round(credits * (100 / selectedOpt.percentage) * 0.85) : 0;
   const daysLeft = Math.max(0, Math.floor((new Date(market.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
+  const shareUrl = `${window.location.origin}/market/${market.id}`;
+  const shareText = topOption
+    ? `"${market.question}" — ${topOption.percentage}% say ${topOption.label} | @fuabordo`
+    : market.question;
 
   const handleConfirm = async () => {
     if (!user || !selectedOption) return;
@@ -131,6 +141,10 @@ export default function MarketDetailPage() {
 
   return (
     <Layout>
+      <SEO
+        title={market.question}
+        description={topOption ? `${topOption.label}: ${topOption.percentage}% — ${market.total_participants} participants` : market.description}
+      />
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
@@ -138,6 +152,9 @@ export default function MarketDetailPage() {
               <div className="flex items-center gap-2 mb-3">
                 <CategoryBadge category={market.category as any} />
                 {statusBadge}
+                <div className="ml-auto">
+                  <ShareButton title={market.question} text={shareText} url={shareUrl} />
+                </div>
               </div>
               <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight">{market.question}</h1>
               <p className="text-muted-foreground mt-2">{market.description}</p>

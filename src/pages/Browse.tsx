@@ -7,6 +7,8 @@ import { CATEGORIES, MarketCategory } from '@/data/types';
 import { cn } from '@/lib/utils';
 import { Search } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
+import { SEO } from '@/components/SEO';
+import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';
 
 const SORT_OPTIONS = ['Trending', 'Popular', 'Newest', 'Ending Soon'];
 
@@ -21,6 +23,7 @@ function dbToCard(m: any) {
 }
 
 export default function BrowsePage() {
+  useRealtimeMarkets();
   const [searchParams] = useSearchParams();
   const initialFilter = searchParams.get('filter') || '';
   const [sortBy, setSortBy] = useState(initialFilter === 'trending' ? 'Trending' : initialFilter === 'popular' ? 'Popular' : initialFilter === 'ending' ? 'Ending Soon' : 'Trending');
@@ -36,6 +39,7 @@ export default function BrowsePage() {
 
   return (
     <Layout>
+      <SEO title="Browse Markets" description="Explore all prediction markets on FUTRA" />
       <div className="container mx-auto px-4 py-8">
         <h1 className="font-display text-3xl font-bold text-foreground mb-2">Browse Markets</h1>
         <p className="text-muted-foreground mb-6">Explore prediction markets across all categories.</p>

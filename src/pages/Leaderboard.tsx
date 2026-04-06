@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { Trophy } from 'lucide-react';
 import { LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { Button } from '@/components/ui/button';
+import { SEO } from '@/components/SEO';
 
 const TIME_FILTERS = ['All Time', 'This Week', 'This Month'];
 
@@ -18,6 +19,7 @@ export default function LeaderboardPage() {
 
   return (
     <Layout>
+      <SEO title="Leaderboard" description="Top forecasters ranked by Futra Score and accuracy" />
       <div className="container mx-auto px-4 py-8">
         <h1 className="font-display text-3xl font-bold text-foreground mb-2">Leaderboard</h1>
         <p className="text-muted-foreground mb-6">Top forecasters ranked by Futra Score and accuracy.</p>

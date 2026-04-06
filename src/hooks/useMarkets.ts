@@ -31,17 +31,23 @@ export interface DbMarket {
 }
 
 function parseMarket(row: any): DbMarket {
-  return {
-    ...row,
-    options: (row.options as any[]) || [],
-  };
+  // Prefer market_options (normalized table) over JSONB cache
+  const rawOptions = row.market_options || row.options || [];
+  const options = rawOptions.map((o: any) => ({
+    id: o.id,
+    label: o.label,
+    votes: o.total_votes ?? o.votes ?? 0,
+    creditsAllocated: o.total_credits ?? o.creditsAllocated ?? 0,
+    percentage: Number(o.percentage) || 0,
+  }));
+  return { ...row, options };
 }
 
 export function useMarkets(filters?: { category?: string; featured?: boolean; trending?: boolean; status?: string }) {
   return useQuery({
     queryKey: ['markets', filters],
     queryFn: async () => {
-      let query = supabase.from('markets').select('*');
+      let query = supabase.from('markets').select('*, market_options(*)');
       if (filters?.category) query = query.eq('category', filters.category as any);
       if (filters?.featured) query = query.eq('featured', true);
       if (filters?.trending) query = query.eq('trending', true);
@@ -57,11 +63,16 @@ export function useMarket(id: string) {
   return useQuery({
     queryKey: ['market', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('markets').select('*').eq('id', id).single();
+      const { data, error } = await supabase
+        .from('markets')
+        .select('*, market_options(*)')
+        .eq('id', id)
+        .single();
       if (error) throw error;
       return parseMarket(data);
     },
     enabled: !!id,
+    staleTime: 10_000,
   });
 }
 
@@ -77,6 +88,7 @@ export function useLeaderboard() {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 60_000,
   });
 }
 
@@ -93,6 +105,7 @@ export function useProfile(username: string) {
       return data;
     },
     enabled: !!username,
+    staleTime: 60_000,
   });
 }
 
