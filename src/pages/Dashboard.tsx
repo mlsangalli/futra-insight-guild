@@ -52,7 +52,8 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <DailyBonusBanner />
+        <div className="flex items-center justify-between mb-8 mt-4">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground mt-1">Welcome back, {profile?.display_name || profile?.username}</p>
