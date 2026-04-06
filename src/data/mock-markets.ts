@@ -1,4 +1,4 @@
-import { Market } from '@/types';
+import { MarketCardData as Market } from '@/types';
 
 export const mockMarkets: Market[] = [
   {
