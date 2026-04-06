@@ -74,7 +74,7 @@ export default function HomePage() {
       {/* Hero */}
       {heroCard && heroLeader ? (
         <section className="relative overflow-hidden particle-bg">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.18)_0%,hsl(var(--emerald)/0.08)_40%,transparent_70%)] pointer-events-none" />
           <div className="container mx-auto px-4 py-12 md:py-24 relative z-10">
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
               <div className="max-w-xl">
