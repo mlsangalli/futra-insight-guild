@@ -5,6 +5,8 @@ import { useMarkets } from '@/hooks/useMarkets';
 import { CATEGORIES } from '@/types';
 import { FolderOpen } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 
 function dbToCard(m: any) {
   return {
@@ -16,10 +18,17 @@ function dbToCard(m: any) {
   };
 }
 
+const PAGE_SIZE = 20;
+
 export default function CategoryPage() {
   const { category } = useParams<{ category: string }>();
   const cat = CATEGORIES.find(c => c.key === category);
   const { data: markets, isLoading, isError, refetch } = useMarkets({ category });
+  const [page, setPage] = useState(0);
+
+  const allMarkets = markets || [];
+  const paginatedMarkets = allMarkets.slice(0, (page + 1) * PAGE_SIZE);
+  const hasMore = paginatedMarkets.length < allMarkets.length;
 
   return (
     <Layout>
@@ -28,7 +37,7 @@ export default function CategoryPage() {
           {cat && <span className="text-4xl">{cat.emoji}</span>}
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">{cat?.label || category}</h1>
-            <p className="text-muted-foreground">All markets in this category</p>
+            <p className="text-muted-foreground">Todos os mercados nesta categoria</p>
           </div>
         </div>
 
@@ -36,15 +45,24 @@ export default function CategoryPage() {
           <ErrorState onRetry={() => refetch()} />
         ) : isLoading ? (
           <MarketGridSkeleton count={6} />
-        ) : (markets || []).length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(markets || []).map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
-          </div>
+        ) : paginatedMarkets.length > 0 ? (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedMarkets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
+            </div>
+            {hasMore && (
+              <div className="text-center mt-8">
+                <Button variant="outline" onClick={() => setPage(p => p + 1)}>
+                  Carregar mais
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <EmptyState
             icon={<FolderOpen className="h-10 w-10 text-muted-foreground" />}
-            title="No markets in this category"
-            description="New markets will appear here when they are created."
+            title="Nenhum mercado nesta categoria"
+            description="Novos mercados aparecerão aqui quando forem criados."
           />
         )}
       </div>

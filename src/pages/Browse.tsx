@@ -5,10 +5,11 @@ import { MarketCard } from '@/components/futra/MarketCard';
 import { useMarkets } from '@/hooks/useMarkets';
 import { CATEGORIES, MarketCategory } from '@/types';
 import { cn } from '@/lib/utils';
-import { Search, X, ChevronDown } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
 import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -18,10 +19,10 @@ import {
 } from '@/components/ui/select';
 
 const SORT_OPTIONS = [
-  { value: 'trending', label: 'Trending' },
-  { value: 'popular', label: 'Popular' },
-  { value: 'newest', label: 'Newest' },
-  { value: 'ending', label: 'Ending Soon' },
+  { value: 'trending', label: 'Em alta' },
+  { value: 'popular', label: 'Populares' },
+  { value: 'newest', label: 'Mais recentes' },
+  { value: 'ending', label: 'Encerrando' },
 ];
 
 function dbToCard(m: any) {
@@ -44,6 +45,8 @@ export default function BrowsePage() {
     initialFilter === 'ending' ? 'ending' : 'trending'
   );
   const [categoryFilter, setCategoryFilter] = useState<MarketCategory | 'all'>('all');
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 20;
 
   const { data: allMarkets, isLoading, isError, refetch } = useMarkets(categoryFilter !== 'all' ? { category: categoryFilter } : undefined);
 
@@ -56,19 +59,21 @@ export default function BrowsePage() {
     return result;
   }, [allMarkets, sortBy]);
 
+  const paginatedMarkets = markets.slice(0, (page + 1) * PAGE_SIZE);
+  const hasMore = paginatedMarkets.length < markets.length;
+
   const activeCat = CATEGORIES.find(c => c.key === categoryFilter);
 
   return (
     <Layout>
-      <SEO title="Browse Markets" description="Explore all prediction markets on FUTRA" />
+      <SEO title="Explorar Mercados" description="Explore todos os mercados de previsão na FUTRA" />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="font-display text-3xl font-bold text-foreground mb-2">Browse Markets</h1>
-        <p className="text-muted-foreground mb-6">Explore prediction markets across all categories.</p>
+        <h1 className="font-display text-3xl font-bold text-foreground mb-2">Explorar Mercados</h1>
+        <p className="text-muted-foreground mb-6">Explore mercados de previsão em todas as categorias.</p>
 
         {/* Sticky filter bar */}
         <div className="sticky top-[56px] lg:top-[64px] z-30 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-md border-b border-border/50 mb-4">
           <div className="flex items-center gap-3">
-            {/* Category pills - scrollable */}
             <div className="flex-1 overflow-x-auto scrollbar-hide">
               <div className="flex gap-2 snap-x snap-mandatory">
                 <button
@@ -80,7 +85,7 @@ export default function BrowsePage() {
                       : 'bg-surface-800 text-muted-foreground hover:bg-surface-700'
                   )}
                 >
-                  All
+                  Todos
                 </button>
                 {CATEGORIES.map(cat => (
                   <button
@@ -99,7 +104,6 @@ export default function BrowsePage() {
               </div>
             </div>
 
-            {/* Sort dropdown */}
             <div className="shrink-0">
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[140px] h-8 text-xs bg-surface-800 border-border/50">
@@ -114,7 +118,6 @@ export default function BrowsePage() {
             </div>
           </div>
 
-          {/* Active filter chip */}
           {categoryFilter !== 'all' && activeCat && (
             <div className="mt-2 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -127,10 +130,9 @@ export default function BrowsePage() {
           )}
         </div>
 
-        {/* Results counter */}
         {!isLoading && !isError && (
           <p className="text-sm text-muted-foreground mb-4">
-            Showing {markets.length} {markets.length === 1 ? 'market' : 'markets'}
+            Mostrando {paginatedMarkets.length} de {markets.length} {markets.length === 1 ? 'mercado' : 'mercados'}
           </p>
         )}
 
@@ -139,14 +141,23 @@ export default function BrowsePage() {
         ) : isLoading ? (
           <MarketGridSkeleton count={6} />
         ) : markets.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {markets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
-          </div>
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedMarkets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
+            </div>
+            {hasMore && (
+              <div className="text-center mt-8">
+                <Button variant="outline" onClick={() => setPage(p => p + 1)}>
+                  Carregar mais
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <EmptyState
             icon={<Search className="h-10 w-10 text-muted-foreground" />}
-            title="No markets found"
-            description="Try changing the filters or explore another category."
+            title="Nenhum mercado encontrado"
+            description="Tente mudar os filtros ou explorar outra categoria."
           />
         )}
       </div>

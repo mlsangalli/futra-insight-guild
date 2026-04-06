@@ -10,19 +10,19 @@ import { LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 
-const TIME_FILTERS = ['All Time', 'This Week', 'This Month'];
+const TIME_FILTERS = ['Todos', 'Esta semana', 'Este mês'];
 
 export default function LeaderboardPage() {
-  const [timeFilter, setTimeFilter] = useState('All Time');
+  const [timeFilter, setTimeFilter] = useState('Todos');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const { data: users, isLoading, isError, refetch } = useLeaderboard();
 
   return (
     <Layout>
-      <SEO title="Leaderboard" description="Top forecasters ranked by Futra Score and accuracy" />
+      <SEO title="Ranking" description="Melhores previsores ranqueados por Futra Score e precisão" />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="font-display text-3xl font-bold text-foreground mb-2">Leaderboard</h1>
-        <p className="text-muted-foreground mb-6">Top forecasters ranked by Futra Score and accuracy.</p>
+        <h1 className="font-display text-3xl font-bold text-foreground mb-2">Ranking</h1>
+        <p className="text-muted-foreground mb-6">Melhores previsores ranqueados por Futra Score e precisão.</p>
 
         <div className="flex flex-wrap gap-2 mb-4">
           {TIME_FILTERS.map(f => (
@@ -32,7 +32,7 @@ export default function LeaderboardPage() {
           ))}
         </div>
         <div className="flex flex-wrap gap-2 mb-8">
-          <button onClick={() => setCategoryFilter('all')} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors', categoryFilter === 'all' ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground')}>All</button>
+          <button onClick={() => setCategoryFilter('all')} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors', categoryFilter === 'all' ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground')}>Todos</button>
           {CATEGORIES.map(cat => (
             <button key={cat.key} onClick={() => setCategoryFilter(cat.key)} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors', categoryFilter === cat.key ? 'bg-primary/10 text-primary' : 'bg-surface-700 text-muted-foreground')}>
               {cat.emoji} {cat.label}
@@ -47,9 +47,9 @@ export default function LeaderboardPage() {
         ) : !users?.length ? (
           <EmptyState
             icon={<Trophy className="h-10 w-10 text-muted-foreground" />}
-            title="No forecasters yet"
-            description="Be the first to make predictions and appear on the leaderboard!"
-            action={<Button variant="outline" asChild><Link to="/browse">Explore markets</Link></Button>}
+            title="Nenhum previsor ainda"
+            description="Seja o primeiro a fazer previsões e aparecer no ranking!"
+            action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
           />
         ) : (
           <div className="rounded-xl border border-border bg-card divide-y divide-border">
@@ -63,7 +63,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm truncate">{user.display_name}</p>
-                  <p className="text-xs text-muted-foreground">@{user.username} · {user.accuracy_rate}% accuracy</p>
+                  <p className="text-xs text-muted-foreground">@{user.username} · {user.accuracy_rate}% precisão</p>
                 </div>
                 <div className="hidden sm:block"><InfluenceBadge level={user.influence_level} /></div>
                 <div className="text-right shrink-0">

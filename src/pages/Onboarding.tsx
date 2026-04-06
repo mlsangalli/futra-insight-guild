@@ -35,10 +35,9 @@ export default function OnboardingPage() {
       .eq('user_id', user.id);
     if (error) {
       setSaving(false);
-      toast.error('Failed to save preferences');
+      toast.error('Falha ao salvar preferências');
       return;
     }
-    // Apply referral if present
     const refCode = localStorage.getItem('futra_ref');
     if (refCode) {
       try {
@@ -52,11 +51,10 @@ export default function OnboardingPage() {
     }
     setSaving(false);
     await refreshProfile();
-    toast.success('Welcome to FUTRA! 🎉');
+    toast.success('Bem-vindo à FUTRA! 🎉');
     navigate('/');
   };
 
-  // If onboarding already completed, redirect
   if (profile?.onboarding_completed) {
     navigate('/');
     return null;
@@ -74,9 +72,9 @@ export default function OnboardingPage() {
                 <Target className="h-8 w-8 text-primary-foreground" />
               </div>
               <div>
-                <h2 className="font-display text-xl font-bold text-foreground">Welcome to FUTRA</h2>
+                <h2 className="font-display text-xl font-bold text-foreground">Bem-vindo à FUTRA</h2>
                 <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-                  The social forecasting platform where your predictions build reputation. Make calls, earn credits, climb the leaderboard.
+                  A plataforma social de previsões onde suas apostas constroem reputação. Faça previsões, ganhe créditos, suba no ranking.
                 </p>
               </div>
             </>
@@ -85,9 +83,9 @@ export default function OnboardingPage() {
           {step === 1 && (
             <>
               <div>
-                <h2 className="font-display text-xl font-bold text-foreground">Pick your interests</h2>
+                <h2 className="font-display text-xl font-bold text-foreground">Escolha seus interesses</h2>
                 <p className="text-muted-foreground mt-2 text-sm">
-                  Choose categories you'd like to follow. You can change this later.
+                  Escolha categorias que deseja acompanhar. Você pode mudar depois.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -120,21 +118,20 @@ export default function OnboardingPage() {
                 <Coins className="h-8 w-8 text-primary-foreground" />
               </div>
               <div>
-                <h2 className="font-display text-xl font-bold text-foreground">You're all set!</h2>
+                <h2 className="font-display text-xl font-bold text-foreground">Tudo pronto!</h2>
                 <p className="text-muted-foreground mt-2 text-sm">
-                  You start with <span className="text-emerald font-bold">1,000 Futra Credits</span> to make your first predictions.
+                  Você começa com <span className="text-emerald font-bold">1.000 Futra Credits</span> para fazer suas primeiras previsões.
                 </p>
               </div>
               <div className="rounded-lg bg-surface-800 p-4">
                 <p className="text-3xl font-display font-bold text-emerald glow-text-emerald">
-                  1,000 FC
+                  1.000 FC
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Your starting balance</p>
+                <p className="text-xs text-muted-foreground mt-1">Seu saldo inicial</p>
               </div>
             </>
           )}
 
-          {/* Step dots */}
           <div className="flex justify-center gap-2">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <div
@@ -150,12 +147,12 @@ export default function OnboardingPage() {
           <div className="flex gap-3">
             {step > 0 && (
               <Button variant="outline" className="flex-1" onClick={() => setStep(step - 1)}>
-                Back
+                Voltar
               </Button>
             )}
             {step < TOTAL_STEPS - 1 ? (
               <Button className="flex-1 gradient-primary border-0" onClick={() => setStep(step + 1)}>
-                Next <ArrowRight className="ml-2 h-4 w-4" />
+                Próximo <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
               <Button
@@ -163,7 +160,7 @@ export default function OnboardingPage() {
                 onClick={completeOnboarding}
                 disabled={saving}
               >
-                {saving ? 'Saving...' : 'Start exploring'} <ArrowRight className="ml-2 h-4 w-4" />
+                {saving ? 'Salvando...' : 'Começar a explorar'} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             )}
           </div>

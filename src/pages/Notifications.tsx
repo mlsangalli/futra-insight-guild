@@ -4,6 +4,7 @@ import { Bell, Trophy, Coins, Target, Clock, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const typeIcons: Record<string, any> = {
   market_resolved: Target,
@@ -23,20 +24,20 @@ export default function NotificationsPage() {
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-display text-3xl font-bold text-foreground">Notifications</h1>
+          <h1 className="font-display text-3xl font-bold text-foreground">Notificações</h1>
           {notifications.some((n: any) => !n.read) && (
             <Button variant="ghost" size="sm" onClick={() => markAsRead.mutate(undefined)}>
-              <CheckCheck className="h-4 w-4 mr-1" /> Mark all read
+              <CheckCheck className="h-4 w-4 mr-1" /> Marcar todas como lidas
             </Button>
           )}
         </div>
 
         {isLoading ? (
-          <p className="text-muted-foreground text-sm">Loading...</p>
+          <p className="text-muted-foreground text-sm">Carregando...</p>
         ) : notifications.length === 0 ? (
           <div className="text-center py-20">
             <Bell className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">No notifications yet.</p>
+            <p className="text-muted-foreground">Nenhuma notificação ainda.</p>
           </div>
         ) : (
           <div className="rounded-xl border border-border bg-card divide-y divide-border">
@@ -54,7 +55,7 @@ export default function NotificationsPage() {
                     <p className="text-sm font-medium text-foreground">{n.title}</p>
                     <p className="text-sm text-muted-foreground">{n.body}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
                     </p>
                   </div>
                   {!n.read && <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />}

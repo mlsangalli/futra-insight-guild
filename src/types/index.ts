@@ -168,18 +168,18 @@ export interface MarketCardData {
 // ── Constants ───────────────────────────────────────────────────
 
 export const CATEGORIES: { key: MarketCategory; label: string; emoji: string }[] = [
-  { key: 'politics', label: 'Politics', emoji: '🏛️' },
-  { key: 'economy', label: 'Economy', emoji: '📊' },
-  { key: 'crypto', label: 'Crypto', emoji: '₿' },
-  { key: 'football', label: 'Football', emoji: '⚽' },
-  { key: 'culture', label: 'Culture', emoji: '🎬' },
-  { key: 'technology', label: 'Technology', emoji: '🤖' },
+  { key: 'politics', label: 'Política', emoji: '🏛️' },
+  { key: 'economy', label: 'Economia', emoji: '📊' },
+  { key: 'crypto', label: 'Cripto', emoji: '₿' },
+  { key: 'football', label: 'Futebol', emoji: '⚽' },
+  { key: 'culture', label: 'Cultura', emoji: '🎬' },
+  { key: 'technology', label: 'Tecnologia', emoji: '🤖' },
 ];
 
 export const INFLUENCE_LABELS: Record<InfluenceLevel, string> = {
-  low: 'Low Influence',
-  medium: 'Medium Influence',
-  high: 'High Influence',
+  low: 'Baixa Influência',
+  medium: 'Média Influência',
+  high: 'Alta Influência',
   elite: 'Elite',
 };
 
