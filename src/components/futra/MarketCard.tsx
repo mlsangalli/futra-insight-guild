@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Users, Coins } from 'lucide-react';
-import { Market } from '@/data/types';
+import { Market } from '@/types';
 import { CategoryBadge } from './CategoryBadge';
 import { StatusBadge } from './StatusBadge';
 import { CountdownTimer } from './CountdownTimer';

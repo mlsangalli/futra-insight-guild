@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
 import { useMarkets } from '@/hooks/useMarkets';
-import { CATEGORIES } from '@/data/types';
+import { CATEGORIES } from '@/types';
 import { FolderOpen } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 

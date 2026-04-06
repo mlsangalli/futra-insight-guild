@@ -7,7 +7,7 @@ import { CountdownTimer } from '@/components/futra/CountdownTimer';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users } from 'lucide-react';
 import { useMarkets, useLeaderboard } from '@/hooks/useMarkets';
-import { CATEGORIES } from '@/data/types';
+import { CATEGORIES } from '@/types';
 import { MarketGridSkeleton, HeroMarketSkeleton, LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
 import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';

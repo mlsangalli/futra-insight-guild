@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock } from 'lucide-react';
 import { useState } from 'react';
-import { CATEGORIES } from '@/data/types';
+import { CATEGORIES } from '@/types';
 import { toast } from 'sonner';
 import { z } from 'zod';
 

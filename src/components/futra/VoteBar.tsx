@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { MarketOption } from '@/data/types';
+import { MarketOption } from '@/types';
 
 interface VoteBarProps {
   options: MarketOption[];

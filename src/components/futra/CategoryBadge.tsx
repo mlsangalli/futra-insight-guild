@@ -1,4 +1,4 @@
-import { MarketCategory, CATEGORIES } from '@/data/types';
+import { MarketCategory, CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface CategoryBadgeProps {
