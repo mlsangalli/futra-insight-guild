@@ -22,8 +22,8 @@ export default function ProfilePage() {
         <div className="container mx-auto px-4 py-8">
           <EmptyState
             icon={<UserX className="h-10 w-10 text-muted-foreground" />}
-            title="Usuário não encontrado"
-            description={`O perfil @${username} não existe ou foi removido.`}
+            title="User not found"
+            description={`The profile @${username} does not exist or has been removed.`}
           />
         </div>
       </Layout>

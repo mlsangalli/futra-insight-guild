@@ -43,8 +43,8 @@ export default function SearchPage() {
         ) : (
           <EmptyState
             icon={<Search className="h-10 w-10 text-muted-foreground" />}
-            title={query ? 'Nenhum mercado encontrado' : 'Digite algo para pesquisar'}
-            description={query ? 'Tente termos diferentes ou explore os mercados disponíveis.' : 'Use a barra de pesquisa para encontrar mercados.'}
+            title={query ? 'No markets found' : 'Type something to search'}
+            description={query ? 'Try different terms or explore available markets.' : 'Use the search bar to find markets.'}
           />
         )}
       </div>

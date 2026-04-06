@@ -43,8 +43,8 @@ export default function CategoryPage() {
         ) : (
           <EmptyState
             icon={<FolderOpen className="h-10 w-10 text-muted-foreground" />}
-            title="Nenhum mercado nesta categoria"
-            description="Novos mercados aparecerão aqui quando forem criados."
+            title="No markets in this category"
+            description="New markets will appear here when they are created."
           />
         )}
       </div>

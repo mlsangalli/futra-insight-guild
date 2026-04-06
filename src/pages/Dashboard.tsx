@@ -1,23 +1,24 @@
 import { Layout } from '@/components/layout/Layout';
 import { StatCard } from '@/components/futra/StatCard';
+import { StatusBadge } from '@/components/futra/StatusBadge';
 import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPredictions } from '@/hooks/useMarkets';
 import { Trophy, Coins, Target, TrendingUp, Bookmark, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { StatCardSkeleton, PredictionRowSkeleton, EmptyState } from '@/components/futra/Skeletons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import EditProfileDialog from '@/components/EditProfileDialog';
 
-const TABS = ['Abertas', 'Resolvidas', 'Favoritos'];
+const TABS = ['Open', 'Resolved', 'Saved'];
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const { data: predictions, isLoading: loadingPredictions } = useUserPredictions(user?.id);
-  const [tab, setTab] = useState('Abertas');
+  const [tab, setTab] = useState('Open');
 
   if (loading) {
     return (
@@ -41,8 +42,6 @@ export default function DashboardPage() {
     );
   }
 
-  
-
   const openPredictions = predictions?.filter((p: any) => p.status === 'pending') || [];
   const resolvedPredictions = predictions?.filter((p: any) => p.status !== 'pending') || [];
 
@@ -51,8 +50,8 @@ export default function DashboardPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Painel</h1>
-            <p className="text-muted-foreground mt-1">Bem-vindo de volta, {profile?.display_name || profile?.username}</p>
+            <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Welcome back, {profile?.display_name || profile?.username}</p>
           </div>
           <div className="flex items-center gap-3">
             <EditProfileDialog />
@@ -63,8 +62,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatCard label="Futra Credits" value={(profile?.futra_credits || 0).toLocaleString()} icon={Coins} />
           <StatCard label="Futra Score" value={profile?.futra_score || 0} icon={Trophy} />
-          <StatCard label="Precisão" value={`${profile?.accuracy_rate || 0}%`} icon={Target} />
-          <StatCard label="Ranking Global" value={profile?.global_rank ? `#${profile.global_rank}` : '—'} icon={TrendingUp} />
+          <StatCard label="Accuracy" value={`${profile?.accuracy_rate || 0}%`} icon={Target} />
+          <StatCard label="Global Rank" value={profile?.global_rank ? `#${profile.global_rank}` : '—'} icon={TrendingUp} />
         </div>
 
         <div className="flex gap-1 mb-6 border-b border-border">
@@ -75,45 +74,50 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {tab === 'Abertas' && (
+        {tab === 'Open' && (
           <div className="space-y-3">
             {loadingPredictions ? (
               Array.from({ length: 3 }).map((_, i) => <PredictionRowSkeleton key={i} />)
             ) : openPredictions.length === 0 ? (
               <EmptyState
                 icon={<BarChart3 className="h-10 w-10 text-muted-foreground" />}
-                title="Nenhuma previsão aberta"
-                description="Explore mercados e faça sua primeira previsão!"
-                action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
+                title="No open predictions"
+                description="Explore markets and make your first prediction!"
+                action={<Button variant="outline" asChild><Link to="/browse">Explore markets</Link></Button>}
               />
             ) : openPredictions.map((p: any) => (
               <Link key={p.id} to={`/market/${p.market_id}`} className="block rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors">
-                <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Mercado'}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Market'}</p>
+                  <StatusBadge status="pending" />
+                </div>
                 <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                  <span>Escolha: <span className="text-primary">{p.selected_option}</span></span>
-                  <span>Créditos: <span className="text-foreground">{p.credits_allocated} FC</span></span>
+                  <span>Choice: <span className="text-primary">{p.selected_option}</span></span>
+                  <span>Credits: <span className="text-foreground">{p.credits_allocated} FC</span></span>
                 </div>
               </Link>
             ))}
           </div>
         )}
 
-        {tab === 'Resolvidas' && (
+        {tab === 'Resolved' && (
           <div className="space-y-3">
             {loadingPredictions ? (
               Array.from({ length: 3 }).map((_, i) => <PredictionRowSkeleton key={i} />)
             ) : resolvedPredictions.length === 0 ? (
               <EmptyState
                 icon={<Target className="h-10 w-10 text-muted-foreground" />}
-                title="Nenhuma previsão resolvida"
-                description="Suas previsões resolvidas aparecerão aqui."
+                title="No resolved predictions"
+                description="Your resolved predictions will appear here."
               />
             ) : resolvedPredictions.map((p: any) => (
               <div key={p.id} className="rounded-xl border border-border bg-card p-4">
-                <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Mercado'}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Market'}</p>
+                  <StatusBadge status={p.status} />
+                </div>
                 <div className="flex gap-4 mt-2 text-xs">
-                  <span className={p.status === 'won' ? 'text-emerald' : 'text-negative'}>{p.status === 'won' ? 'Ganhou' : 'Perdeu'}</span>
-                  <span className="text-muted-foreground">{p.credits_allocated} FC apostados</span>
+                  <span className="text-muted-foreground">{p.credits_allocated} FC staked</span>
                   {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
                 </div>
               </div>
@@ -121,11 +125,11 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {tab === 'Favoritos' && (
+        {tab === 'Saved' && (
           <EmptyState
             icon={<Bookmark className="h-10 w-10 text-muted-foreground" />}
-            title="Nenhum mercado salvo"
-            description="Salve mercados para acompanhá-los aqui."
+            title="No saved markets"
+            description="Save markets to track them here."
           />
         )}
       </div>

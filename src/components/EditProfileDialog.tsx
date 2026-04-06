@@ -39,7 +39,7 @@ export default function EditProfileDialog() {
     const { error } = await supabase
       .from('profiles')
       .update({
-        display_name: displayName.trim() || 'Usuário',
+        display_name: displayName.trim() || 'User',
         bio: bio.trim(),
         avatar_url: avatarUrl.trim(),
         specialties: specialtiesArr,
@@ -49,9 +49,9 @@ export default function EditProfileDialog() {
     setSaving(false);
 
     if (error) {
-      toast.error('Erro ao salvar perfil: ' + error.message);
+      toast.error('Failed to save profile: ' + error.message);
     } else {
-      toast.success('Perfil atualizado!');
+      toast.success('Profile updated!');
       await refreshProfile();
       setOpen(false);
     }
@@ -62,22 +62,22 @@ export default function EditProfileDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           <Pencil className="h-3.5 w-3.5" />
-          Editar perfil
+          Edit profile
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar perfil</DialogTitle>
+          <DialogTitle>Edit profile</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div>
-            <label className="text-sm font-medium text-foreground">Nome de exibição</label>
+            <label className="text-sm font-medium text-foreground">Display name</label>
             <Input
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               className="mt-1"
               maxLength={50}
-              placeholder="Seu nome"
+              placeholder="Your name"
             />
           </div>
           <div>
@@ -88,31 +88,31 @@ export default function EditProfileDialog() {
               className="mt-1 resize-none"
               maxLength={280}
               rows={3}
-              placeholder="Conte algo sobre você..."
+              placeholder="Tell us about yourself..."
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">URL do avatar</label>
+            <label className="text-sm font-medium text-foreground">Avatar URL</label>
             <Input
               value={avatarUrl}
               onChange={e => setAvatarUrl(e.target.value)}
               className="mt-1"
-              placeholder="https://exemplo.com/foto.jpg"
+              placeholder="https://example.com/photo.jpg"
               type="url"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Especialidades</label>
+            <label className="text-sm font-medium text-foreground">Specialties</label>
             <Input
               value={specialties}
               onChange={e => setSpecialties(e.target.value)}
               className="mt-1"
-              placeholder="Política, Economia, Futebol"
+              placeholder="Politics, Economy, Football"
             />
-            <p className="text-xs text-muted-foreground mt-1">Separe com vírgulas</p>
+            <p className="text-xs text-muted-foreground mt-1">Separate with commas</p>
           </div>
           <Button className="w-full gradient-primary border-0" onClick={handleSave} disabled={saving}>
-            {saving ? 'Salvando...' : 'Salvar alterações'}
+            {saving ? 'Saving...' : 'Save changes'}
           </Button>
         </div>
       </DialogContent>

@@ -8,8 +8,8 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().trim().min(1, 'Email é obrigatório').email('Email inválido'),
-  password: z.string().min(1, 'Senha é obrigatória'),
+  email: z.string().trim().min(1, 'Email is required').email('Invalid email'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 type FieldErrors = Partial<Record<'email' | 'password', string>>;
@@ -45,10 +45,10 @@ export default function LoginPage() {
     setLoading(false);
     if (error) {
       toast.error(error.message === 'Invalid login credentials'
-        ? 'Email ou senha incorretos'
+        ? 'Incorrect email or password'
         : error.message);
     } else {
-      toast.success('Bem-vindo de volta!');
+      toast.success('Welcome back!');
       navigate('/dashboard');
     }
   };
@@ -57,7 +57,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      toast.error(err.message || 'Falha ao entrar com Google');
+      toast.error(err.message || 'Failed to sign in with Google');
     }
   };
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <h1 className="font-display text-3xl font-bold gradient-primary-text">FUTRA</h1>
-            <p className="text-muted-foreground mt-2">Bem-vindo de volta</p>
+            <p className="text-muted-foreground mt-2">Welcome back</p>
           </div>
 
           <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-6 space-y-4">
@@ -75,7 +75,7 @@ export default function LoginPage() {
               <label className="text-sm font-medium text-foreground">Email</label>
               <Input
                 type="email"
-                placeholder="seu@email.com"
+                placeholder="you@email.com"
                 value={email}
                 onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(p => ({ ...p, email: undefined })); }}
                 className={`mt-1 bg-surface-800 ${errors.email ? 'border-destructive' : ''}`}
@@ -83,7 +83,7 @@ export default function LoginPage() {
               {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Senha</label>
+              <label className="text-sm font-medium text-foreground">Password</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -94,24 +94,24 @@ export default function LoginPage() {
               {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
             </div>
             <Button type="submit" className="w-full gradient-primary border-0" disabled={loading}>
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? 'Signing in...' : 'Sign in'}
             </Button>
 
             <p className="text-xs text-center">
-              <Link to="/forgot-password" className="text-primary hover:underline">Esqueceu a senha?</Link>
+              <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
             </p>
             
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-              <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
+              <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">or</span></div>
             </div>
 
             <Button type="button" variant="outline" className="w-full" onClick={handleGoogle}>
-              Entrar com Google
+              Sign in with Google
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              Não tem conta? <Link to="/signup" className="text-primary hover:underline">Cadastre-se</Link>
+              Don't have an account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
             </p>
           </form>
         </div>
