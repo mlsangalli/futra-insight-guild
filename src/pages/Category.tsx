@@ -7,6 +7,7 @@ import { FolderOpen } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { SEO } from '@/components/SEO';
 
 function dbToCard(m: any) {
   return {
