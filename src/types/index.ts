@@ -93,7 +93,34 @@ export interface AdminLog {
 
 // ── Legacy-compatible re-exports ────────────────────────────────
 
-/** Market card props shape (camelCase for UI components) */
+/** Legacy User shape for UI components (camelCase) */
+export interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar: string;
+  bio: string;
+  futraCredits: number;
+  futraScore: number;
+  influenceLevel: InfluenceLevel;
+  totalPredictions: number;
+  resolvedPredictions: number;
+  accuracyRate: number;
+  globalRank: number;
+  badges: UserBadge[];
+  specialties: MarketCategory[];
+  streak: number;
+  joinedAt: string;
+}
+
+export interface UserBadge {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+}
+
+
 export interface MarketCardData {
   id: string;
   question: string;
