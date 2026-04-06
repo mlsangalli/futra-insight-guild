@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { isOnCooldown } from '@/lib/rate-limiter';
 
 export interface Comment {
   id: string;
@@ -50,6 +51,9 @@ export function useCreateComment() {
 
   return useMutation({
     mutationFn: async ({ marketId, body, parentId }: { marketId: string; body: string; parentId?: string }) => {
+      if (isOnCooldown('post-comment', 2000)) {
+        throw new Error('Aguarde antes de enviar outro comentário.');
+      }
       if (!user) throw new Error('Not authenticated');
       const { data, error } = await supabase
         .from('comments')
@@ -62,6 +66,6 @@ export function useCreateComment() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['comments', variables.marketId] });
     },
-    onError: () => toast.error('Falha ao publicar comentário'),
+    onError: (err: Error) => toast.error(err.message || 'Falha ao publicar comentário'),
   });
 }

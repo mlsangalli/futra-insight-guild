@@ -1,5 +1,5 @@
 /**
- * Client-side rate limiter using localStorage
+ * Client-side rate limiter using localStorage + in-memory cooldowns
  */
 interface RateLimitRecord {
   timestamps: number[];
@@ -53,3 +53,14 @@ export const RATE_LIMITS = {
   daily_bonus: { max: 1, windowMs: 24 * 60 * 60 * 1000 },
   search: { max: 60, windowMs: 60 * 1000 },
 } as const;
+
+// ── In-memory cooldown for mutations ────────────────────────────
+const cooldowns = new Map<string, number>();
+
+/** Returns true if the action is still on cooldown (should be blocked) */
+export function isOnCooldown(key: string, cooldownMs: number = 2000): boolean {
+  const last = cooldowns.get(key) ?? 0;
+  if (Date.now() - last < cooldownMs) return true;
+  cooldowns.set(key, Date.now());
+  return false;
+}

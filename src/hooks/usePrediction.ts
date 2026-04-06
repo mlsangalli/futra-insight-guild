@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { isOnCooldown } from '@/lib/rate-limiter';
 
 interface CreatePredictionPayload {
   marketId: string;
@@ -18,6 +19,9 @@ export function useCreatePrediction() {
 
   return useMutation({
     mutationFn: async (payload: CreatePredictionPayload) => {
+      if (isOnCooldown('place-prediction', 3000)) {
+        throw new Error('Aguarde alguns segundos antes de fazer outra previsão.');
+      }
       const { data, error } = await supabase.rpc('place_prediction', {
         p_market_id: payload.marketId,
         p_selected_option: payload.selectedOption,

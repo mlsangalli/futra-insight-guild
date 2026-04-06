@@ -24,18 +24,18 @@ export default function HealthCheckPage() {
     const dbStart = performance.now();
     try {
       const { error } = await supabase.from('categories').select('id').limit(1);
-      checks.push({ name: 'Database', status: error ? 'fail' : 'ok', latency: Math.round(performance.now() - dbStart), error: error?.message });
+      checks.push({ name: 'Banco de dados', status: error ? 'fail' : 'ok', latency: Math.round(performance.now() - dbStart), error: error?.message });
     } catch (e: any) {
-      checks.push({ name: 'Database', status: 'fail', latency: Math.round(performance.now() - dbStart), error: e.message });
+      checks.push({ name: 'Banco de dados', status: 'fail', latency: Math.round(performance.now() - dbStart), error: e.message });
     }
 
     // Auth
     const authStart = performance.now();
     try {
-      const { data } = await supabase.auth.getSession();
-      checks.push({ name: 'Auth', status: data.session ? 'ok' : 'ok', latency: Math.round(performance.now() - authStart) });
+      await supabase.auth.getSession();
+      checks.push({ name: 'Autenticação', status: 'ok', latency: Math.round(performance.now() - authStart) });
     } catch (e: any) {
-      checks.push({ name: 'Auth', status: 'fail', latency: Math.round(performance.now() - authStart), error: e.message });
+      checks.push({ name: 'Autenticação', status: 'fail', latency: Math.round(performance.now() - authStart), error: e.message });
     }
 
     // Realtime
@@ -59,11 +59,19 @@ export default function HealthCheckPage() {
     // Edge Functions
     const efStart = performance.now();
     try {
-      const { error } = await supabase.functions.invoke('og-image', { body: {} });
-      // og-image may return error without id param, but connection working = ok
+      await supabase.functions.invoke('og-image', { body: {} });
       checks.push({ name: 'Edge Functions', status: 'ok', latency: Math.round(performance.now() - efStart) });
     } catch (e: any) {
       checks.push({ name: 'Edge Functions', status: 'fail', latency: Math.round(performance.now() - efStart), error: e.message });
+    }
+
+    // Storage
+    const stStart = performance.now();
+    try {
+      const { error } = await supabase.storage.listBuckets();
+      checks.push({ name: 'Storage', status: error ? 'fail' : 'ok', latency: Math.round(performance.now() - stStart), error: error?.message });
+    } catch (e: any) {
+      checks.push({ name: 'Storage', status: 'fail', latency: Math.round(performance.now() - stStart), error: e.message });
     }
 
     setResults(checks);
@@ -75,11 +83,11 @@ export default function HealthCheckPage() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-lg">
-        <h1 className="font-display text-2xl font-bold text-foreground mb-2">Health Check</h1>
-        <p className="text-sm text-muted-foreground mb-6">System connectivity diagnostics.</p>
+        <h1 className="font-display text-2xl font-bold text-foreground mb-2">Status do Sistema</h1>
+        <p className="text-sm text-muted-foreground mb-6">Diagnóstico de conectividade com os serviços.</p>
 
         <Button onClick={runChecks} disabled={running} className="mb-6 gradient-primary border-0">
-          {running ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Running...</> : <><RefreshCw className="h-4 w-4 mr-2" /> Run checks</>}
+          {running ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Verificando...</> : <><RefreshCw className="h-4 w-4 mr-2" /> Executar verificações</>}
         </Button>
 
         {results.length > 0 && (
@@ -95,7 +103,7 @@ export default function HealthCheckPage() {
               </div>
             ))}
             <div className={cn('text-center p-4 rounded-xl border', allOk ? 'border-emerald-500/30 text-emerald-400' : 'border-destructive/30 text-destructive')}>
-              <p className="font-display font-bold">{allOk ? '✅ All systems operational' : '⚠️ Some checks failed'}</p>
+              <p className="font-display font-bold">{allOk ? '✅ Todos os serviços operacionais' : '⚠️ Alguns serviços com falha'}</p>
             </div>
           </div>
         )}

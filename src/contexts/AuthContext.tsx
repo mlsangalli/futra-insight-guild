@@ -19,8 +19,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
+/** Fetch profile with exponential backoff retry */
+async function fetchProfileWithRetry(userId: string, attempts = 3): Promise<Profile | null> {
+  for (let i = 0; i < attempts; i++) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    if (data) return data as unknown as Profile;
+    logger.error('Failed to fetch profile', { userId, error: error?.message, retry: i });
+    if (i < attempts - 1) {
+      await new Promise(r => setTimeout(r, Math.pow(2, i) * 500));
+    }
+  }
+  return null;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -29,29 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
 
-  const fetchProfile = useCallback(async (userId: string, retries = 0) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) throw error;
-      if (mountedRef.current && data) {
-        setProfile(data as unknown as Profile);
-      }
-    } catch (err: any) {
-      logger.error('Failed to fetch profile', { userId, error: err.message, retry: retries });
-      if (retries < MAX_RETRIES) {
-        await new Promise(r => setTimeout(r, RETRY_DELAY * (retries + 1)));
-        if (mountedRef.current) {
-          return fetchProfile(userId, retries + 1);
-        }
+  const loadProfile = useCallback(async (userId: string) => {
+    const result = await fetchProfileWithRetry(userId);
+    if (mountedRef.current) {
+      if (result) {
+        setProfile(result);
       } else {
-        if (mountedRef.current) {
-          toast.error('Não foi possível carregar seu perfil. Atualize a página.');
-        }
+        toast.error('Não foi possível carregar seu perfil. Atualize a página.');
       }
     }
   }, []);
@@ -64,9 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Defer to avoid Supabase deadlock
         setTimeout(() => {
-          if (mountedRef.current) fetchProfile(session.user.id);
+          if (mountedRef.current) loadProfile(session.user.id);
         }, 0);
       } else {
         setProfile(null);
@@ -79,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        loadProfile(session.user.id);
       }
       setLoading(false);
     });
@@ -88,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [loadProfile]);
 
   const signUp = async (email: string, password: string, username: string, displayName: string) => {
     const { error } = await supabase.auth.signUp({
@@ -120,8 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshProfile = useCallback(async () => {
-    if (user) await fetchProfile(user.id);
-  }, [user, fetchProfile]);
+    if (user) await loadProfile(user.id);
+  }, [user, loadProfile]);
 
   return (
     <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signInWithGoogle, signOut, refreshProfile }}>
@@ -135,3 +132,12 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
+
+/** Hook que garante que o usuário está autenticado. Usar dentro de ProtectedRoute. */
+export function useRequiredAuth() {
+  const ctx = useAuth();
+  if (!ctx.user || !ctx.profile) {
+    throw new Error('useRequiredAuth deve ser usado dentro de ProtectedRoute');
+  }
+  return { user: ctx.user, profile: ctx.profile, session: ctx.session! };
+}
