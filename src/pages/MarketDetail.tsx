@@ -89,7 +89,8 @@ export default function MarketDetailPage() {
   const topOption = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
   const selectedOpt = market.options.find(o => o.id === selectedOption);
   const maxCredits = Math.min(1000, profile?.futra_credits || 1000);
-  const potentialReward = selectedOpt ? Math.round(credits * (100 / selectedOpt.percentage) * 0.85) : 0;
+  const potentialReward = selectedOpt ? Math.round(credits * (100 / (selectedOpt.percentage || 1)) * 0.85) : 0;
+  const submitting = createPrediction.isPending;
 
   const shareUrl = `${window.location.origin}/market/${market.id}`;
   const shareText = topOption
