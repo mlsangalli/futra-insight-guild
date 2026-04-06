@@ -12,10 +12,8 @@ import { Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion,
 import { useMarket } from '@/hooks/useMarkets';
 import { useRealtimeMarket } from '@/hooks/useRealtimeMarket';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useCreatePrediction } from '@/hooks/usePrediction';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
@@ -50,9 +48,8 @@ export default function MarketDetailPage() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [credits, setCredits] = useState(100);
   const [confirmed, setConfirmed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const { user, profile, refreshProfile } = useAuth();
-  const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
+  const createPrediction = useCreatePrediction();
 
   if (isLoading) {
     return <Layout><div className="container mx-auto px-4 py-8 max-w-4xl"><MarketDetailSkeleton /></div></Layout>;
@@ -89,7 +86,8 @@ export default function MarketDetailPage() {
   const topOption = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
   const selectedOpt = market.options.find(o => o.id === selectedOption);
   const maxCredits = Math.min(1000, profile?.futra_credits || 1000);
-  const potentialReward = selectedOpt ? Math.round(credits * (100 / selectedOpt.percentage) * 0.85) : 0;
+  const potentialReward = selectedOpt ? Math.round(credits * (100 / (selectedOpt.percentage || 1)) * 0.85) : 0;
+  const submitting = createPrediction.isPending;
 
   const shareUrl = `${window.location.origin}/market/${market.id}`;
   const shareText = topOption
@@ -98,21 +96,10 @@ export default function MarketDetailPage() {
 
   const handleConfirm = async () => {
     if (!user || !selectedOption) return;
-    setSubmitting(true);
-    const { error } = await supabase.rpc('place_prediction', {
-      p_market_id: market.id,
-      p_selected_option: selectedOption,
-      p_credits: credits,
-    });
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setConfirmed(true);
-      toast.success('Prediction confirmed!');
-      queryClient.invalidateQueries({ queryKey: ['market', id] });
-      refreshProfile();
-    }
+    createPrediction.mutate(
+      { marketId: market.id, selectedOption, credits },
+      { onSuccess: () => setConfirmed(true) }
+    );
   };
 
   return (

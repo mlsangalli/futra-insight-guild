@@ -377,6 +377,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_user_scores: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -393,6 +397,10 @@ export type Database = {
         Returns: string
       }
       recalculate_global_ranks: { Args: never; Returns: undefined }
+      resolve_market_and_score: {
+        Args: { p_market_id: string; p_winning_option: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

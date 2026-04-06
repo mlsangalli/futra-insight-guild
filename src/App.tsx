@@ -1,5 +1,5 @@
 import React, { Suspense } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,6 +10,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PageLoader } from "@/components/PageLoader";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const Index = React.lazy(() => import("./pages/Index"));
 const Browse = React.lazy(() => import("./pages/Browse"));
@@ -39,6 +41,21 @@ const AdminLogs = React.lazy(() => import("./pages/admin/AdminLogs"));
 const Forbidden = React.lazy(() => import("./pages/admin/Forbidden"));
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      const message = (query.meta?.errorMessage as string) || error.message || 'An error occurred';
+      logger.error('Query error', { queryKey: JSON.stringify(query.queryKey), error: error.message });
+      if (query.state.data !== undefined) {
+        // Only show toast for background refetch failures, not initial loads
+        toast.error(message);
+      }
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      logger.error('Mutation error', { error: error.message });
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

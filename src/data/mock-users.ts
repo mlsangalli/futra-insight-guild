@@ -1,4 +1,4 @@
-import { User, Activity, Notification } from './types';
+import { User, Activity, Notification } from '@/types';
 
 export const mockUsers: User[] = [
   {

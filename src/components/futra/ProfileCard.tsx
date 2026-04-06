@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { User } from '@/data/types';
+import { User } from '@/types';
 import { InfluenceBadge } from './InfluenceBadge';
 
 interface ProfileCardProps {

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { CATEGORIES } from '@/data/types';
+import { CATEGORIES } from '@/types';
 
 const TOTAL_STEPS = 3;
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, Bell, LogOut, User, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CATEGORIES } from '@/data/types';
+import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';

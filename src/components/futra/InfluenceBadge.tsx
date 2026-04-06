@@ -1,4 +1,4 @@
-import { InfluenceLevel, INFLUENCE_LABELS } from '@/data/types';
+import { InfluenceLevel, INFLUENCE_LABELS } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface InfluenceBadgeProps {

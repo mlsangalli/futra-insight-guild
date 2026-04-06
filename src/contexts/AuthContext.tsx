@@ -1,25 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-
-interface Profile {
-  id: string;
-  user_id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string;
-  bio: string;
-  futra_credits: number;
-  futra_score: number;
-  influence_level: 'low' | 'medium' | 'high' | 'elite';
-  total_predictions: number;
-  resolved_predictions: number;
-  accuracy_rate: number;
-  global_rank: number;
-  specialties: string[];
-  streak: number;
-  onboarding_completed: boolean;
-}
+import { logger } from '@/lib/logger';
+import { toast } from 'sonner';
+import type { Profile } from '@/types';
 
 interface AuthContextType {
   user: User | null;
@@ -35,27 +19,55 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    if (data) setProfile(data as Profile);
-  };
+  const fetchProfile = useCallback(async (userId: string, retries = 0) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+      if (mountedRef.current && data) {
+        setProfile(data as unknown as Profile);
+      }
+    } catch (err: any) {
+      logger.error('Failed to fetch profile', { userId, error: err.message, retry: retries });
+      if (retries < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, RETRY_DELAY * (retries + 1)));
+        if (mountedRef.current) {
+          return fetchProfile(userId, retries + 1);
+        }
+      } else {
+        if (mountedRef.current) {
+          toast.error('Could not load your profile. Please refresh.');
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mountedRef.current) return;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        setTimeout(() => fetchProfile(session.user.id), 0);
+        // Defer to avoid Supabase deadlock
+        setTimeout(() => {
+          if (mountedRef.current) fetchProfile(session.user.id);
+        }, 0);
       } else {
         setProfile(null);
       }
@@ -63,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mountedRef.current) return;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -71,8 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mountedRef.current = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
   const signUp = async (email: string, password: string, username: string, displayName: string) => {
     const { error } = await supabase.auth.signUp({
@@ -103,9 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user) await fetchProfile(user.id);
-  };
+  }, [user, fetchProfile]);
 
   return (
     <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signInWithGoogle, signOut, refreshProfile }}>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useLeaderboard } from '@/hooks/useMarkets';
 import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
-import { CATEGORIES } from '@/data/types';
+import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Trophy } from 'lucide-react';

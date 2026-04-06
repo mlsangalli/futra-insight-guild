@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
 import { useMarkets } from '@/hooks/useMarkets';
-import { CATEGORIES, MarketCategory } from '@/data/types';
+import { CATEGORIES, MarketCategory } from '@/types';
 import { cn } from '@/lib/utils';
 import { Search, X, ChevronDown } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';

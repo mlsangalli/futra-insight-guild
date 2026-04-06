@@ -5,7 +5,7 @@ import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { StatCard } from '@/components/futra/StatCard';
 import { useProfile } from '@/hooks/useMarkets';
 import { Target, Coins, Trophy, Zap, UserX } from 'lucide-react';
-import { MarketCategory } from '@/data/types';
+import { MarketCategory } from '@/types';
 import { ProfileSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
 
