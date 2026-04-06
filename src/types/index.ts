@@ -91,6 +91,28 @@ export interface AdminLog {
   created_at: string;
 }
 
+export interface Activity {
+  id: string;
+  userId: string;
+  username: string;
+  avatar: string;
+  action: string;
+  marketId: string;
+  marketQuestion: string;
+  optionLabel: string;
+  credits: number;
+  timestamp: string;
+}
+
+export interface Notification {
+  id: string;
+  type: 'result' | 'credits' | 'ranking' | 'badge' | 'market';
+  title: string;
+  message: string;
+  read: boolean;
+  timestamp: string;
+}
+
 // ── Legacy-compatible re-exports ────────────────────────────────
 
 /** Legacy User shape for UI components (camelCase) */
