@@ -250,7 +250,7 @@ export default function MarketDetailPage() {
       </div>
 
       {/* Mobile floating action bar */}
-      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 p-4 bg-background/95 backdrop-blur-md border-t border-border/50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 p-4 glass-header" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {canBet ? (
           <div className="space-y-3">
             {selectedOption ? (
