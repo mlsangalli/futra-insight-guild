@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { isOnCooldown } from '@/lib/rate-limiter';
 
 export function useDailyBonusEligibility() {
   const { profile } = useAuth();
@@ -21,6 +22,9 @@ export function useClaimDailyBonus() {
 
   return useMutation({
     mutationFn: async () => {
+      if (isOnCooldown('claim-daily-bonus', 5000)) {
+        throw new Error('Bônus já resgatado. Aguarde.');
+      }
       const { data, error } = await supabase.functions.invoke('claim-daily-bonus', {
         method: 'POST',
       });

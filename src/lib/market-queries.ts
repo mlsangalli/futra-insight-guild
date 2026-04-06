@@ -2,21 +2,84 @@
  * Extracted query functions for markets — reusable in hooks and prefetch.
  */
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import type { Market, MarketOption } from '@/types';
 
-function parseMarketRow(row: any): Market {
-  const rawOptions = row.market_options || row.options || [];
-  const options: MarketOption[] = rawOptions.map((o: any) => ({
-    id: o.id,
-    label: o.label,
-    votes: o.total_votes ?? o.votes ?? 0,
-    creditsAllocated: o.total_credits ?? o.creditsAllocated ?? 0,
-    percentage: Number(o.percentage) || 0,
+type MarketRow = Tables<'markets'> & {
+  market_options: Tables<'market_options'>[];
+};
+
+function parseMarketRow(row: MarketRow): Market {
+  const options: MarketOption[] = (row.market_options || []).map((opt) => ({
+    id: opt.id,
+    label: opt.label,
+    votes: opt.total_votes ?? 0,
+    creditsAllocated: opt.total_credits ?? 0,
+    percentage: Number(opt.percentage ?? 0),
   }));
-  return { ...row, options };
+  return {
+    id: row.id,
+    question: row.question,
+    description: row.description,
+    category: row.category,
+    type: row.type,
+    status: row.status,
+    options,
+    total_participants: row.total_participants,
+    total_credits: row.total_credits,
+    end_date: row.end_date,
+    created_at: row.created_at,
+    resolution_source: row.resolution_source,
+    resolution_rules: row.resolution_rules,
+    featured: row.featured,
+    trending: row.trending,
+    created_by: row.created_by,
+    lock_date: row.lock_date,
+    resolved_option: row.resolved_option,
+  };
 }
 
-export async function fetchMarkets(filters?: {
+/** Fetch markets with optional cursor pagination */
+export async function fetchMarkets(
+  filters: {
+    category?: string;
+    featured?: boolean;
+    trending?: boolean;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  } = {}
+): Promise<{ data: Market[]; nextCursor: string | null }> {
+  const pageSize = filters.limit ?? 20;
+
+  let query = supabase
+    .from('markets')
+    .select('*, market_options(*)')
+    .order('created_at', { ascending: false })
+    .limit(pageSize + 1);
+
+  if (filters.category) query = query.eq('category', filters.category as any);
+  if (filters.featured) query = query.eq('featured', true);
+  if (filters.trending) query = query.eq('trending', true);
+  if (filters.status) query = query.eq('status', filters.status as any);
+  if (filters.cursor) query = query.lt('created_at', filters.cursor);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as MarketRow[];
+  const hasMore = rows.length > pageSize;
+  const items = hasMore ? rows.slice(0, pageSize) : rows;
+  const nextCursor = hasMore ? items[items.length - 1]?.created_at : null;
+
+  return {
+    data: items.map(parseMarketRow),
+    nextCursor,
+  };
+}
+
+/** Fetch all markets (non-paginated, for Home sections) */
+export async function fetchAllMarkets(filters?: {
   category?: string;
   featured?: boolean;
   trending?: boolean;
@@ -29,7 +92,7 @@ export async function fetchMarkets(filters?: {
   if (filters?.status) query = query.eq('status', filters.status as any);
   const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
-  return (data || []).map(parseMarketRow);
+  return ((data ?? []) as unknown as MarketRow[]).map(parseMarketRow);
 }
 
 export async function fetchMarketById(id: string): Promise<Market> {
@@ -39,7 +102,7 @@ export async function fetchMarketById(id: string): Promise<Market> {
     .eq('id', id)
     .single();
   if (error) throw error;
-  return parseMarketRow(data);
+  return parseMarketRow(data as unknown as MarketRow);
 }
 
 export async function fetchLeaderboard() {

@@ -12,6 +12,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { parseSupabaseError } from "@/lib/api-error";
 
 const Index = React.lazy(() => import("./pages/Index"));
 const Browse = React.lazy(() => import("./pages/Browse"));
@@ -44,17 +45,18 @@ const HealthCheck = React.lazy(() => import("./pages/HealthCheck"));
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
-      const message = (query.meta?.errorMessage as string) || error.message || 'An error occurred';
-      logger.error('Query error', { queryKey: JSON.stringify(query.queryKey), error: error.message });
+      const message = (query.meta?.errorMessage as string) || parseSupabaseError(error);
+      logger.error('Query error', { queryKey: JSON.stringify(query.queryKey), error: message });
       if (query.state.data !== undefined) {
-        // Only show toast for background refetch failures, not initial loads
         toast.error(message);
       }
     },
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
-      logger.error('Mutation error', { error: error.message });
+      const message = parseSupabaseError(error);
+      logger.error('Mutation error', { error: message });
+      toast.error(message);
     },
   }),
   defaultOptions: {
@@ -71,54 +73,66 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <HelmetProvider>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Suspense fallback={<PageLoader />}>
-                <ErrorBoundary>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/browse" element={<Browse />} />
-                    <Route path="/category/:category" element={<Category />} />
-                    <Route path="/market/:id" element={<MarketDetail />} />
-                    <Route path="/leaderboard" element={<Leaderboard />} />
-                    <Route path="/profile/:username" element={<Profile />} />
-                    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/verify-email" element={<VerifyEmail />} />
-                    <Route path="/how-it-works" element={<HowItWorks />} />
-                    <Route path="/create-market" element={<ProtectedRoute><CreateMarket /></ProtectedRoute>} />
-                    <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
-                    <Route path="/search" element={<SearchResults />} />
-                    <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                    <Route path="/forbidden" element={<Forbidden />} />
-                    <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-                    <Route path="/admin/markets" element={<AdminRoute><AdminMarkets /></AdminRoute>} />
-                    <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
-                    <Route path="/admin/content" element={<AdminRoute><AdminContent /></AdminRoute>} />
-                    <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-                    <Route path="/admin/logs" element={<AdminRoute><AdminLogs /></AdminRoute>} />
-                    <Route path="/health" element={<AdminRoute><HealthCheck /></AdminRoute>} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </ErrorBoundary>
-              </Suspense>
-            </BrowserRouter>
-          </TooltipProvider>
-        </AuthProvider>
-      </HelmetProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
-);
+const App = () => {
+  // Prefetch das rotas mais acessadas após 2 segundos
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      import('./pages/Browse');
+      import('./pages/MarketDetail');
+      import('./pages/Leaderboard');
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <HelmetProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Suspense fallback={<PageLoader />}>
+                  <ErrorBoundary>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/browse" element={<Browse />} />
+                      <Route path="/category/:category" element={<Category />} />
+                      <Route path="/market/:id" element={<MarketDetail />} />
+                      <Route path="/leaderboard" element={<Leaderboard />} />
+                      <Route path="/profile/:username" element={<Profile />} />
+                      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/signup" element={<Signup />} />
+                      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                      <Route path="/forgot-password" element={<ForgotPassword />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/verify-email" element={<VerifyEmail />} />
+                      <Route path="/how-it-works" element={<HowItWorks />} />
+                      <Route path="/create-market" element={<ProtectedRoute><CreateMarket /></ProtectedRoute>} />
+                      <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
+                      <Route path="/search" element={<SearchResults />} />
+                      <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                      <Route path="/forbidden" element={<Forbidden />} />
+                      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                      <Route path="/admin/markets" element={<AdminRoute><AdminMarkets /></AdminRoute>} />
+                      <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+                      <Route path="/admin/content" element={<AdminRoute><AdminContent /></AdminRoute>} />
+                      <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                      <Route path="/admin/logs" element={<AdminRoute><AdminLogs /></AdminRoute>} />
+                      <Route path="/health" element={<AdminRoute><HealthCheck /></AdminRoute>} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </ErrorBoundary>
+                </Suspense>
+              </BrowserRouter>
+            </TooltipProvider>
+          </AuthProvider>
+        </HelmetProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface Props {
   children: React.ReactNode;
@@ -23,8 +24,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
+    logger.error('ErrorBoundary caught', {
+      error: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
   }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: undefined });
+  };
 
   render() {
     if (this.state.hasError) {
@@ -35,15 +44,28 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <h2 className="font-display text-xl font-bold text-foreground mb-2">
               Algo deu errado
             </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Ocorreu um erro inesperado. Atualize a página para continuar.
+            <p className="text-sm text-muted-foreground mb-2">
+              Ocorreu um erro inesperado. Nosso time foi notificado.
             </p>
-            <Button
-              onClick={() => window.location.reload()}
-              className="gradient-primary border-0"
-            >
-              Atualizar página
-            </Button>
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <p className="text-xs text-destructive/70 font-mono mb-4 break-all">
+                {this.state.error.message}
+              </p>
+            )}
+            <div className="flex gap-3 justify-center">
+              <Button
+                variant="outline"
+                onClick={this.handleReset}
+              >
+                Tentar novamente
+              </Button>
+              <Button
+                onClick={() => window.location.href = '/'}
+                className="gradient-primary border-0"
+              >
+                Voltar ao início
+              </Button>
+            </div>
           </div>
         </div>
       );

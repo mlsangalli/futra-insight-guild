@@ -118,7 +118,10 @@ export interface Notification {
 
 // ── Legacy-compatible re-exports ────────────────────────────────
 
-/** Legacy User shape for UI components (camelCase) */
+/**
+ * @deprecated Use `Profile` em vez deste tipo. Será removido em versão futura.
+ * Mantido apenas para compatibilidade com componentes legados.
+ */
 export interface User {
   id: string;
   username: string;
@@ -145,7 +148,10 @@ export interface UserBadge {
   description: string;
 }
 
-
+/**
+ * @deprecated Use `Market` em vez deste tipo. Será removido em versão futura.
+ * Mantido apenas para compatibilidade com componentes legados.
+ */
 export interface MarketCardData {
   id: string;
   question: string;
@@ -163,6 +169,28 @@ export interface MarketCardData {
   featured?: boolean;
   trending?: boolean;
   imageUrl?: string;
+}
+
+/** Converte Profile (snake_case do DB) para User (camelCase legado) */
+export function profileToUser(p: Profile): User {
+  return {
+    id: p.id,
+    username: p.username,
+    displayName: p.display_name,
+    avatar: p.avatar_url ?? '',
+    bio: p.bio ?? '',
+    futraCredits: p.futra_credits,
+    futraScore: p.futra_score,
+    influenceLevel: p.influence_level,
+    totalPredictions: p.total_predictions,
+    resolvedPredictions: p.resolved_predictions,
+    accuracyRate: p.accuracy_rate,
+    globalRank: p.global_rank,
+    badges: [],
+    specialties: p.specialties ? (p.specialties as unknown as MarketCategory[]) : [],
+    streak: p.streak,
+    joinedAt: p.created_at,
+  };
 }
 
 // ── Constants ───────────────────────────────────────────────────
