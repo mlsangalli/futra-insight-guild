@@ -21,6 +21,7 @@ const TABS = ['Open', 'Resolved', 'Saved'];
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const { data: predictions, isLoading: loadingPredictions } = useUserPredictions(user?.id);
+  const { data: transactions } = useCreditTransactions();
   const [tab, setTab] = useState('Open');
 
   if (loading) {
