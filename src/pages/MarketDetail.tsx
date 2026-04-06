@@ -222,7 +222,7 @@ export default function MarketDetailPage() {
 
           {/* Voting panel - desktop */}
           <div className="lg:col-span-1 hidden lg:block">
-            <div className="sticky top-20 rounded-xl border border-border bg-card p-6 space-y-5">
+            <div className="sticky top-20 rounded-2xl border border-border bg-card p-6 space-y-5">
               <VotingPanelContent
                 market={market}
                 isResolved={isResolved}
