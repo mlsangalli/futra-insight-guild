@@ -223,9 +223,9 @@ export default function AdminMarkets() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : markets.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum mercado encontrado</TableCell></TableRow>
+                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+               ) : markets.length === 0 ? (
+                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum mercado encontrado</TableCell></TableRow>
               ) : (
                 markets.map((m: any) => (
                   <TableRow key={m.id}>
