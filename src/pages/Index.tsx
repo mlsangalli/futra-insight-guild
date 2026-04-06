@@ -72,76 +72,93 @@ export default function HomePage() {
         </div>
       )}
       {/* Hero */}
-      <section className="relative overflow-hidden particle-bg">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />
-        <div className="container mx-auto px-4 py-12 md:py-24 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div className="max-w-xl">
-              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
-                Preveja o futuro.<br /><span className="gradient-primary-text">Construa sua reputação.</span>
-              </h1>
-              <p className="mt-5 text-lg text-secondary-foreground leading-relaxed">A plataforma social de previsões onde suas apostas constroem status, reputação e influência. Sem dinheiro real — apenas convicção.</p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild><Link to="/browse">Explorar mercados <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-                <Button size="lg" variant="outline" className="text-base px-8" asChild><Link to="/leaderboard">Ver ranking</Link></Button>
+      {heroCard && heroLeader ? (
+        <section className="relative overflow-hidden particle-bg">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />
+          <div className="container mx-auto px-4 py-12 md:py-24 relative z-10">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              <div className="max-w-xl">
+                <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
+                  Preveja o futuro.<br /><span className="gradient-primary-text">Construa sua reputação.</span>
+                </h1>
+                <p className="mt-5 text-lg text-secondary-foreground leading-relaxed">A plataforma social de previsões onde suas apostas constroem status, reputação e influência. Sem dinheiro real — apenas convicção.</p>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild><Link to="/browse">Explorar mercados <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+                  <Button size="lg" variant="outline" className="text-base px-8" asChild><Link to="/leaderboard">Ver ranking</Link></Button>
+                </div>
+                {!isLoading && markets.length > 0 && (
+                  <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>{markets.length} mercados ativos</span>
+                    <span>•</span>
+                    <span>{totalParticipants.toLocaleString()} previsões feitas</span>
+                  </div>
+                )}
               </div>
 
-              {/* Social proof */}
-              {!isLoading && markets.length > 0 && (
-                <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span>{markets.length} mercados ativos</span>
-                  <span>•</span>
-                  <span>{totalParticipants.toLocaleString()} previsões feitas</span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-8 lg:mt-0">
-              {isLoading ? (
-                <HeroMarketSkeleton />
-              ) : heroCard && heroLeader ? (
-                <Link to={`/market/${heroCard.id}`} className="block glass-card gradient-border rounded-2xl p-6 sm:p-8 animate-fade-in hover:scale-[1.01] transition-transform cursor-pointer">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest">Mercado em destaque</p>
-                      {heroMarket.status === 'open' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold uppercase tracking-wider">
-                          🔴 Ao vivo
-                        </span>
-                      )}
+              <div className="mt-8 lg:mt-0">
+                {isLoading ? (
+                  <HeroMarketSkeleton />
+                ) : (
+                  <Link to={`/market/${heroCard.id}`} className="block glass-card gradient-border rounded-2xl p-6 sm:p-8 animate-fade-in hover:scale-[1.01] transition-transform cursor-pointer">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-widest">Mercado em destaque</p>
+                        {heroMarket.status === 'open' && (
+                          <span className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+                            <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                            AO VIVO
+                          </span>
+                        )}
+                      </div>
+                      <StatusBadge status={heroMarket.status as 'open' | 'closed' | 'resolved'} />
                     </div>
-                    <StatusBadge status={heroMarket.status as 'open' | 'closed' | 'resolved'} />
-                  </div>
-                  <h3 className="font-display text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6 leading-snug">{heroCard.question}</h3>
-                  
-                  {/* Full VoteBar for all options */}
-                  <div className="mb-4">
-                    <VoteBar options={heroCard.options} type={heroCard.type as any} />
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-4">
-                      <span>{heroCard.totalParticipants.toLocaleString()} participantes</span>
-                      <span>{heroCard.totalCredits.toLocaleString()} FC apostados</span>
+                    <h3 className="font-display text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6 leading-snug">{heroCard.question}</h3>
+                    <div className="mb-4">
+                      <VoteBar options={heroCard.options} type={heroCard.type as any} />
                     </div>
-                    <CountdownTimer endDate={heroCard.endDate} />
-                  </div>
-                </Link>
-              ) : (
-                /* Static hero when no featured market */
-                <div className="glass-card gradient-border rounded-2xl p-8 sm:p-12 text-center">
-                  <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">Torne a incerteza legível.</h2>
-                  <p className="text-muted-foreground mb-6">Junte-se a milhares de previsores construindo reputação baseada em dados.</p>
-                  <Button className="gradient-primary border-0" asChild>
-                    <Link to="/browse">Explorar mercados <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                  </Button>
-                </div>
-              )}
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <div className="flex items-center gap-4">
+                        <span>{heroCard.totalParticipants.toLocaleString()} participantes</span>
+                        <span>{heroCard.totalCredits.toLocaleString()} FC apostados</span>
+                      </div>
+                      <CountdownTimer endDate={heroCard.endDate} />
+                    </div>
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="relative overflow-hidden particle-bg">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />
+          <div className="container mx-auto px-4 py-16 md:py-28 relative z-10 text-center">
+            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight text-foreground mb-6">
+              Torne a incerteza <span className="gradient-primary-text">legível</span>.
+            </h1>
+            <p className="text-lg md:text-xl text-secondary-foreground max-w-2xl mx-auto mb-8">
+              Preveja o futuro, construa reputação e suba no ranking. A plataforma social de previsões que transforma opiniões em dados.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild>
+                <Link to="/browse">Explorar mercados <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
+              <Button size="lg" variant="outline" className="text-base px-8" asChild>
+                <Link to="/signup">Criar conta grátis</Link>
+              </Button>
+            </div>
+            {!isLoading && markets.length > 0 && (
+              <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span>{markets.length} mercados ativos</span>
+                <span>•</span>
+                <span>{totalParticipants.toLocaleString()} previsões feitas</span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {isError ? (
         <div className="container mx-auto px-4 py-12">
