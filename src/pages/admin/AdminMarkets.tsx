@@ -216,6 +216,7 @@ export default function AdminMarkets() {
                 <TableHead>Categoria</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Participantes</TableHead>
+                <TableHead>Travamento</TableHead>
                 <TableHead>Destaque</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
