@@ -51,9 +51,8 @@ export default function MarketDetailPage() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [credits, setCredits] = useState(100);
   const [confirmed, setConfirmed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const { user, profile, refreshProfile } = useAuth();
-  const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
+  const createPrediction = useCreatePrediction();
 
   if (isLoading) {
     return <Layout><div className="container mx-auto px-4 py-8 max-w-4xl"><MarketDetailSkeleton /></div></Layout>;
