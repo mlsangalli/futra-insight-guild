@@ -41,6 +41,7 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
   return (
     <Link
       to={`/market/${market.id}`}
+      onMouseEnter={handleMouseEnter}
       className={cn(
         'group block rounded-xl glass-card p-4 sm:p-5 transition-all duration-200 active:scale-[0.98]',
         'hover:translate-y-[-2px] hover:shadow-lg',
