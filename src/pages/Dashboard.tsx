@@ -11,12 +11,12 @@ import { StatCardSkeleton, PredictionRowSkeleton, EmptyState } from '@/component
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
-const TABS = ['Open', 'Resolved', 'Watchlist'];
+const TABS = ['Abertas', 'Resolvidas', 'Favoritos'];
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const { data: predictions, isLoading: loadingPredictions } = useUserPredictions(user?.id);
-  const [tab, setTab] = useState('Open');
+  const [tab, setTab] = useState('Abertas');
 
   if (loading) {
     return (
@@ -50,8 +50,8 @@ export default function DashboardPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, {profile?.display_name || profile?.username}</p>
+            <h1 className="font-display text-3xl font-bold text-foreground">Painel</h1>
+            <p className="text-muted-foreground mt-1">Bem-vindo de volta, {profile?.display_name || profile?.username}</p>
           </div>
           {profile && <InfluenceBadge level={profile.influence_level} />}
         </div>
@@ -59,8 +59,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatCard label="Futra Credits" value={(profile?.futra_credits || 0).toLocaleString()} icon={Coins} />
           <StatCard label="Futra Score" value={profile?.futra_score || 0} icon={Trophy} />
-          <StatCard label="Accuracy" value={`${profile?.accuracy_rate || 0}%`} icon={Target} />
-          <StatCard label="Global Rank" value={profile?.global_rank ? `#${profile.global_rank}` : '—'} icon={TrendingUp} />
+          <StatCard label="Precisão" value={`${profile?.accuracy_rate || 0}%`} icon={Target} />
+          <StatCard label="Ranking Global" value={profile?.global_rank ? `#${profile.global_rank}` : '—'} icon={TrendingUp} />
         </div>
 
         <div className="flex gap-1 mb-6 border-b border-border">
@@ -71,7 +71,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {tab === 'Open' && (
+        {tab === 'Abertas' && (
           <div className="space-y-3">
             {loadingPredictions ? (
               Array.from({ length: 3 }).map((_, i) => <PredictionRowSkeleton key={i} />)
@@ -84,17 +84,17 @@ export default function DashboardPage() {
               />
             ) : openPredictions.map((p: any) => (
               <Link key={p.id} to={`/market/${p.market_id}`} className="block rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors">
-                <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Market'}</p>
+                <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Mercado'}</p>
                 <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                  <span>Pick: <span className="text-primary">{p.selected_option}</span></span>
-                  <span>Credits: <span className="text-foreground">{p.credits_allocated} FC</span></span>
+                  <span>Escolha: <span className="text-primary">{p.selected_option}</span></span>
+                  <span>Créditos: <span className="text-foreground">{p.credits_allocated} FC</span></span>
                 </div>
               </Link>
             ))}
           </div>
         )}
 
-        {tab === 'Resolved' && (
+        {tab === 'Resolvidas' && (
           <div className="space-y-3">
             {loadingPredictions ? (
               Array.from({ length: 3 }).map((_, i) => <PredictionRowSkeleton key={i} />)
@@ -106,10 +106,10 @@ export default function DashboardPage() {
               />
             ) : resolvedPredictions.map((p: any) => (
               <div key={p.id} className="rounded-xl border border-border bg-card p-4">
-                <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Market'}</p>
+                <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Mercado'}</p>
                 <div className="flex gap-4 mt-2 text-xs">
-                  <span className={p.status === 'won' ? 'text-emerald' : 'text-negative'}>{p.status === 'won' ? 'Won' : 'Lost'}</span>
-                  <span className="text-muted-foreground">{p.credits_allocated} FC risked</span>
+                  <span className={p.status === 'won' ? 'text-emerald' : 'text-negative'}>{p.status === 'won' ? 'Ganhou' : 'Perdeu'}</span>
+                  <span className="text-muted-foreground">{p.credits_allocated} FC apostados</span>
                   {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
                 </div>
               </div>
@@ -117,7 +117,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {tab === 'Watchlist' && (
+        {tab === 'Favoritos' && (
           <EmptyState
             icon={<Bookmark className="h-10 w-10 text-muted-foreground" />}
             title="Nenhum mercado salvo"

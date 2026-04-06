@@ -4,7 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { VoteBar } from '@/components/futra/VoteBar';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { Button } from '@/components/ui/button';
-import { Clock, Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion } from 'lucide-react';
+import { Clock, Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy, XCircle } from 'lucide-react';
 import { useMarket } from '@/hooks/useMarkets';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState, EmptyState } from '@/components/futra/Skeletons';
+import { Badge } from '@/components/ui/badge';
 
 function formatNumber(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -42,11 +43,6 @@ function MarketDetailSkeleton() {
             <Skeleton className="h-16 rounded-lg" />
             <Skeleton className="h-16 rounded-lg" />
           </div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-6 space-y-3">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
         </div>
       </div>
       <div className="lg:col-span-1">
@@ -93,6 +89,15 @@ export default function MarketDetailPage() {
     );
   }
 
+  const isLocked = market.status === 'open' && market.lock_date && new Date(market.lock_date) <= new Date();
+  const isResolved = market.status === 'resolved';
+  const isClosed = market.status === 'closed';
+  const canBet = market.status === 'open' && !isLocked;
+
+  const winningOption = isResolved && market.resolved_option
+    ? market.options.find(o => o.id === market.resolved_option)
+    : null;
+
   const selectedOpt = market.options.find(o => o.id === selectedOption);
   const potentialReward = selectedOpt ? Math.round(credits * (100 / selectedOpt.percentage) * 0.85) : 0;
   const daysLeft = Math.max(0, Math.floor((new Date(market.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
@@ -110,11 +115,19 @@ export default function MarketDetailPage() {
       toast.error(error.message);
     } else {
       setConfirmed(true);
-      toast.success('Prediction confirmed!');
+      toast.success('Previsão confirmada!');
       queryClient.invalidateQueries({ queryKey: ['market', id] });
       refreshProfile();
     }
   };
+
+  const statusBadge = isResolved ? (
+    <Badge className="bg-emerald/20 text-emerald border-emerald/30"><Trophy className="h-3 w-3 mr-1" /> Resolvido</Badge>
+  ) : isClosed ? (
+    <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Fechado</Badge>
+  ) : isLocked ? (
+    <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30"><Lock className="h-3 w-3 mr-1" /> Travado</Badge>
+  ) : null;
 
   return (
     <Layout>
@@ -122,54 +135,91 @@ export default function MarketDetailPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div>
-              <CategoryBadge category={market.category as any} className="mb-3" />
+              <div className="flex items-center gap-2 mb-3">
+                <CategoryBadge category={market.category as any} />
+                {statusBadge}
+              </div>
               <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight">{market.question}</h1>
               <p className="text-muted-foreground mt-2">{market.description}</p>
             </div>
 
             <div className="flex flex-wrap gap-4 text-sm">
-              <span className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {formatNumber(market.total_participants)} participants</span>
-              <span className="flex items-center gap-1.5 text-muted-foreground"><Coins className="h-4 w-4" /> {formatNumber(market.total_credits)} credits</span>
-              <span className="flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4" /> {daysLeft} days left</span>
+              <span className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {formatNumber(market.total_participants)} participantes</span>
+              <span className="flex items-center gap-1.5 text-muted-foreground"><Coins className="h-4 w-4" /> {formatNumber(market.total_credits)} créditos</span>
+              <span className="flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4" /> {daysLeft} dias restantes</span>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="font-semibold text-foreground mb-4">Current distribution</h2>
+              <h2 className="font-semibold text-foreground mb-4">Distribuição atual</h2>
               <VoteBar options={market.options} type={market.type as any} />
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {market.options.map(opt => (
-                  <div key={opt.id} className="p-3 rounded-lg bg-surface-800 text-center">
-                    <p className="text-sm font-medium text-foreground">{opt.label}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{formatNumber(opt.votes)} votes · {formatNumber(opt.creditsAllocated)} credits</p>
+                  <div key={opt.id} className={cn(
+                    'p-3 rounded-lg text-center',
+                    isResolved && opt.id === market.resolved_option
+                      ? 'bg-emerald/10 border border-emerald/30'
+                      : 'bg-surface-800'
+                  )}>
+                    <p className="text-sm font-medium text-foreground flex items-center justify-center gap-1">
+                      {isResolved && opt.id === market.resolved_option && <CheckCircle className="h-4 w-4 text-emerald" />}
+                      {opt.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{formatNumber(opt.votes)} votos · {formatNumber(opt.creditsAllocated)} créditos</p>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> Resolution rules</h2>
+              <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> Regras de resolução</h2>
               <p className="text-sm text-muted-foreground mb-3">{market.resolution_rules}</p>
               <div className="flex items-center gap-2 text-sm">
                 <ExternalLink className="h-3 w-3 text-primary" />
                 <span className="text-primary">{market.resolution_source}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Ends: {new Date(market.end_date).toLocaleDateString()}</p>
+              <p className="text-xs text-muted-foreground mt-2">Encerra em: {new Date(market.end_date).toLocaleDateString('pt-BR')}</p>
             </div>
           </div>
 
           {/* Participation panel */}
           <div className="lg:col-span-1">
             <div className="sticky top-20 rounded-xl border border-border bg-card p-6 space-y-5">
-              {confirmed ? (
+              {isResolved ? (
+                <div className="text-center py-6">
+                  <Trophy className="h-12 w-12 text-emerald mx-auto mb-3" />
+                  <h3 className="font-display font-bold text-foreground text-lg">Mercado resolvido</h3>
+                  {winningOption && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Resultado: <span className="text-emerald font-bold">{winningOption.label}</span>
+                    </p>
+                  )}
+                  <Button className="mt-4 w-full" variant="outline" asChild>
+                    <Link to="/browse">Explorar outros mercados</Link>
+                  </Button>
+                </div>
+              ) : isClosed || isLocked ? (
+                <div className="text-center py-6">
+                  <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="font-display font-bold text-foreground text-lg">
+                    {isClosed ? 'Mercado fechado' : 'Mercado travado'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Este mercado não aceita mais previsões.
+                  </p>
+                  <Button className="mt-4 w-full" variant="outline" asChild>
+                    <Link to="/browse">Explorar outros mercados</Link>
+                  </Button>
+                </div>
+              ) : confirmed ? (
                 <div className="text-center py-6">
                   <CheckCircle className="h-12 w-12 text-emerald mx-auto mb-3" />
-                  <h3 className="font-display font-bold text-foreground text-lg">Prediction confirmed!</h3>
-                  <p className="text-sm text-muted-foreground mt-2">You picked <span className="text-emerald font-medium">{selectedOpt?.label}</span> with {credits} credits.</p>
-                  <Button className="mt-4 w-full" variant="outline" onClick={() => { setConfirmed(false); setSelectedOption(null); }}>Make another prediction</Button>
+                  <h3 className="font-display font-bold text-foreground text-lg">Previsão confirmada!</h3>
+                  <p className="text-sm text-muted-foreground mt-2">Você escolheu <span className="text-emerald font-medium">{selectedOpt?.label}</span> com {credits} créditos.</p>
+                  <Button className="mt-4 w-full" variant="outline" onClick={() => { setConfirmed(false); setSelectedOption(null); }}>Fazer outra previsão</Button>
                 </div>
               ) : (
                 <>
-                  <h3 className="font-display font-semibold text-foreground">Make your pick</h3>
+                  <h3 className="font-display font-semibold text-foreground">Faça sua previsão</h3>
                   <div className="space-y-2">
                     {market.options.map(opt => (
                       <button key={opt.id} onClick={() => setSelectedOption(opt.id)} className={cn('w-full text-left p-3 rounded-lg border transition-all text-sm', selectedOption === opt.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:border-primary/30 text-muted-foreground hover:text-foreground')}>
@@ -181,7 +231,7 @@ export default function MarketDetailPage() {
                   {selectedOption && (
                     <div className="space-y-3 animate-fade-in">
                       <div>
-                        <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Allocate credits</label>
+                        <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Alocar créditos</label>
                         <input type="range" min={10} max={Math.min(1000, profile?.futra_credits || 1000)} step={10} value={credits} onChange={e => setCredits(Number(e.target.value))} className="w-full mt-2 accent-primary" />
                         <div className="flex justify-between text-sm mt-1">
                           <span className="text-muted-foreground">10</span>
@@ -190,17 +240,17 @@ export default function MarketDetailPage() {
                         </div>
                       </div>
                       <div className="rounded-lg bg-surface-800 p-4 space-y-2">
-                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">You risk</span><span className="text-foreground font-medium">{credits} FC</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Potential reward</span><span className="text-emerald font-bold">{potentialReward} FC</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Your balance</span><span className="text-foreground">{profile?.futra_credits?.toLocaleString() || '—'} FC</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Você arrisca</span><span className="text-foreground font-medium">{credits} FC</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Recompensa potencial</span><span className="text-emerald font-bold">{potentialReward} FC</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Seu saldo</span><span className="text-foreground">{profile?.futra_credits?.toLocaleString() || '—'} FC</span></div>
                       </div>
                       {user ? (
                         <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting}>
-                          {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirming...</> : 'Confirm prediction'}
+                          {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : 'Confirmar previsão'}
                         </Button>
                       ) : (
                         <Button className="w-full gradient-primary border-0" asChild>
-                          <Link to="/login">Log in to predict</Link>
+                          <Link to="/login">Entre para prever</Link>
                         </Button>
                       )}
                     </div>
@@ -208,7 +258,7 @@ export default function MarketDetailPage() {
 
                   {!user && (
                     <p className="text-xs text-muted-foreground text-center">
-                      <Link to="/login" className="text-primary hover:underline">Log in</Link> to make predictions
+                      <Link to="/login" className="text-primary hover:underline">Entre</Link> para fazer previsões
                     </p>
                   )}
                 </>
