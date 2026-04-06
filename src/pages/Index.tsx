@@ -52,9 +52,16 @@ export default function HomePage() {
     return counts;
   }, [markets]);
 
+  const { user } = useAuth();
+
   return (
     <Layout>
       <SEO />
+      {user && (
+        <div className="container mx-auto px-4 pt-4">
+          <DailyBonusBanner />
+        </div>
+      )}
       {/* Hero */}
       <section className="relative overflow-hidden particle-bg">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />

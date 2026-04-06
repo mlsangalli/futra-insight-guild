@@ -137,6 +137,31 @@ export default function DashboardPage() {
             description="Save markets to track them here."
           />
         )}
+
+        {/* Credit History */}
+        {transactions && transactions.length > 0 && (
+          <div className="mt-8">
+            <h2 className="font-display text-lg font-bold text-foreground mb-4">Recent credit activity</h2>
+            <div className="rounded-xl border border-border bg-card divide-y divide-border">
+              {transactions.slice(0, 10).map((tx: any) => (
+                <div key={tx.id} className="flex items-center justify-between p-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="text-foreground truncate">{tx.description || tx.type}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <span className={cn('font-display font-bold shrink-0 ml-3', tx.amount > 0 ? 'text-emerald' : 'text-destructive')}>
+                    {tx.amount > 0 ? '+' : ''}{tx.amount} FC
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Referral Card */}
+        <div className="mt-8">
+          <ReferralCard />
+        </div>
       </div>
     </Layout>
   );
