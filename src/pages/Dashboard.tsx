@@ -10,6 +10,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { StatCardSkeleton, PredictionRowSkeleton, EmptyState } from '@/components/futra/Skeletons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import EditProfileDialog from '@/components/EditProfileDialog';
 
 const TABS = ['Abertas', 'Resolvidas', 'Favoritos'];
 
