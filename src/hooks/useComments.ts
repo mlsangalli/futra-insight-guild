@@ -62,6 +62,6 @@ export function useCreateComment() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['comments', variables.marketId] });
     },
-    onError: () => toast.error('Failed to post comment'),
+    onError: () => toast.error('Falha ao publicar comentário'),
   });
 }

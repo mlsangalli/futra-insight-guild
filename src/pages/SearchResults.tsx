@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
@@ -7,6 +6,7 @@ import { Search } from 'lucide-react';
 import { MarketGridSkeleton, EmptyState } from '@/components/futra/Skeletons';
 import { CATEGORIES } from '@/types';
 import { Link } from 'react-router-dom';
+import { SEO } from '@/components/SEO';
 
 function dbToCard(m: any) {
   return {
@@ -25,12 +25,13 @@ export default function SearchPage() {
 
   return (
     <Layout>
+      <SEO title={query ? `Resultados para "${query}" — FUTRA` : 'Busca — FUTRA'} description="Busque mercados de previsão na FUTRA." />
       <div className="container mx-auto px-4 py-8">
         <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-          {query ? `Results for "${query}"` : 'Search'}
+          {query ? `Resultados para "${query}"` : 'Busca'}
         </h1>
         <p className="text-muted-foreground mb-6">
-          {isLoading ? 'Searching...' : `${results.length} markets found`}
+          {isLoading ? 'Buscando...' : `${results.length} mercado${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''}`}
         </p>
 
         {isLoading ? (
@@ -43,11 +44,11 @@ export default function SearchPage() {
           <div className="space-y-6">
             <EmptyState
               icon={<Search className="h-10 w-10 text-muted-foreground" />}
-              title={query ? 'No markets found' : 'Type something to search'}
-              description={query ? 'Try different terms or explore available markets.' : 'Use the search bar to find markets.'}
+              title={query ? 'Nenhum mercado encontrado' : 'Digite algo para buscar'}
+              description={query ? 'Tente termos diferentes ou explore os mercados disponíveis.' : 'Use a barra de busca para encontrar mercados.'}
             />
             <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-3">Popular categories:</p>
+              <p className="text-sm text-muted-foreground mb-3">Categorias populares:</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {CATEGORIES.map(cat => (
                   <Link key={cat.key} to={`/category/${cat.key}`} className="px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground bg-surface-800">

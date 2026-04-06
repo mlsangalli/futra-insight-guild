@@ -6,6 +6,7 @@ import { Bookmark } from 'lucide-react';
 import { MarketGridSkeleton, EmptyState } from '@/components/futra/Skeletons';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { SEO } from '@/components/SEO';
 
 function dbToCard(m: any) {
   return {
@@ -23,9 +24,10 @@ export default function WatchlistPage() {
 
   return (
     <Layout>
+      <SEO title="Watchlist — FUTRA" description="Mercados que você está acompanhando na FUTRA." />
       <div className="container mx-auto px-4 py-8">
         <h1 className="font-display text-3xl font-bold text-foreground mb-2">Watchlist</h1>
-        <p className="text-muted-foreground mb-6">Markets you're keeping an eye on.</p>
+        <p className="text-muted-foreground mb-6">Mercados que você está de olho.</p>
 
         {isLoading ? (
           <MarketGridSkeleton count={3} />
@@ -36,9 +38,9 @@ export default function WatchlistPage() {
         ) : (
           <EmptyState
             icon={<Bookmark className="h-10 w-10 text-muted-foreground" />}
-            title="No markets watched yet"
-            description="Browse markets to find interesting predictions."
-            action={<Button variant="outline" asChild><Link to="/browse">Explore markets</Link></Button>}
+            title="Nenhum mercado salvo ainda"
+            description="Navegue pelos mercados para encontrar previsões interessantes."
+            action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
           />
         )}
       </div>

@@ -228,6 +228,27 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Insert notifications for all participants
+        const notificationRows = allPredictions.map((pred: any) => {
+          const isWinner = pred.selected_option === winning_option;
+          const reward = isWinner && totalWinningCredits > 0
+            ? Math.floor((pred.credits_allocated / totalWinningCredits) * totalPool)
+            : 0;
+          return {
+            user_id: pred.user_id,
+            type: 'result',
+            title: isWinner ? '🎉 Você acertou!' : '❌ Não foi dessa vez',
+            body: isWinner
+              ? `Sua previsão no mercado "${market.question}" estava certa! Você ganhou ${reward} FC.`
+              : `Sua previsão no mercado "${market.question}" não acertou. Continue tentando!`,
+            data: { market_id: market_id, reward },
+          };
+        });
+
+        if (notificationRows.length > 0) {
+          await adminClient.from("notifications").insert(notificationRows);
+        }
+
         await adminClient.from("markets").update({ status: "resolved", resolved_option: winning_option }).eq("id", market_id);
         await adminClient.rpc("recalculate_global_ranks" as any);
 

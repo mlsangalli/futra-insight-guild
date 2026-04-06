@@ -57,7 +57,7 @@ export function VoteBar({ options, type, compact }: VoteBarProps) {
         </div>
       ))}
       {compact && sorted.length > 3 && (
-        <p className="text-xs text-muted-foreground">+{sorted.length - 3} more options</p>
+        <p className="text-xs text-muted-foreground">+{sorted.length - 3} opções</p>
       )}
     </div>
   );

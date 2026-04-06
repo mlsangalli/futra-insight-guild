@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -17,7 +17,7 @@ export function useDailyBonusEligibility() {
 
 export function useClaimDailyBonus() {
   const queryClient = useQueryClient();
-  const { user, refreshProfile } = useAuth();
+  const { refreshProfile } = useAuth();
 
   return useMutation({
     mutationFn: async () => {
@@ -29,12 +29,12 @@ export function useClaimDailyBonus() {
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`+${data.amount} credits claimed! 🎉`);
+      toast.success(`+${data.amount} créditos resgatados! 🎉`);
       refreshProfile();
       queryClient.invalidateQueries({ queryKey: ['credit-transactions'] });
     },
     onError: (err: Error) => {
-      toast.error(err.message || 'Could not claim bonus');
+      toast.error(err.message || 'Não foi possível resgatar o bônus');
     },
   });
 }
