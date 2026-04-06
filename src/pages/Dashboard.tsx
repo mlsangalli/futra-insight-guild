@@ -12,12 +12,16 @@ import { StatCardSkeleton, PredictionRowSkeleton, EmptyState } from '@/component
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import EditProfileDialog from '@/components/EditProfileDialog';
+import { DailyBonusBanner } from '@/components/futra/DailyBonusBanner';
+import { ReferralCard } from '@/components/futra/ReferralCard';
+import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 
 const TABS = ['Open', 'Resolved', 'Saved'];
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const { data: predictions, isLoading: loadingPredictions } = useUserPredictions(user?.id);
+  const { data: transactions } = useCreditTransactions();
   const [tab, setTab] = useState('Open');
 
   if (loading) {
@@ -48,7 +52,8 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <DailyBonusBanner />
+        <div className="flex items-center justify-between mb-8 mt-4">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground mt-1">Welcome back, {profile?.display_name || profile?.username}</p>
@@ -132,6 +137,31 @@ export default function DashboardPage() {
             description="Save markets to track them here."
           />
         )}
+
+        {/* Credit History */}
+        {transactions && transactions.length > 0 && (
+          <div className="mt-8">
+            <h2 className="font-display text-lg font-bold text-foreground mb-4">Recent credit activity</h2>
+            <div className="rounded-xl border border-border bg-card divide-y divide-border">
+              {transactions.slice(0, 10).map((tx: any) => (
+                <div key={tx.id} className="flex items-center justify-between p-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="text-foreground truncate">{tx.description || tx.type}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <span className={cn('font-display font-bold shrink-0 ml-3', tx.amount > 0 ? 'text-emerald' : 'text-destructive')}>
+                    {tx.amount > 0 ? '+' : ''}{tx.amount} FC
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Referral Card */}
+        <div className="mt-8">
+          <ReferralCard />
+        </div>
       </div>
     </Layout>
   );

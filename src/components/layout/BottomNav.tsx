@@ -1,8 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, PlusCircle, Trophy, User } from 'lucide-react';
+import { Home, Search, PlusCircle, Trophy, User, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
+import { useUnreadCount } from '@/hooks/useNotifications';
 
 const NAV_ITEMS = [
   { icon: Home, label: 'Home', path: '/' },
@@ -16,16 +17,25 @@ export function BottomNav() {
   const location = useLocation();
   const { user } = useAuth();
   const show = useScrollDirection();
+  const { data: unreadCount } = useUnreadCount();
 
   const items = NAV_ITEMS.map(item => {
     if (item.label === 'Profile' && user) {
-      return { ...item, path: '/dashboard', label: 'Profile' };
+      return { ...item, path: '/dashboard', label: 'Profile', icon: User };
     }
     if (item.label === 'Profile') {
       return { ...item, path: '/login', label: 'Login' };
     }
     return item;
   });
+
+  // Insert notifications before Profile for logged-in users
+  const finalItems = user
+    ? [
+        ...items.slice(0, 4),
+        { icon: Bell, label: 'Alerts', path: '/notifications', highlight: false },
+      ]
+    : items;
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -41,12 +51,12 @@ export function BottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-center justify-around h-16 px-2">
-        {items.map(item => (
+        {finalItems.map(item => (
           <Link
             key={item.label}
             to={item.path}
             className={cn(
-              'flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-lg transition-colors min-h-[44px] min-w-[44px]',
+              'flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-lg transition-colors min-h-[44px] min-w-[44px] relative',
               item.highlight ? '' : isActive(item.path)
                 ? 'text-primary'
                 : 'text-muted-foreground'
@@ -58,7 +68,14 @@ export function BottomNav() {
               </div>
             ) : (
               <>
-                <item.icon className={cn('h-5 w-5', isActive(item.path) && 'drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]')} />
+                <div className="relative">
+                  <item.icon className={cn('h-5 w-5', isActive(item.path) && 'drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]')} />
+                  {item.label === 'Alerts' && !!unreadCount && unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </div>
                 {isActive(item.path) && <span className="w-1 h-1 rounded-full bg-primary" />}
               </>
             )}

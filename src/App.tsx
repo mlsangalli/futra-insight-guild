@@ -39,6 +39,7 @@ const AdminContent = React.lazy(() => import("./pages/admin/AdminContent"));
 const AdminUsers = React.lazy(() => import("./pages/admin/AdminUsers"));
 const AdminLogs = React.lazy(() => import("./pages/admin/AdminLogs"));
 const Forbidden = React.lazy(() => import("./pages/admin/Forbidden"));
+const HealthCheck = React.lazy(() => import("./pages/HealthCheck"));
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -107,6 +108,7 @@ const App = () => (
                     <Route path="/admin/content" element={<AdminRoute><AdminContent /></AdminRoute>} />
                     <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
                     <Route path="/admin/logs" element={<AdminRoute><AdminLogs /></AdminRoute>} />
+                    <Route path="/health" element={<AdminRoute><HealthCheck /></AdminRoute>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </ErrorBoundary>
