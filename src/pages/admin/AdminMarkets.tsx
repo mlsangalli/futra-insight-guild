@@ -487,24 +487,15 @@ function ScheduleLockDialog({ market, open, onOpenChange, onSchedule, saving }: 
   onSchedule: (marketId: string, lockDate: string | null) => void;
   saving: boolean;
 }) {
-  const [date, setDate] = useState<Date | undefined>(
-    market?.lock_date ? new Date(market.lock_date) : undefined
-  );
-  const [time, setTime] = useState(
-    market?.lock_date ? format(new Date(market.lock_date), 'HH:mm') : '12:00'
-  );
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [time, setTime] = useState('12:00');
 
-  // Reset state when market changes
-  const marketId = market?.id;
-  useState(() => {
-    if (market?.lock_date) {
-      setDate(new Date(market.lock_date));
-      setTime(format(new Date(market.lock_date), 'HH:mm'));
-    } else {
-      setDate(undefined);
-      setTime('12:00');
-    }
-  });
+  // Sync state when dialog opens with a different market
+  const marketLockDate = market?.lock_date;
+  if (open && date === undefined && marketLockDate) {
+    setDate(new Date(marketLockDate));
+    setTime(format(new Date(marketLockDate), 'HH:mm'));
+  }
 
   const handleSave = () => {
     if (!market?.id) return;
