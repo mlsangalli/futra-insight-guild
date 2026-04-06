@@ -1,133 +1,94 @@
 
 
-# Implementacao Completa — Diagnostico FUTRA
+# Implementacao dos Itens Pendentes — FUTRA
 
 ## Resumo
 
-Implementar todas as correcoes criticas identificadas no diagnostico, organizadas por prioridade: seguranca (P0), core loop de reputacao (P1), UX do MarketDetail (P2) e padronizacao PT-BR (P2).
+5 itens pendentes: (1) RLS explícito para user_roles, (2) componente ProtectedRoute, (3) redirect pós-signup para verificação de email, (4) edição de perfil, (5) SEO básico.
 
 ---
 
-## 1. Seguranca P0 — Remover predictions do Realtime
+## 1. RLS user_roles — Policies INSERT/DELETE para admins
 
-**Problema:** A tabela `predictions` esta no `supabase_realtime`, expondo apostas privadas de outros usuarios.
+**Estado atual:** RLS está habilitado e bloqueia INSERT/UPDATE/DELETE por padrão (sem policies permissivas). Porém, admins também não conseguem gerenciar roles via cliente — precisam de policies explícitas.
 
 **Migration SQL:**
 ```sql
-ALTER PUBLICATION supabase_realtime DROP TABLE public.predictions;
+CREATE POLICY "Only admins can insert roles"
+ON public.user_roles FOR INSERT TO authenticated
+WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role));
+
+CREATE POLICY "Only admins can delete roles"
+ON public.user_roles FOR DELETE TO authenticated
+USING (public.has_role(auth.uid(), 'admin'::app_role));
 ```
 
 ---
 
-## 2. Seguranca P0 — Fluxo de Reset de Senha
+## 2. ProtectedRoute — Guard reutilizável
 
-**Problema:** Nao existe pagina de recuperacao de senha.
+**Criar `src/components/ProtectedRoute.tsx`:**
+- Usa `useAuth()` para checar `user` e `loading`
+- Se `loading`: mostra spinner
+- Se `!user`: redireciona para `/login`
+- Se autenticado: renderiza `children`
 
-**Arquivos novos:**
-- `src/pages/ForgotPassword.tsx` — formulario com email, chama `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`
-- `src/pages/ResetPassword.tsx` — detecta `type=recovery` no hash da URL, mostra formulario de nova senha, chama `supabase.auth.updateUser({ password })`
-
-**Modificacoes:**
-- `src/App.tsx` — adicionar rotas `/forgot-password` e `/reset-password`
-- `src/pages/Login.tsx` — adicionar link "Esqueceu a senha?" apontando para `/forgot-password`
-
----
-
-## 3. Core Loop P1 — Reputacao na Resolucao
-
-**Problema:** `futra_score`, `global_rank`, `influence_level` e `streak` nunca sao atualizados.
-
-**Modificacao em `supabase/functions/admin-actions/index.ts` (case `resolve_market`):**
-
-Apos atualizar `resolved_predictions` e `accuracy_rate` de cada participante, adicionar:
-
-- **futra_score:** `resolved_predictions * accuracy_rate` (formula simples, pode ser ajustada)
-- **streak:** Para vencedores, buscar as ultimas N predictions resolvidas do usuario; se todas forem `won`, incrementar streak. Para perdedores, resetar streak para 0.
-- **influence_level:** Baseado no futra_score:
-  - `< 500` → `low`
-  - `500-2000` → `medium`
-  - `2000-5000` → `high`
-  - `>= 5000` → `elite`
-- **global_rank:** Apos processar todos os participantes do mercado, executar query para recalcular ranks:
-  ```sql
-  UPDATE profiles SET global_rank = sub.rank
-  FROM (SELECT user_id, ROW_NUMBER() OVER (ORDER BY futra_score DESC) as rank FROM profiles) sub
-  WHERE profiles.user_id = sub.user_id;
-  ```
-
-Tudo isso adicionado dentro do loop de winners/losers existente, usando o `adminClient`.
+**Modificar `src/App.tsx`:**
+- Envolver rotas `/dashboard`, `/create-market`, `/watchlist`, `/notifications` com `<ProtectedRoute>`
+- Remover o guard manual (`if (!user) return <Navigate>`) de `Dashboard.tsx`
 
 ---
 
-## 4. UX P2 — MarketDetail estados condicionais
+## 3. Redirect pós-signup — Página de verificação de email
 
-**Problema:** O painel de apostas aparece mesmo quando o mercado esta `resolved`, `closed` ou travado (`lock_date` ultrapassado).
+**Criar `src/pages/VerifyEmail.tsx`:**
+- Layout simples com icone de email, titulo "Verifique seu email", instrução para checar a caixa de entrada
+- Botão "Reenviar email" que chama `supabase.auth.resend({ type: 'signup', email })`
+- Link para `/login`
 
-**Modificacao em `src/pages/MarketDetail.tsx`:**
+**Modificar `src/pages/Signup.tsx`:**
+- Após signup bem-sucedido, redirecionar para `/verify-email?email=...` em vez de `/dashboard`
 
-- Adicionar `lock_date` e `resolved_option` ao tipo `DbMarket` em `useMarkets.ts`
-- Calcular `isLocked = market.lock_date && new Date(market.lock_date) <= new Date()`
-- Condicionar o painel lateral:
-  - **resolved:** Mostrar resultado (opcao vencedora destacada com icone de check), esconder formulario de aposta
-  - **closed / locked:** Mostrar mensagem "Mercado fechado para novas apostas", esconder formulario
-  - **open (nao travado):** Manter formulario atual
-- Mostrar badge de status no topo ("Resolvido", "Fechado", "Travado")
-
----
-
-## 5. UX P2 — Padronizacao PT-BR
-
-**Problema:** Interface mistura portugues e ingles.
-
-**Arquivos afetados:**
-- `src/pages/Login.tsx` — "Welcome back" → "Bem-vindo de volta", "Log in" → "Entrar", "Don't have an account?" → "Nao tem conta?", "Sign in with Google" → "Entrar com Google"
-- `src/pages/Signup.tsx` — "Create your account" → "Crie sua conta", "Sign up" → "Cadastrar", "Already have an account?" → "Ja tem conta?", "Sign up with Google" → "Cadastrar com Google"
-- `src/pages/MarketDetail.tsx` — "Make your pick" → "Faca sua previsao", "Current distribution" → "Distribuicao atual", "Resolution rules" → "Regras de resolucao", "Confirm prediction" → "Confirmar previsao", "participants" → "participantes", "credits" → "creditos", "days left" → "dias restantes", etc.
-- `src/pages/Dashboard.tsx` — "Dashboard" → "Painel", "Welcome back" → "Bem-vindo de volta", "Open" → "Abertas", "Resolved" → "Resolvidas", "Won" → "Ganhou", "Lost" → "Perdeu", "risked" → "apostados"
+**Modificar `src/App.tsx`:**
+- Adicionar rota `/verify-email` -> `VerifyEmail`
 
 ---
 
-## 6. Seguranca P1 — Restringir INSERT de markets
+## 4. Edição de perfil — Modal/página no Dashboard
 
-**Problema:** Qualquer usuario autenticado pode criar mercados com `featured: true` ou `total_credits` manipulado. O trigger `protect_market_fields` so protege UPDATE.
+**Criar `src/components/EditProfileDialog.tsx`:**
+- Dialog (modal) com formulário: display_name, bio, avatar_url (input de URL por enquanto), specialties (multi-select ou tags)
+- Usa `supabase.from('profiles').update(...)` com os campos editáveis
+- Chama `refreshProfile()` do AuthContext após salvar
+- O trigger `protect_profile_fields` já garante que campos sensíveis não sejam alterados
 
-**Migration SQL — Criar trigger de INSERT para markets:**
-```sql
-CREATE OR REPLACE FUNCTION public.sanitize_market_insert()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF NOT public.has_role(auth.uid(), 'admin') THEN
-    NEW.featured := false;
-    NEW.trending := false;
-    NEW.total_credits := 0;
-    NEW.total_participants := 0;
-    NEW.status := 'open';
-    NEW.resolved_option := NULL;
-  END IF;
-  NEW.created_by := auth.uid();
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_sanitize_market_insert
-BEFORE INSERT ON public.markets
-FOR EACH ROW EXECUTE FUNCTION public.sanitize_market_insert();
-```
+**Modificar `src/pages/Dashboard.tsx`:**
+- Adicionar botão "Editar perfil" ao lado do nome, que abre o dialog
 
 ---
 
-## Arquivos Modificados (resumo)
+## 5. SEO básico — index.html + favicon
+
+**Modificar `index.html`:**
+- Trocar `lang="en"` para `lang="pt-BR"`
+- Atualizar OG image/description para PT-BR e remover referência ao Lovable
+- Adicionar `<link rel="canonical" href="https://futra.app/" />`
+- Adicionar favicon placeholder (letra F com gradient via SVG data URI)
+- Adicionar JSON-LD WebApplication schema
+- Remover `@Lovable` do twitter:site
+
+---
+
+## Arquivos
 
 | Arquivo | Acao |
 |---|---|
-| `src/pages/ForgotPassword.tsx` | Criar |
-| `src/pages/ResetPassword.tsx` | Criar |
-| `src/App.tsx` | Adicionar 2 rotas |
-| `src/pages/Login.tsx` | Link "Esqueceu a senha?" + PT-BR |
-| `src/pages/Signup.tsx` | PT-BR |
-| `src/pages/MarketDetail.tsx` | Estados condicionais + PT-BR |
-| `src/pages/Dashboard.tsx` | PT-BR |
-| `src/hooks/useMarkets.ts` | Adicionar lock_date e resolved_option ao DbMarket |
-| `supabase/functions/admin-actions/index.ts` | Reputacao (score, rank, streak, influence) |
-| Migration | DROP predictions do realtime + trigger sanitize_market_insert |
+| Migration SQL | RLS policies INSERT/DELETE em user_roles |
+| `src/components/ProtectedRoute.tsx` | Criar |
+| `src/pages/VerifyEmail.tsx` | Criar |
+| `src/components/EditProfileDialog.tsx` | Criar |
+| `src/App.tsx` | Adicionar ProtectedRoute, rota /verify-email |
+| `src/pages/Signup.tsx` | Redirect para /verify-email |
+| `src/pages/Dashboard.tsx` | Remover guard manual, adicionar botão editar perfil |
+| `index.html` | SEO completo |
 
