@@ -77,6 +77,7 @@ export default function SignupPage() {
 
   return (
     <Layout hideFooter>
+      <SEO title="Criar Conta" description="Crie sua conta na FUTRA e comece a fazer previsões." />
       <div className="min-h-[80vh] flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">

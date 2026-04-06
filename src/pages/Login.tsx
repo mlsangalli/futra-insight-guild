@@ -64,6 +64,7 @@ export default function LoginPage() {
 
   return (
     <Layout hideFooter>
+      <SEO title="Entrar" description="Acesse sua conta FUTRA." />
       <div className="min-h-[80vh] flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
