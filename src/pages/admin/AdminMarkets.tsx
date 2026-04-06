@@ -36,8 +36,8 @@ export default function AdminMarkets() {
     queryFn: async () => {
       let query = supabase.from('markets').select('*', { count: 'exact' });
       if (search) query = query.ilike('question', `%${search}%`);
-      if (filterCategory !== 'all') query = query.eq('category', filterCategory);
-      if (filterStatus !== 'all') query = query.eq('status', filterStatus);
+      if (filterCategory !== 'all') query = query.eq('category', filterCategory as any);
+      if (filterStatus !== 'all') query = query.eq('status', filterStatus as any);
       query = query.order('created_at', { ascending: false }).range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       const { data, count } = await query;
       return { markets: data || [], total: count || 0 };

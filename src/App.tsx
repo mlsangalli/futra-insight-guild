@@ -20,6 +20,13 @@ import Watchlist from "./pages/Watchlist";
 import SearchResults from "./pages/SearchResults";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminMarkets from "./pages/admin/AdminMarkets";
+import AdminCategories from "./pages/admin/AdminCategories";
+import AdminContent from "./pages/admin/AdminContent";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminLogs from "./pages/admin/AdminLogs";
+import Forbidden from "./pages/admin/Forbidden";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +53,13 @@ const App = () => (
             <Route path="/watchlist" element={<Watchlist />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/forbidden" element={<Forbidden />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/markets" element={<AdminMarkets />} />
+            <Route path="/admin/categories" element={<AdminCategories />} />
+            <Route path="/admin/content" element={<AdminContent />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/logs" element={<AdminLogs />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
