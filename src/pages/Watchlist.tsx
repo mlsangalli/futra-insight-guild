@@ -1,11 +1,25 @@
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
-import { mockMarkets } from '@/data/mock-markets';
+import { useWatchlist } from '@/hooks/useWatchlist';
+import { useAuth } from '@/contexts/AuthContext';
 import { Bookmark } from 'lucide-react';
-import type { MarketCardData } from '@/types';
+import { MarketGridSkeleton, EmptyState } from '@/components/futra/Skeletons';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+
+function dbToCard(m: any) {
+  return {
+    id: m.id, question: m.question, description: m.description, category: m.category,
+    type: m.type, status: m.status, options: m.options, totalParticipants: m.total_participants,
+    totalCredits: m.total_credits, endDate: m.end_date, createdAt: m.created_at,
+    resolutionSource: m.resolution_source || '', resolutionRules: m.resolution_rules || '',
+    featured: m.featured, trending: m.trending,
+  };
+}
 
 export default function WatchlistPage() {
-  const watchlist = mockMarkets.slice(0, 3); // Mock saved markets
+  const { user } = useAuth();
+  const { data: markets, isLoading } = useWatchlist();
 
   return (
     <Layout>
@@ -13,15 +27,19 @@ export default function WatchlistPage() {
         <h1 className="font-display text-3xl font-bold text-foreground mb-2">Watchlist</h1>
         <p className="text-muted-foreground mb-6">Markets you're keeping an eye on.</p>
 
-        {watchlist.length > 0 ? (
+        {isLoading ? (
+          <MarketGridSkeleton count={3} />
+        ) : (markets || []).length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {watchlist.map(m => <MarketCard key={m.id} market={m} />)}
+            {markets!.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
           </div>
         ) : (
-          <div className="text-center py-20">
-            <Bookmark className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">No saved markets yet.</p>
-          </div>
+          <EmptyState
+            icon={<Bookmark className="h-10 w-10 text-muted-foreground" />}
+            title="No markets watched yet"
+            description="Browse markets to find interesting predictions."
+            action={<Button variant="outline" asChild><Link to="/browse">Explore markets</Link></Button>}
+          />
         )}
       </div>
     </Layout>
