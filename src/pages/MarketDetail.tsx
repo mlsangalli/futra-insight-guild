@@ -17,9 +17,6 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ErrorState, EmptyState } from '@/components/futra/Skeletons';
-import { SEO } from '@/components/SEO';
 
 function formatNumber(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
