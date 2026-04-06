@@ -328,6 +328,14 @@ export default function AdminMarkets() {
           onResolve={(marketId, winningOption) => resolveMutation.mutate({ market_id: marketId, winning_option: winningOption })}
           resolving={resolveMutation.isPending}
         />
+
+        <ScheduleLockDialog
+          market={schedulingMarket}
+          open={!!schedulingMarket}
+          onOpenChange={(open) => { if (!open) setSchedulingMarket(null); }}
+          onSchedule={(marketId, lockDate) => scheduleMutation.mutate({ market_id: marketId, lock_date: lockDate })}
+          saving={scheduleMutation.isPending}
+        />
       </div>
     </AdminLayout>
   );
