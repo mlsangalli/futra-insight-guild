@@ -136,7 +136,8 @@ export default function MarketDetailPage() {
         <div className="flex flex-wrap gap-4 text-sm mb-8">
           <span className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {formatNumber(market.total_participants)} participants</span>
           <span className="flex items-center gap-1.5 text-muted-foreground"><Coins className="h-4 w-4" /> {formatNumber(market.total_credits)} credits staked</span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <WatchlistButton marketId={market.id} compact />
             <ShareButton title={market.question} text={shareText} url={shareUrl} />
           </div>
         </div>
