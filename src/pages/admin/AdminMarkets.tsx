@@ -479,3 +479,115 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
     </Dialog>
   );
 }
+
+function ScheduleLockDialog({ market, open, onOpenChange, onSchedule, saving }: {
+  market: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSchedule: (marketId: string, lockDate: string | null) => void;
+  saving: boolean;
+}) {
+  const [date, setDate] = useState<Date | undefined>(
+    market?.lock_date ? new Date(market.lock_date) : undefined
+  );
+  const [time, setTime] = useState(
+    market?.lock_date ? format(new Date(market.lock_date), 'HH:mm') : '12:00'
+  );
+
+  // Reset state when market changes
+  const marketId = market?.id;
+  useState(() => {
+    if (market?.lock_date) {
+      setDate(new Date(market.lock_date));
+      setTime(format(new Date(market.lock_date), 'HH:mm'));
+    } else {
+      setDate(undefined);
+      setTime('12:00');
+    }
+  });
+
+  const handleSave = () => {
+    if (!market?.id) return;
+    if (!date) {
+      onSchedule(market.id, null);
+      return;
+    }
+    const [h, m] = time.split(':').map(Number);
+    const combined = new Date(date);
+    combined.setHours(h, m, 0, 0);
+    onSchedule(market.id, combined.toISOString());
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => {
+      if (!o) {
+        setDate(market?.lock_date ? new Date(market.lock_date) : undefined);
+        setTime(market?.lock_date ? format(new Date(market.lock_date), 'HH:mm') : '12:00');
+      }
+      onOpenChange(o);
+    }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Agendar Travamento</DialogTitle>
+          <DialogDescription className="text-sm">
+            Defina a data e hora em que o mercado será travado para novas apostas.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <Label className="text-xs">Data</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                  <Clock className="mr-2 h-4 w-4" />
+                  {date ? format(date, 'dd/MM/yyyy') : 'Selecionar data'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  disabled={(d) => d < new Date()}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div>
+            <Label className="text-xs">Horário</Label>
+            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          </div>
+
+          {market?.lock_date && (
+            <p className="text-xs text-muted-foreground">
+              Agendamento atual: {format(new Date(market.lock_date), 'dd/MM/yyyy HH:mm')}
+            </p>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2">
+          {market?.lock_date && (
+            <Button
+              variant="outline"
+              className="text-destructive"
+              onClick={() => { if (market?.id) onSchedule(market.id, null); }}
+              disabled={saving}
+            >
+              Remover
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
