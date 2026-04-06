@@ -86,7 +86,7 @@ export default function HomePage() {
                 <Link to={`/market/${heroCard.id}`} className="block glass-card gradient-border rounded-2xl p-6 sm:p-8 animate-fade-in hover:scale-[1.01] transition-transform cursor-pointer">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs text-muted-foreground uppercase tracking-widest">Featured Market</p>
-                    <StatusBadge status={heroMarket.status} />
+                    <StatusBadge status={heroMarket.status as 'open' | 'closed' | 'resolved'} />
                   </div>
                   <h3 className="font-display text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6 leading-snug">{heroCard.question}</h3>
                   <div className="flex items-end gap-3 mb-4 sm:mb-6">

@@ -136,7 +136,7 @@ export default function MarketDetailPage() {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <CategoryBadge category={market.category as any} />
-            <StatusBadge status={market.status} />
+            <StatusBadge status={market.status as 'open' | 'closed' | 'resolved'} />
             <CountdownTimer endDate={market.end_date} className="ml-auto" />
           </div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight">{market.question}</h1>
