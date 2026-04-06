@@ -13,7 +13,7 @@ export default function VerifyEmailPage() {
 
   const handleResend = async () => {
     if (!email) {
-      toast.error('Email não encontrado.');
+      toast.error('Email not found.');
       return;
     }
     setResending(true);
@@ -22,7 +22,7 @@ export default function VerifyEmailPage() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Email reenviado! Verifique sua caixa de entrada.');
+      toast.success('Email resent! Check your inbox.');
     }
   };
 
@@ -35,11 +35,11 @@ export default function VerifyEmailPage() {
               <Mail className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <h1 className="font-display text-2xl font-bold text-foreground">Verifique seu email</h1>
+              <h1 className="font-display text-2xl font-bold text-foreground">Verify your email</h1>
               <p className="text-muted-foreground mt-2 text-sm">
-                Enviamos um link de confirmação para{' '}
-                {email ? <span className="text-foreground font-medium">{email}</span> : 'seu email'}.
-                Clique no link para ativar sua conta.
+                We sent a confirmation link to{' '}
+                {email ? <span className="text-foreground font-medium">{email}</span> : 'your email'}.
+                Click the link to activate your account.
               </p>
             </div>
 
@@ -50,17 +50,17 @@ export default function VerifyEmailPage() {
                 onClick={handleResend}
                 disabled={resending || !email}
               >
-                {resending ? 'Reenviando...' : 'Reenviar email'}
+                {resending ? 'Resending...' : 'Resend email'}
               </Button>
 
               <Link to="/login" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
                 <ArrowLeft className="h-4 w-4" />
-                Voltar para login
+                Back to login
               </Link>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Não recebeu? Verifique a pasta de spam ou tente reenviar.
+              Didn't receive it? Check your spam folder or try resending.
             </p>
           </div>
         </div>
