@@ -2,6 +2,7 @@ import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
 import { mockMarkets } from '@/data/mock-markets';
 import { Bookmark } from 'lucide-react';
+import type { MarketCardData } from '@/types';
 
 export default function WatchlistPage() {
   const watchlist = mockMarkets.slice(0, 3); // Mock saved markets
