@@ -6,6 +6,8 @@ import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { StatusBadge } from '@/components/futra/StatusBadge';
 import { CountdownTimer } from '@/components/futra/CountdownTimer';
 import { ShareButton } from '@/components/futra/ShareButton';
+import { WatchlistButton } from '@/components/futra/WatchlistButton';
+import { CommentSection } from '@/components/futra/CommentSection';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy } from 'lucide-react';
