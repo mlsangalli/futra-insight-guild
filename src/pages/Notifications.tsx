@@ -1,4 +1,5 @@
 import { Layout } from '@/components/layout/Layout';
+import { SEO } from '@/components/SEO';
 import { useNotifications, useMarkAsRead } from '@/hooks/useNotifications';
 import { Bell, Trophy, Coins, Target, Clock, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';

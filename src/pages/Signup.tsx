@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { SEO } from '@/components/SEO';
 
 const signupSchema = z.object({
   username: z.string().trim()

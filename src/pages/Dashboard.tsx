@@ -1,4 +1,5 @@
 import { Layout } from '@/components/layout/Layout';
+import { SEO } from '@/components/SEO';
 import { StatCard } from '@/components/futra/StatCard';
 import { StatusBadge } from '@/components/futra/StatusBadge';
 import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
