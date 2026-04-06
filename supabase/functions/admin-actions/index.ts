@@ -126,6 +126,24 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "schedule_lock": {
+        const { market_id, lock_date } = body;
+        if (!market_id) throw new Error("market_id required");
+        // lock_date can be null (to remove schedule)
+        if (lock_date) {
+          const d = new Date(lock_date);
+          if (isNaN(d.getTime())) throw new Error("Invalid lock_date");
+          if (d <= new Date()) throw new Error("lock_date must be in the future");
+        }
+        const { error } = await adminClient
+          .from("markets")
+          .update({ lock_date: lock_date || null })
+          .eq("id", market_id);
+        if (error) throw error;
+        result = { success: true };
+        break;
+      }
+
       case "resolve_market": {
         const { market_id, winning_option } = body;
         if (!market_id || !winning_option) throw new Error("market_id and winning_option required");

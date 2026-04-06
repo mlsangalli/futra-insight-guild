@@ -13,8 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['politics', 'economy', 'crypto', 'football', 'culture', 'technology'];
 const STATUSES = ['open', 'closed', 'resolved'];
@@ -35,6 +38,7 @@ export default function AdminMarkets() {
   const [editingMarket, setEditingMarket] = useState<any>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [resolvingMarket, setResolvingMarket] = useState<any>(null);
+  const [schedulingMarket, setSchedulingMarket] = useState<any>(null);
   const { toast } = useToast();
   const { log } = useAdminLog();
   const queryClient = useQueryClient();
@@ -110,6 +114,23 @@ export default function AdminMarkets() {
       toast({ title: 'Mercado resolvido', description: msg });
     },
     onError: (e: Error) => toast({ title: 'Erro ao resolver', description: e.message, variant: 'destructive' }),
+  });
+
+  const scheduleMutation = useMutation({
+    mutationFn: ({ market_id, lock_date }: { market_id: string; lock_date: string | null }) =>
+      invokeAdmin({
+        action: 'schedule_lock',
+        market_id,
+        lock_date,
+        entity_type: 'market',
+        description: lock_date ? `Scheduled lock: ${lock_date}` : 'Removed lock schedule',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+      setSchedulingMarket(null);
+      toast({ title: 'Agendamento salvo' });
+    },
+    onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
   const saveMutation = useMutation({
@@ -195,15 +216,16 @@ export default function AdminMarkets() {
                 <TableHead>Categoria</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Participantes</TableHead>
+                <TableHead>Travamento</TableHead>
                 <TableHead>Destaque</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : markets.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum mercado encontrado</TableCell></TableRow>
+                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+               ) : markets.length === 0 ? (
+                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum mercado encontrado</TableCell></TableRow>
               ) : (
                 markets.map((m: any) => (
                   <TableRow key={m.id}>
@@ -218,6 +240,16 @@ export default function AdminMarkets() {
                       </Select>
                     </TableCell>
                     <TableCell className="text-sm">{m.total_participants}</TableCell>
+                    <TableCell className="text-xs">
+                      {m.lock_date ? (
+                        <span className={m.lock_date && new Date(m.lock_date) <= new Date() ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
+                          {format(new Date(m.lock_date), 'dd/MM/yy HH:mm')}
+                          {new Date(m.lock_date) <= new Date() && <Badge variant="outline" className="ml-1 text-[10px] border-destructive text-destructive">Travado</Badge>}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <button onClick={() => toggleFeatured.mutate({ id: m.id, featured: !m.featured })} className="hover:text-primary transition-colors">
                         <Star className={`h-4 w-4 ${m.featured ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
@@ -225,6 +257,17 @@ export default function AdminMarkets() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {m.status === 'open' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setSchedulingMarket(m)}
+                            title="Agendar travamento"
+                          >
+                            <Clock className={cn("h-3.5 w-3.5", m.lock_date ? 'text-primary' : 'text-muted-foreground')} />
+                          </Button>
+                        )}
                         {m.status !== 'resolved' && (
                           <Button
                             variant="ghost"
@@ -284,6 +327,14 @@ export default function AdminMarkets() {
           onOpenChange={(open) => { if (!open) setResolvingMarket(null); }}
           onResolve={(marketId, winningOption) => resolveMutation.mutate({ market_id: marketId, winning_option: winningOption })}
           resolving={resolveMutation.isPending}
+        />
+
+        <ScheduleLockDialog
+          market={schedulingMarket}
+          open={!!schedulingMarket}
+          onOpenChange={(open) => { if (!open) setSchedulingMarket(null); }}
+          onSchedule={(marketId, lockDate) => scheduleMutation.mutate({ market_id: marketId, lock_date: lockDate })}
+          saving={scheduleMutation.isPending}
         />
       </div>
     </AdminLayout>
@@ -424,6 +475,109 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
             <Button type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
           </div>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ScheduleLockDialog({ market, open, onOpenChange, onSchedule, saving }: {
+  market: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSchedule: (marketId: string, lockDate: string | null) => void;
+  saving: boolean;
+}) {
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [time, setTime] = useState('12:00');
+
+  // Sync state when dialog opens with a different market
+  const marketLockDate = market?.lock_date;
+  if (open && date === undefined && marketLockDate) {
+    setDate(new Date(marketLockDate));
+    setTime(format(new Date(marketLockDate), 'HH:mm'));
+  }
+
+  const handleSave = () => {
+    if (!market?.id) return;
+    if (!date) {
+      onSchedule(market.id, null);
+      return;
+    }
+    const [h, m] = time.split(':').map(Number);
+    const combined = new Date(date);
+    combined.setHours(h, m, 0, 0);
+    onSchedule(market.id, combined.toISOString());
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => {
+      if (!o) {
+        setDate(undefined);
+        setTime('12:00');
+      }
+      onOpenChange(o);
+    }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Agendar Travamento</DialogTitle>
+          <DialogDescription className="text-sm">
+            Defina a data e hora em que o mercado será travado para novas apostas.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <Label className="text-xs">Data</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                  <Clock className="mr-2 h-4 w-4" />
+                  {date ? format(date, 'dd/MM/yyyy') : 'Selecionar data'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  disabled={(d) => d < new Date()}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div>
+            <Label className="text-xs">Horário</Label>
+            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          </div>
+
+          {market?.lock_date && (
+            <p className="text-xs text-muted-foreground">
+              Agendamento atual: {format(new Date(market.lock_date), 'dd/MM/yyyy HH:mm')}
+            </p>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2">
+          {market?.lock_date && (
+            <Button
+              variant="outline"
+              className="text-destructive"
+              onClick={() => { if (market?.id) onSchedule(market.id, null); }}
+              disabled={saving}
+            >
+              Remover
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

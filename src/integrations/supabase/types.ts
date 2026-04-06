@@ -113,6 +113,7 @@ export type Database = {
           end_date: string
           featured: boolean
           id: string
+          lock_date: string | null
           options: Json
           question: string
           resolution_rules: string | null
@@ -133,6 +134,7 @@ export type Database = {
           end_date: string
           featured?: boolean
           id?: string
+          lock_date?: string | null
           options?: Json
           question: string
           resolution_rules?: string | null
@@ -153,6 +155,7 @@ export type Database = {
           end_date?: string
           featured?: boolean
           id?: string
+          lock_date?: string | null
           options?: Json
           question?: string
           resolution_rules?: string | null
