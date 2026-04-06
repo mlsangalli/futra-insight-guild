@@ -38,6 +38,7 @@ export default function AdminMarkets() {
   const [editingMarket, setEditingMarket] = useState<any>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [resolvingMarket, setResolvingMarket] = useState<any>(null);
+  const [schedulingMarket, setSchedulingMarket] = useState<any>(null);
   const { toast } = useToast();
   const { log } = useAdminLog();
   const queryClient = useQueryClient();
