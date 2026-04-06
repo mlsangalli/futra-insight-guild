@@ -35,40 +35,40 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
     <Link
       to={`/market/${market.id}`}
       className={cn(
-        'block rounded-xl glass-card p-5 transition-all duration-300',
+        'block rounded-xl glass-card p-4 sm:p-5 transition-all duration-300 active:scale-[0.98]',
         featured && 'gradient-border',
         className
       )}
     >
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
         <CategoryBadge category={market.category} />
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground shrink-0">
           <Clock className="h-3 w-3" />
           {timeRemaining(market.endDate)}
         </span>
       </div>
 
-      <h3 className="font-display font-semibold text-foreground leading-snug mb-2 line-clamp-2">
+      <h3 className="font-display font-semibold text-foreground leading-snug mb-2 line-clamp-2 text-sm sm:text-base">
         {market.question}
       </h3>
 
       {/* Big leader percentage */}
-      <div className="mb-3">
+      <div className="mb-2 sm:mb-3 flex items-baseline gap-1.5">
         <span className={cn(
-          'font-display text-2xl font-bold',
+          'font-display text-xl sm:text-2xl font-bold',
           leader.label.toLowerCase() === 'yes' || leader.label.toLowerCase() === 'sim'
             ? 'text-emerald glow-text-emerald'
             : 'text-neon-blue glow-text'
         )}>
           {leader.percentage}%
         </span>
-        <span className="text-xs text-muted-foreground ml-1.5">{leader.label}</span>
+        <span className="text-[10px] sm:text-xs text-muted-foreground">{leader.label}</span>
       </div>
 
       <VoteBar options={market.options} type={market.type} compact />
 
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-border/50">
+        <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
             {formatNumber(market.totalParticipants)}
