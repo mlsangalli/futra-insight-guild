@@ -132,7 +132,7 @@ export default function HomePage() {
         </section>
       ) : (
         <section className="relative overflow-hidden particle-bg">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.18)_0%,hsl(var(--emerald)/0.08)_40%,transparent_70%)] pointer-events-none" />
           <div className="container mx-auto px-4 py-16 md:py-28 relative z-10 text-center">
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight text-foreground mb-6">
               Torne a incerteza <span className="gradient-primary-text">legível</span>.
