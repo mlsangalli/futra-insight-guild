@@ -1,60 +1,147 @@
 
 
-# Aplicar Moodboard Visual ao FUTRA
+# Painel Administrativo FUTRA - Plano de Implementação
 
-## Análise do Moodboard
-A imagem mostra um visual **sci-fi/futurista** com: fundo escuro com partículas/estrelas brilhantes, cards com glassmorphism mais pronunciado e bordas sutis com glow, percentuais grandes e destacados em verde/azul neon, efeitos de brilho e profundidade, globo de rede neural no hero.
+## Visao Geral
 
-## Mudanças Planejadas
+Construir uma area administrativa completa em `/admin` com sidebar, CRUD funcional, dashboard com metricas reais, gestao de mercados/categorias/conteudo/usuarios/logs, protegida por role `admin` no backend e frontend.
 
-### 1. Background com partículas animadas (CSS)
-- Adicionar um campo de estrelas/partículas animadas no `body` via CSS puro (pseudo-elements com radial gradients e animação)
-- Adicionar um sutil grid pattern de fundo nas sections
+---
 
-### 2. Hero Section redesenhada (`Index.tsx`)
-- Adicionar efeito de glow radial atrás do título (gradiente circular neon blue/emerald)
-- Percentual grande em destaque no hero (ex: "78% Yes" estilo moodboard) usando o mercado featured principal
-- Layout mais dramático com o mercado principal em destaque grande à esquerda
+## Fase 1: Banco de Dados (Migration SQL)
 
-### 3. MarketCard com visual glass aprimorado
-- Bordas com gradiente sutil (border-image ou pseudo-element)
-- Hover com glow mais intenso
-- Percentual do líder em tamanho grande e cor neon (estilo "62% Yes" do moodboard)
-- Background com gradiente sutil interno
+Criar uma unica migration com:
 
-### 4. VoteBar mais visual
-- Barras mais grossas com glow effect
-- Labels com percentuais maiores e mais bold
-- Adicionar animação de pulse sutil na barra líder
+**Novas tabelas:**
+- `categories` (id, name, slug, description, active, created_at, updated_at)
+- `site_content` (id, section_key unique, title, subtitle, body, cta_label, cta_link, active, created_at, updated_at)
+- `faq_items` (id, question, answer, order_index, active, created_at, updated_at)
+- `admin_logs` (id, admin_user_id references auth.users, action_type, entity_type, entity_id, description, created_at)
 
-### 5. CSS utilities e efeitos globais (`index.css`)
-- Nova classe `.glass-card` com backdrop-blur mais forte, borda com gradiente, sombra neon
-- Classe `.glow-text` para texto com text-shadow neon
-- Classe `.particle-bg` com pseudo-elements para efeito de partículas
-- Animação `@keyframes float` e `@keyframes twinkle` para elementos decorativos
-- Glow mais intenso no `.glow-blue` e `.glow-emerald`
+**RLS para todas as novas tabelas:**
+- `categories`: SELECT publico, INSERT/UPDATE/DELETE apenas admins (usando `has_role`)
+- `site_content`: SELECT publico, INSERT/UPDATE/DELETE apenas admins
+- `faq_items`: SELECT publico, INSERT/UPDATE/DELETE apenas admins
+- `admin_logs`: SELECT/INSERT apenas admins, sem UPDATE/DELETE
 
-### 6. StatCard com efeito de brilho
-- Borda com gradiente sutil
-- Valor com glow text
-- Ícone com cor neon
+**Nota:** As tabelas `profiles`, `markets`, `user_roles` e `predictions` ja existem e nao serao recriadas. A migration apenas adicionara novas policies de admin para UPDATE/DELETE em `markets` e SELECT amplo em `profiles` e `predictions` para admins.
 
-### 7. Header com glass mais pronunciado
-- Aumentar blur do backdrop-filter
-- Adicionar borda inferior com gradiente sutil
+**Edge function `admin-actions`:** Para operacoes privilegiadas (promover/remover admin, deletar mercado, bloquear usuario) usando service_role key, com verificacao de role do chamador.
 
-### 8. Tailwind config — novas animações
-- `float`, `twinkle`, `glow-pulse` keyframes
+---
 
-## Arquivos a modificar
-1. `src/index.css` — novas utilities CSS (glass-card, glow-text, particle effects, star field)
-2. `tailwind.config.ts` — novas animações (float, twinkle)
-3. `src/components/futra/MarketCard.tsx` — glass-card, percentual grande em destaque
-4. `src/components/futra/VoteBar.tsx` — barras com glow, percentuais maiores
-5. `src/components/futra/StatCard.tsx` — borda gradiente, glow text
-6. `src/components/layout/Header.tsx` — glass mais forte
-7. `src/pages/Index.tsx` — hero redesenhado com glow radial, mercado destaque grande, efeito de partículas no background
+## Fase 2: Seguranca e Roteamento
 
-## Abordagem
-Todas as mudanças são puramente visuais (CSS + Tailwind classes). Sem alterações em lógica, dados ou backend.
+**Componente `AdminGuard`:**
+- Verifica autenticacao (redireciona para `/login` se nao autenticado)
+- Consulta `user_roles` para verificar role `admin`
+- Redireciona para pagina 403 se nao for admin
+- Loading state enquanto verifica
+
+**Componente `AdminLayout`:**
+- Sidebar fixa com navegacao entre secoes (Dashboard, Mercados, Categorias, Conteudo, Usuarios, Logs)
+- Usa `SidebarProvider` do shadcn
+- Header com nome do admin e botao de sair
+- Design dark fintech consistente com FUTRA
+
+**Hook `useAdmin`:**
+- Retorna `isAdmin`, `loading`
+- Usa `has_role` RPC ou query em `user_roles`
+
+**Rotas no App.tsx:**
+- `/admin` -> Dashboard
+- `/admin/markets` -> Gestao de mercados
+- `/admin/categories` -> Gestao de categorias
+- `/admin/content` -> Conteudo do site
+- `/admin/users` -> Gestao de usuarios
+- `/admin/logs` -> Logs administrativos
+
+**Ocultar links admin:** O Header e BottomNav nao mostrarao nenhum link para `/admin` a nao ser que `isAdmin` seja true.
+
+---
+
+## Fase 3: Paginas do Admin
+
+### 3.1 Dashboard (`/admin`)
+- Cards com metricas: total usuarios, total mercados, mercados ativos/fechados, categorias, conteudos publicados
+- Queries diretas via Supabase com `.select('*', { count: 'exact', head: true })`
+- Tabela de atividades recentes (ultimos admin_logs)
+- Ultimos mercados criados/editados
+
+### 3.2 Gestao de Mercados (`/admin/markets`)
+- Tabela paginada com busca por nome, filtro por categoria/status
+- Dialog/Sheet para criar/editar mercado (formulario com Zod validation)
+- Botoes: editar, excluir (com confirmacao AlertDialog), duplicar, toggle destaque, alterar status
+- Mutations via TanStack Query + Supabase
+- Operacoes de admin (status, featured, trending, delete) via edge function
+
+### 3.3 Gestao de Categorias (`/admin/categories`)
+- CRUD com tabela simples
+- Toggle ativo/inativo
+- Alerta antes de excluir se houver mercados vinculados (verificacao client-side)
+
+### 3.4 Conteudo do Site (`/admin/content`)
+- Tabs: "Secoes do Site" e "FAQs"
+- Secoes: editar por section_key (hero, about, how-it-works, etc.)
+- FAQs: lista reordenavel, criar/editar/excluir
+- Toggle ativo/inativo
+
+### 3.5 Gestao de Usuarios (`/admin/users`)
+- Tabela com todos os profiles + join com user_roles
+- Promover/remover admin (via edge function)
+- Confirmacao forte antes de remover proprio acesso admin
+
+### 3.6 Logs (`/admin/logs`)
+- Tabela paginada com filtros por action_type e entity_type
+- Exibe admin, acao, entidade e timestamp
+- Read-only
+
+---
+
+## Fase 4: Logging Automatico
+
+- Hook `useAdminLog` que insere em `admin_logs` apos cada mutacao bem-sucedida
+- Registra: criacao, edicao, exclusao de mercados, categorias, conteudo, FAQs, alteracoes de role
+
+---
+
+## Estrutura de Arquivos
+
+```text
+src/
+  hooks/useAdmin.ts
+  hooks/useAdminLog.ts
+  components/admin/
+    AdminGuard.tsx
+    AdminLayout.tsx
+    AdminSidebar.tsx
+    AdminMetricCard.tsx
+    AdminDataTable.tsx
+    MarketForm.tsx
+    CategoryForm.tsx
+    ContentForm.tsx
+    FaqForm.tsx
+  pages/admin/
+    AdminDashboard.tsx
+    AdminMarkets.tsx
+    AdminCategories.tsx
+    AdminContent.tsx
+    AdminUsers.tsx
+    AdminLogs.tsx
+    Forbidden.tsx
+supabase/
+  migrations/XXXX_admin_tables.sql
+  functions/admin-actions/index.ts
+```
+
+---
+
+## Detalhes Tecnicos
+
+- **Paginacao:** Implementada com `.range(from, to)` do Supabase + state local de pagina
+- **Busca:** Input com debounce de 300ms + `.ilike('question', '%term%')`
+- **Formularios:** React Hook Form + Zod schemas
+- **Mutations:** `useMutation` do TanStack Query com `invalidateQueries` apos sucesso
+- **Edge function:** Usa `SUPABASE_SERVICE_ROLE_KEY` para operacoes privilegiadas (insert em user_roles, delete em markets, etc.) com verificacao de que o chamador e admin
+- **Design:** Reutiliza CSS variables do tema dark FUTRA, cards com `bg-card`, borders com `border`, badges com cores do sistema
 
