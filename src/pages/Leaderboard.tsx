@@ -52,26 +52,71 @@ export default function LeaderboardPage() {
             action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
           />
         ) : (
-          <div className="rounded-xl border border-border bg-card divide-y divide-border">
-            {users.map((user: any, i: number) => (
-              <Link key={user.id} to={`/profile/${user.username}`} className="flex items-center gap-3 sm:gap-4 p-4 hover:bg-surface-800 transition-colors">
-                <span className={cn('font-display font-bold text-lg w-8 text-center shrink-0', i < 3 ? 'text-primary' : 'text-muted-foreground')}>
-                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
-                </span>
-                <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shrink-0">
-                  {user.display_name?.charAt(0) || '?'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground text-sm truncate">{user.display_name}</p>
-                  <p className="text-xs text-muted-foreground">@{user.username} · {user.accuracy_rate}% precisão</p>
-                </div>
-                <div className="hidden sm:block"><InfluenceBadge level={user.influence_level} /></div>
-                <div className="text-right shrink-0">
-                  <p className="font-display font-bold text-foreground">{user.futra_score}</p>
-                  <p className="text-xs text-muted-foreground">score</p>
-                </div>
-              </Link>
-            ))}
+          <div className="space-y-6">
+            {/* Top 3 highlight cards */}
+            {users.length >= 3 && (
+              <div className="grid sm:grid-cols-3 gap-4">
+                {users.slice(0, 3).map((user: any, i: number) => (
+                  <Link
+                    key={user.id}
+                    to={`/profile/${user.username}`}
+                    className={cn(
+                      'glass-card gradient-border rounded-xl p-5 text-center transition-all hover:scale-[1.02]',
+                      i === 0 && 'sm:order-2'
+                    )}
+                  >
+                    <div className={cn(
+                      'w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center text-lg font-bold',
+                      i === 0
+                        ? 'gradient-primary text-primary-foreground ring-2 ring-yellow-400/60 glow-emerald'
+                        : 'bg-surface-700 text-foreground'
+                    )}>
+                      {user.display_name?.charAt(0) || '?'}
+                    </div>
+                    <p className="text-2xl mb-1">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</p>
+                    <p className="font-medium text-foreground text-sm truncate">{user.display_name}</p>
+                    <p className="text-xs text-muted-foreground mb-2">@{user.username}</p>
+                    <p className={cn(
+                      'font-display text-2xl font-bold',
+                      i === 0 ? 'text-foreground glow-text' : 'text-foreground'
+                    )}>
+                      {user.futra_score}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{user.accuracy_rate}% precisão</p>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Remaining rows */}
+            <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+              {users.slice(3).map((user: any, i: number) => (
+                <Link
+                  key={user.id}
+                  to={`/profile/${user.username}`}
+                  className={cn(
+                    'flex items-center gap-3 sm:gap-4 p-4 transition-colors hover:bg-surface-800/50',
+                    i % 2 === 1 && 'bg-surface-800/30'
+                  )}
+                >
+                  <span className="font-display font-bold text-lg w-8 text-center shrink-0 text-muted-foreground">
+                    #{i + 4}
+                  </span>
+                  <div className="w-10 h-10 rounded-full bg-surface-700 flex items-center justify-center text-sm font-bold text-foreground shrink-0">
+                    {user.display_name?.charAt(0) || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm truncate">{user.display_name}</p>
+                    <p className="text-xs text-muted-foreground">@{user.username} · {user.accuracy_rate}% precisão</p>
+                  </div>
+                  <div className="hidden sm:block"><InfluenceBadge level={user.influence_level} /></div>
+                  <div className="text-right shrink-0">
+                    <p className="font-display font-bold text-foreground">{user.futra_score}</p>
+                    <p className="text-xs text-muted-foreground">score</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </div>

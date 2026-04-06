@@ -75,6 +75,10 @@ export default {
         negative: {
           DEFAULT: "hsl(var(--negative))",
         },
+        "chart-green": "hsl(var(--chart-green))",
+        "buy-yes": "hsl(var(--buy-yes))",
+        "buy-no": "hsl(var(--buy-no))",
+        "price-tag": "hsl(var(--price-tag))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -121,6 +125,14 @@ export default {
           "50%": { opacity: "1" },
           "100%": { opacity: "0.5" },
         },
+        "count-up": {
+          from: { opacity: "0", transform: "translateY(4px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "shimmer": {
+          from: { backgroundPosition: "-200% 0" },
+          to: { backgroundPosition: "200% 0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -130,6 +142,8 @@ export default {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "float": "float 4s ease-in-out infinite",
         "twinkle": "twinkle 6s ease-in-out infinite alternate",
+        "count-up": "count-up 0.5s ease-out",
+        "shimmer": "shimmer 2s linear infinite",
       },
     },
   },

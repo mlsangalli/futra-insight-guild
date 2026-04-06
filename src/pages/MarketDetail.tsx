@@ -151,31 +151,45 @@ export default function MarketDetailPage() {
             {/* Option cards */}
             <div className="space-y-3">
               <h2 className="font-semibold text-foreground text-sm uppercase tracking-wider text-muted-foreground">Probabilidades atuais</h2>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {market.options.map(opt => {
+              <div className="space-y-0 rounded-xl border border-border/30 bg-card overflow-hidden">
+                {market.options.map((opt, idx) => {
                   const isWinner = isResolved && opt.id === market.resolved_option;
                   const isLoser = isResolved && opt.id !== market.resolved_option;
+                  const isLeader = opt.id === topOption.id;
                   return (
                     <div key={opt.id} className={cn(
-                      'p-4 rounded-xl border transition-all',
-                      isWinner ? 'border-emerald-500/50 bg-emerald-500/10' :
-                      isLoser ? 'border-border/30 bg-card opacity-50' :
-                      'border-border bg-card'
+                      'relative p-4 overflow-hidden transition-all',
+                      idx < market.options.length - 1 && 'border-b border-border/20',
+                      isWinner && 'bg-emerald/10',
+                      isLoser && 'opacity-50',
                     )}>
-                      <div className="flex items-center justify-between">
+                      {/* Background fill bar */}
+                      <div
+                        className={cn(
+                          'absolute inset-0 transition-all duration-500',
+                          isWinner ? 'bg-emerald/10' : isLeader ? 'bg-primary/8' : 'bg-primary/4'
+                        )}
+                        style={{ width: `${opt.percentage}%` }}
+                      />
+                      <div className="relative flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                            {isWinner && <CheckCircle className="h-4 w-4 text-emerald-400" />}
+                            {isWinner && <CheckCircle className="h-4 w-4 text-emerald" />}
                             {opt.label}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">{formatNumber(opt.votes)} votos · {formatNumber(opt.creditsAllocated)} FC</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{formatNumber(opt.votes)} votos · {formatNumber(opt.creditsAllocated)} FC</p>
                         </div>
-                        <span className={cn(
-                          'font-display text-3xl font-bold',
-                          isWinner ? 'text-emerald glow-text-emerald' : 'text-foreground'
-                        )}>
-                          {opt.percentage}%
-                        </span>
+                        <div className="text-right">
+                          <span className={cn(
+                            'font-display text-3xl font-bold',
+                            isWinner ? 'text-emerald glow-text-emerald' : isLeader ? 'text-foreground glow-text' : 'text-muted-foreground'
+                          )}>
+                            {opt.percentage}%
+                          </span>
+                          <p className="text-xs text-muted-foreground font-display">
+                            {(opt.percentage / 100).toFixed(2)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   );
@@ -208,7 +222,7 @@ export default function MarketDetailPage() {
 
           {/* Voting panel - desktop */}
           <div className="lg:col-span-1 hidden lg:block">
-            <div className="sticky top-20 rounded-xl border border-border bg-card p-6 space-y-5">
+            <div className="sticky top-20 rounded-2xl border border-border bg-card p-6 space-y-5">
               <VotingPanelContent
                 market={market}
                 isResolved={isResolved}
@@ -236,7 +250,7 @@ export default function MarketDetailPage() {
       </div>
 
       {/* Mobile floating action bar */}
-      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 p-4 bg-background/95 backdrop-blur-md border-t border-border/50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 p-4 glass-header" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {canBet ? (
           <div className="space-y-3">
             {selectedOption ? (
@@ -340,16 +354,52 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
     );
   }
 
+  const isBinary = market.options.length === 2;
+  const yesOpt = isBinary ? market.options.find((o: any) => ['sim','yes','s'].includes(o.label.toLowerCase())) || market.options[0] : null;
+  const noOpt = isBinary ? market.options.find((o: any) => o.id !== yesOpt?.id) : null;
+
   return (
     <>
       <h3 className="font-display font-semibold text-foreground">Faça sua previsão</h3>
-      <div className="space-y-2">
-        {market.options.map((opt: any) => (
-          <button key={opt.id} onClick={() => setSelectedOption(opt.id)} className={cn('w-full text-left p-3 rounded-lg border transition-all text-sm', selectedOption === opt.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:border-primary/30 text-muted-foreground hover:text-foreground')}>
-            <div className="flex justify-between"><span className="font-medium">{opt.label}</span><span>{opt.percentage}%</span></div>
+
+      {isBinary && yesOpt && noOpt ? (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setSelectedOption(yesOpt.id)}
+            className={cn(
+              'py-4 rounded-xl font-bold text-lg transition-all text-primary-foreground',
+              selectedOption === yesOpt.id ? 'bg-buy-yes ring-2 ring-buy-yes/50' : 'bg-buy-yes/80 hover:bg-buy-yes'
+            )}
+          >
+            {yesOpt.label}
+            <span className="block text-xs font-normal opacity-80 mt-0.5">{(yesOpt.percentage / 100).toFixed(2)}</span>
           </button>
-        ))}
-      </div>
+          <button
+            onClick={() => setSelectedOption(noOpt.id)}
+            className={cn(
+              'py-4 rounded-xl font-bold text-lg transition-all text-primary-foreground',
+              selectedOption === noOpt.id ? 'bg-buy-no ring-2 ring-buy-no/50' : 'bg-buy-no/80 hover:bg-buy-no'
+            )}
+          >
+            {noOpt.label}
+            <span className="block text-xs font-normal opacity-80 mt-0.5">{(noOpt.percentage / 100).toFixed(2)}</span>
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {market.options.map((opt: any) => (
+            <button key={opt.id} onClick={() => setSelectedOption(opt.id)} className={cn('w-full text-left p-4 rounded-xl border transition-all text-sm', selectedOption === opt.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:border-primary/30 text-muted-foreground hover:text-foreground')}>
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{opt.label}</span>
+                <div className="text-right">
+                  <span className="font-display font-bold">{opt.percentage}%</span>
+                  <span className="block text-xs text-muted-foreground">{(opt.percentage / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {selectedOption && (
         <div className="space-y-3 animate-fade-in">

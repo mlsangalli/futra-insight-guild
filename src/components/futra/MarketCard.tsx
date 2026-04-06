@@ -8,12 +8,14 @@ import { StatusBadge } from './StatusBadge';
 import { CountdownTimer } from './CountdownTimer';
 import { VoteBar } from './VoteBar';
 import { ShareButton } from './ShareButton';
+import { PriceChart } from './PriceChart';
 import { cn } from '@/lib/utils';
 
 interface MarketCardProps {
   market: MarketCardData;
   className?: string;
   featured?: boolean;
+  showChart?: boolean;
 }
 
 function formatNumber(n: number) {
@@ -22,7 +24,7 @@ function formatNumber(n: number) {
   return n.toString();
 }
 
-export function MarketCard({ market, className, featured }: MarketCardProps) {
+export function MarketCard({ market, className, featured, showChart }: MarketCardProps) {
   const queryClient = useQueryClient();
   const leader = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
 
@@ -38,40 +40,51 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
     ? `"${market.question}" — ${leader.percentage}% say ${leader.label} | @fuabordo`
     : market.question;
 
+  const isYes = leader.label.toLowerCase() === 'yes' || leader.label.toLowerCase() === 'sim';
+
   return (
     <Link
       to={`/market/${market.id}`}
       onMouseEnter={handleMouseEnter}
       className={cn(
-        'group block rounded-xl glass-card p-4 sm:p-5 transition-all duration-200 active:scale-[0.98]',
-        'hover:translate-y-[-2px] hover:shadow-lg',
-        featured && 'gradient-border',
+        'group block rounded-xl glass-card p-4 sm:p-5 transition-all duration-300 active:scale-[0.98]',
+        'hover:scale-[1.01]',
+        featured && 'gradient-border-top',
         className
       )}
     >
-      {/* Top row: category + status + leader percentage */}
-      <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <CategoryBadge category={market.category} />
-          <StatusBadge status={market.status} />
-        </div>
-        <span className={cn(
-          'font-display text-2xl font-bold shrink-0',
-          leader.label.toLowerCase() === 'yes' || leader.label.toLowerCase() === 'sim'
-            ? 'text-emerald glow-text-emerald'
-            : 'text-neon-blue glow-text'
-        )}>
-          {leader.percentage}%
-        </span>
+      {/* Top row: category + status */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-2 sm:mb-3">
+        <CategoryBadge category={market.category} />
+        <StatusBadge status={market.status} />
       </div>
 
-      <h3 className="font-display font-semibold text-foreground leading-snug mb-2 line-clamp-2 text-sm sm:text-base">
+      <h3 className="font-display font-bold text-foreground leading-snug mb-3 line-clamp-2 text-base sm:text-lg">
         {market.question}
       </h3>
 
+      {/* Leader percentage — prominent */}
+      <div className="flex items-end justify-between mb-3">
+        <span className={cn(
+          'font-display text-3xl font-bold',
+          isYes ? 'text-emerald glow-text-emerald' : 'text-neon-blue glow-text'
+        )}>
+          {leader.percentage}%
+        </span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+          {leader.label}
+        </span>
+      </div>
+
+      {showChart && (
+        <div className="mb-3">
+          <PriceChart className="w-full h-12" />
+        </div>
+      )}
+
       <VoteBar options={market.options} type={market.type as 'binary' | 'multiple'} compact />
 
-      <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-border/50">
+      <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-border/30">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Users className="h-3.5 w-3.5" />
