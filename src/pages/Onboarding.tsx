@@ -33,11 +33,24 @@ export default function OnboardingPage() {
         specialties: selectedCategories,
       })
       .eq('user_id', user.id);
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast.error('Failed to save preferences');
       return;
     }
+    // Apply referral if present
+    const refCode = localStorage.getItem('futra_ref');
+    if (refCode) {
+      try {
+        await supabase.functions.invoke('apply-referral', {
+          body: { referral_code: refCode },
+        });
+        localStorage.removeItem('futra_ref');
+      } catch {
+        // Non-blocking
+      }
+    }
+    setSaving(false);
     await refreshProfile();
     toast.success('Welcome to FUTRA! 🎉');
     navigate('/');
