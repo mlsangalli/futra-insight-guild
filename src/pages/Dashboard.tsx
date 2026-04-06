@@ -41,7 +41,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) return <Navigate to="/login" />;
+  
 
   const openPredictions = predictions?.filter((p: any) => p.status === 'pending') || [];
   const resolvedPredictions = predictions?.filter((p: any) => p.status !== 'pending') || [];
