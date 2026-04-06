@@ -12,6 +12,9 @@ import { StatCardSkeleton, PredictionRowSkeleton, EmptyState } from '@/component
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import EditProfileDialog from '@/components/EditProfileDialog';
+import { DailyBonusBanner } from '@/components/futra/DailyBonusBanner';
+import { ReferralCard } from '@/components/futra/ReferralCard';
+import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 
 const TABS = ['Open', 'Resolved', 'Saved'];
 
