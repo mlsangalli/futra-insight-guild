@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, Bell, LogOut, User } from 'lucide-react';
+import { Search, Menu, X, Bell, LogOut, User, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CATEGORIES } from '@/data/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/hooks/useAdmin';
 
 const NAV_ITEMS = [
   { label: 'Browse', path: '/browse' },
@@ -21,6 +22,7 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
 
   const handleSignOut = async () => {
     await signOut();
@@ -58,6 +60,11 @@ export function Header() {
             <div className="hidden sm:flex items-center gap-2 ml-2">
               {user ? (
                 <>
+                  {isAdmin && (
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to="/admin"><Shield className="h-4 w-4 mr-1" /> Admin</Link>
+                    </Button>
+                  )}
                   <span className="text-xs text-muted-foreground">{profile?.futra_credits?.toLocaleString() || 0} FC</span>
                   <Button variant="ghost" size="sm" asChild>
                     <Link to="/dashboard"><User className="h-4 w-4 mr-1" /> {profile?.username || 'Profile'}</Link>
