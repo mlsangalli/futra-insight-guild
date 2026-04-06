@@ -22,8 +22,16 @@ export default function ProfilePage() {
   const isOwn = !!currentUser && !!user && currentUser.id === user.user_id;
   const { data: predictions } = usePublicPredictions(user?.user_id);
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/profile/${username}`);
+  const handleShareProfile = async () => {
+    const text = `Meu perfil na FUTRA:\n🏆 Rank #${user?.global_rank}\n⭐ Score: ${user?.futra_score}\n🎯 Precisão: ${Math.round(user?.accuracy_rate || 0)}%\n\nVeja meu histórico de previsões:`;
+    const url = `${window.location.origin}/profile/${username}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${user?.display_name} na FUTRA`, text, url });
+        return;
+      } catch {}
+    }
+    navigator.clipboard.writeText(`${text}\n${url}`);
     toast.success('Link do perfil copiado!');
   };
 
