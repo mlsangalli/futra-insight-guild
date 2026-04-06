@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
-import { useMarkets } from '@/hooks/useMarkets';
+import { useMarketsInfinite } from '@/hooks/useMarkets';
 import { CATEGORIES, MarketCategory } from '@/types';
 import { cn } from '@/lib/utils';
 import { Search, X } from 'lucide-react';
@@ -45,22 +45,21 @@ export default function BrowsePage() {
     initialFilter === 'ending' ? 'ending' : 'trending'
   );
   const [categoryFilter, setCategoryFilter] = useState<MarketCategory | 'all'>('all');
-  const [page, setPage] = useState(0);
-  const PAGE_SIZE = 20;
 
-  const { data: allMarkets, isLoading, isError, refetch } = useMarkets(categoryFilter !== 'all' ? { category: categoryFilter } : undefined);
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useMarketsInfinite(
+    categoryFilter !== 'all' ? { category: categoryFilter } : undefined
+  );
+
+  const allMarkets = useMemo(() => data?.pages.flatMap(p => p.data) ?? [], [data]);
 
   const markets = useMemo(() => {
-    let result = allMarkets || [];
+    let result = allMarkets;
     if (sortBy === 'trending') result = result.filter(m => m.trending).concat(result.filter(m => !m.trending));
     else if (sortBy === 'popular') result = [...result].sort((a, b) => b.total_participants - a.total_participants);
     else if (sortBy === 'newest') result = [...result].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     else if (sortBy === 'ending') result = [...result].sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
     return result;
   }, [allMarkets, sortBy]);
-
-  const paginatedMarkets = markets.slice(0, (page + 1) * PAGE_SIZE);
-  const hasMore = paginatedMarkets.length < markets.length;
 
   const activeCat = CATEGORIES.find(c => c.key === categoryFilter);
 
@@ -132,7 +131,7 @@ export default function BrowsePage() {
 
         {!isLoading && !isError && (
           <p className="text-sm text-muted-foreground mb-4">
-            Mostrando {paginatedMarkets.length} de {markets.length} {markets.length === 1 ? 'mercado' : 'mercados'}
+            Mostrando {markets.length} {markets.length === 1 ? 'mercado' : 'mercados'}
           </p>
         )}
 
@@ -143,12 +142,16 @@ export default function BrowsePage() {
         ) : markets.length > 0 ? (
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedMarkets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
+              {markets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
             </div>
-            {hasMore && (
+            {hasNextPage && (
               <div className="text-center mt-8">
-                <Button variant="outline" onClick={() => setPage(p => p + 1)}>
-                  Carregar mais
+                <Button
+                  variant="outline"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? 'Carregando...' : 'Carregar mais mercados'}
                 </Button>
               </div>
             )}
