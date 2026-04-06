@@ -1,6 +1,6 @@
-import { MarketCardData as Market } from '@/types';
+import { MarketCardData } from '@/types';
 
-export const mockMarkets: Market[] = [
+export const mockMarkets: MarketCardData[] = [
   {
     id: 'm1',
     question: 'Quem vence a eleição presidencial de 2026?',
