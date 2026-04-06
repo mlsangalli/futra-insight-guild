@@ -12,6 +12,8 @@ import { MarketGridSkeleton, HeroMarketSkeleton, LeaderboardSkeleton, ErrorState
 import { SEO } from '@/components/SEO';
 import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { DailyBonusBanner } from '@/components/futra/DailyBonusBanner';
 
 function dbToCard(m: any) {
   return {
