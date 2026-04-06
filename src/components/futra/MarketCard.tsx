@@ -23,7 +23,16 @@ function formatNumber(n: number) {
 }
 
 export function MarketCard({ market, className, featured }: MarketCardProps) {
+  const queryClient = useQueryClient();
   const leader = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
+
+  const handleMouseEnter = () => {
+    queryClient.prefetchQuery({
+      queryKey: ['market', market.id],
+      queryFn: () => fetchMarketById(market.id),
+      staleTime: 60_000,
+    });
+  };
   const shareUrl = `${window.location.origin}/market/${market.id}`;
   const shareText = leader
     ? `"${market.question}" — ${leader.percentage}% say ${leader.label} | @fuabordo`
