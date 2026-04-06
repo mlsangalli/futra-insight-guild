@@ -63,6 +63,9 @@ export interface Profile {
   specialties: string[] | null;
   streak: number;
   onboarding_completed: boolean | null;
+  last_daily_bonus: string | null;
+  referral_code: string | null;
+  referred_by: string | null;
   created_at: string;
   updated_at: string;
 }

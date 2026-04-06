@@ -34,20 +34,11 @@ export function useComments(marketId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('comments')
-        .select('*, profiles!comments_user_id_fkey(username, display_name, avatar_url)')
+        .select('*')
         .eq('market_id', marketId)
         .order('created_at', { ascending: true });
-      if (error) {
-        // Fallback without join if FK doesn't exist
-        const { data: fallback, error: err2 } = await supabase
-          .from('comments')
-          .select('*')
-          .eq('market_id', marketId)
-          .order('created_at', { ascending: true });
-        if (err2) throw err2;
-        return (fallback || []) as Comment[];
-      }
-      return (data || []) as Comment[];
+      if (error) throw error;
+      return (data || []) as unknown as Comment[];
     },
     enabled: !!marketId,
   });
