@@ -25,7 +25,7 @@ export default function NotificationsPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="font-display text-3xl font-bold text-foreground">Notifications</h1>
           {notifications.some((n: any) => !n.read) && (
-            <Button variant="ghost" size="sm" onClick={() => markAsRead.mutate()}>
+            <Button variant="ghost" size="sm" onClick={() => markAsRead.mutate(undefined)}>
               <CheckCheck className="h-4 w-4 mr-1" /> Mark all read
             </Button>
           )}

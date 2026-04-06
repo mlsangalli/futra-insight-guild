@@ -54,7 +54,7 @@ export function useUnreadCount() {
 export function useMarkAsRead() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (ids?: string[]) => {
+    mutationFn: async (ids: string[] | undefined) => {
       let query = supabase.from('notifications').update({ read: true } as any);
       if (ids && ids.length > 0) {
         query = query.in('id', ids);
