@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Users, Coins } from 'lucide-react';
-import { Market } from '@/types';
+import { MarketCardData } from '@/types';
+import { fetchMarketById } from '@/lib/market-queries';
 import { CategoryBadge } from './CategoryBadge';
 import { StatusBadge } from './StatusBadge';
 import { CountdownTimer } from './CountdownTimer';
@@ -9,7 +11,7 @@ import { ShareButton } from './ShareButton';
 import { cn } from '@/lib/utils';
 
 interface MarketCardProps {
-  market: Market;
+  market: MarketCardData;
   className?: string;
   featured?: boolean;
 }
