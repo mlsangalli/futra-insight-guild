@@ -26,6 +26,8 @@ export interface DbMarket {
   featured: boolean;
   trending: boolean;
   created_by: string | null;
+  lock_date: string | null;
+  resolved_option: string | null;
 }
 
 function parseMarket(row: any): DbMarket {

@@ -14,6 +14,8 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import HowItWorks from "./pages/HowItWorks";
 import CreateMarket from "./pages/CreateMarket";
 import Watchlist from "./pages/Watchlist";
