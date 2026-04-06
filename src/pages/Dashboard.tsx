@@ -10,6 +10,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { StatCardSkeleton, PredictionRowSkeleton, EmptyState } from '@/components/futra/Skeletons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import EditProfileDialog from '@/components/EditProfileDialog';
 
 const TABS = ['Abertas', 'Resolvidas', 'Favoritos'];
 
@@ -40,7 +41,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) return <Navigate to="/login" />;
+  
 
   const openPredictions = predictions?.filter((p: any) => p.status === 'pending') || [];
   const resolvedPredictions = predictions?.filter((p: any) => p.status !== 'pending') || [];
@@ -53,7 +54,10 @@ export default function DashboardPage() {
             <h1 className="font-display text-3xl font-bold text-foreground">Painel</h1>
             <p className="text-muted-foreground mt-1">Bem-vindo de volta, {profile?.display_name || profile?.username}</p>
           </div>
-          {profile && <InfluenceBadge level={profile.influence_level} />}
+          <div className="flex items-center gap-3">
+            <EditProfileDialog />
+            {profile && <InfluenceBadge level={profile.influence_level} />}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

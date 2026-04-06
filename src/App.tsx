@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Browse from "./pages/Browse";
 import Category from "./pages/Category";
@@ -16,6 +17,7 @@ import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 import HowItWorks from "./pages/HowItWorks";
 import CreateMarket from "./pages/CreateMarket";
 import Watchlist from "./pages/Watchlist";
@@ -46,17 +48,18 @@ const App = () => (
             <Route path="/market/:id" element={<MarketDetail />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile/:username" element={<Profile />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/create-market" element={<CreateMarket />} />
-            <Route path="/watchlist" element={<Watchlist />} />
+            <Route path="/create-market" element={<ProtectedRoute><CreateMarket /></ProtectedRoute>} />
+            <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
             <Route path="/search" element={<SearchResults />} />
-            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/forbidden" element={<Forbidden />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/markets" element={<AdminMarkets />} />
