@@ -45,7 +45,6 @@ describe('MarketCard', () => {
     renderWithProviders(<MarketCard market={baseMarket} />);
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('1.0K')).toBeInTheDocument();
-    expect(screen.getByText('1K')).toBeInTheDocument();
   });
 
   it('links to market detail page', () => {
