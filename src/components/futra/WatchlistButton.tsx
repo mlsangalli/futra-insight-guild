@@ -38,7 +38,7 @@ export function WatchlistButton({ marketId, compact }: Props) {
   return (
     <Button variant="outline" size="sm" onClick={handleClick}>
       <Bookmark className={cn('h-4 w-4 mr-1', isWatching && 'fill-current text-primary')} />
-      {isWatching ? 'Watching' : 'Watch'}
+      {isWatching ? 'Salvo' : 'Salvar'}
     </Button>
   );
 }

@@ -33,16 +33,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <div className="text-center max-w-md">
             <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
             <h2 className="font-display text-xl font-bold text-foreground mb-2">
-              Something went wrong
+              Algo deu errado
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              An unexpected error occurred. Please refresh to continue.
+              Ocorreu um erro inesperado. Atualize a página para continuar.
             </p>
             <Button
               onClick={() => window.location.reload()}
               className="gradient-primary border-0"
             >
-              Refresh page
+              Atualizar página
             </Button>
           </div>
         </div>

@@ -24,7 +24,7 @@ export default function ProfilePage() {
 
   const copyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/profile/${username}`);
-    toast.success('Profile link copied!');
+    toast.success('Link do perfil copiado!');
   };
 
   if (isLoading) return <Layout><div className="container mx-auto px-4 py-8"><ProfileSkeleton /></div></Layout>;
@@ -36,8 +36,8 @@ export default function ProfilePage() {
         <div className="container mx-auto px-4 py-8">
           <EmptyState
             icon={<UserX className="h-10 w-10 text-muted-foreground" />}
-            title="User not found"
-            description={`The profile @${username} does not exist or has been removed.`}
+            title="Usuário não encontrado"
+            description={`O perfil @${username} não existe ou foi removido.`}
           />
         </div>
       </Layout>
@@ -46,7 +46,7 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <SEO title={`${user.display_name} (@${user.username})`} description={`${user.display_name} — Futra Score: ${user.futra_score} · Accuracy: ${user.accuracy_rate}%`} />
+      <SEO title={`${user.display_name} (@${user.username})`} description={`${user.display_name} — Futra Score: ${user.futra_score} · Precisão: ${user.accuracy_rate}%`} />
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start gap-6">
@@ -68,14 +68,14 @@ export default function ProfilePage() {
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="text-right">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Global Rank</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Ranking Global</p>
                 <p className="font-display text-3xl font-bold text-foreground">#{user.global_rank || '—'}</p>
               </div>
               {isOwn ? (
                 <EditProfileDialog />
               ) : (
                 <Button variant="outline" size="sm" onClick={copyLink}>
-                  <Share2 className="h-4 w-4 mr-1" /> Share
+                  <Share2 className="h-4 w-4 mr-1" /> Compartilhar
                 </Button>
               )}
             </div>
@@ -85,13 +85,13 @@ export default function ProfilePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <StatCard label="Futra Score" value={user.futra_score} icon={Trophy} />
           <StatCard label="Futra Credits" value={(user.futra_credits || 0).toLocaleString()} icon={Coins} />
-          <StatCard label="Accuracy" value={`${user.accuracy_rate}%`} icon={Target} />
-          <StatCard label="Streak" value={user.streak} icon={Zap} />
+          <StatCard label="Precisão" value={`${user.accuracy_rate}%`} icon={Target} />
+          <StatCard label="Sequência" value={user.streak} icon={Zap} />
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mt-6">
           <div className="rounded-xl border border-border bg-card p-6">
-            <h2 className="font-semibold text-foreground mb-4">Prediction history</h2>
+            <h2 className="font-semibold text-foreground mb-4">Histórico de previsões</h2>
             {predictions && predictions.length > 0 ? (
               <div className="space-y-3">
                 {predictions.map((p: any) => (
@@ -100,11 +100,11 @@ export default function ProfilePage() {
                       ? <CheckCircle className="h-4 w-4 text-emerald shrink-0 mt-0.5" />
                       : <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-foreground truncate">{p.markets?.question || 'Market'}</p>
+                      <p className="text-sm text-foreground truncate">{p.markets?.question || 'Mercado'}</p>
                       <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                        <span>{p.credits_allocated} FC staked</span>
+                        <span>{p.credits_allocated} FC apostados</span>
                         {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
-                        <span>{new Date(p.updated_at).toLocaleDateString()}</span>
+                        <span>{new Date(p.updated_at).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
                   </Link>
@@ -112,17 +112,17 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total predictions</span><span className="text-foreground font-medium">{user.total_predictions}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Resolved</span><span className="text-foreground font-medium">{user.resolved_predictions}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pending</span><span className="text-foreground font-medium">{user.total_predictions - user.resolved_predictions}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Win rate</span><span className="text-emerald font-medium">{user.accuracy_rate}%</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total de previsões</span><span className="text-foreground font-medium">{user.total_predictions}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Resolvidas</span><span className="text-foreground font-medium">{user.resolved_predictions}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pendentes</span><span className="text-foreground font-medium">{user.total_predictions - user.resolved_predictions}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Taxa de acerto</span><span className="text-emerald font-medium">{user.accuracy_rate}%</span></div>
               </div>
             )}
           </div>
           <div className="rounded-xl border border-border bg-card p-6">
-            <h2 className="font-semibold text-foreground mb-4">About</h2>
-            <p className="text-sm text-muted-foreground">{user.bio || 'No bio yet.'}</p>
-            <p className="text-xs text-muted-foreground mt-4">Joined {new Date(user.created_at).toLocaleDateString()}</p>
+            <h2 className="font-semibold text-foreground mb-4">Sobre</h2>
+            <p className="text-sm text-muted-foreground">{user.bio || 'Sem bio ainda.'}</p>
+            <p className="text-xs text-muted-foreground mt-4">Entrou em {new Date(user.created_at).toLocaleDateString('pt-BR')}</p>
           </div>
         </div>
       </div>

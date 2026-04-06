@@ -1,4 +1,4 @@
-import { Share2, Link2 } from 'lucide-react';
+import { Share2, Link2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,9 +22,23 @@ export function ShareButton({ title, text, url }: ShareButtonProps) {
     );
   };
 
+  const shareToTelegram = () => {
+    window.open(
+      `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+      '_blank'
+    );
+  };
+
+  const shareToWhatsApp = () => {
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(text + '\n' + url)}`,
+      '_blank'
+    );
+  };
+
   const copyLink = () => {
     navigator.clipboard.writeText(url);
-    toast.success('Link copied!');
+    toast.success('Link copiado!');
   };
 
   return (
@@ -41,10 +55,16 @@ export function ShareButton({ title, text, url }: ShareButtonProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem onClick={shareToTwitter}>
-          <span className="mr-2 font-bold text-xs">𝕏</span> Share on X
+          <span className="mr-2 font-bold text-xs">𝕏</span> Compartilhar no X
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={shareToTelegram}>
+          <MessageCircle className="h-4 w-4 mr-2" /> Telegram
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={shareToWhatsApp}>
+          <MessageCircle className="h-4 w-4 mr-2" /> WhatsApp
         </DropdownMenuItem>
         <DropdownMenuItem onClick={copyLink}>
-          <Link2 className="h-4 w-4 mr-2" /> Copy link
+          <Link2 className="h-4 w-4 mr-2" /> Copiar link
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

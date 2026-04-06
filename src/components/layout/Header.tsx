@@ -8,12 +8,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 
 const NAV_ITEMS = [
-  { label: 'Browse', path: '/browse' },
-  { label: 'Trending', path: '/browse?filter=trending' },
-  { label: 'Popular', path: '/browse?filter=popular' },
-  { label: 'New', path: '/browse?filter=new' },
-  { label: 'Ending Soon', path: '/browse?filter=ending' },
-  { label: 'Leaderboard', path: '/leaderboard' },
+  { label: 'Explorar', path: '/browse' },
+  { label: 'Em alta', path: '/browse?filter=trending' },
+  { label: 'Populares', path: '/browse?filter=popular' },
+  { label: 'Recentes', path: '/browse?filter=new' },
+  { label: 'Encerrando', path: '/browse?filter=ending' },
+  { label: 'Ranking', path: '/leaderboard' },
 ];
 
 export function Header() {
@@ -67,7 +67,7 @@ export function Header() {
                   )}
                   <span className="text-xs text-muted-foreground">{profile?.futra_credits?.toLocaleString() || 0} FC</span>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to="/dashboard"><User className="h-4 w-4 mr-1" /> {profile?.username || 'Profile'}</Link>
+                    <Link to="/dashboard"><User className="h-4 w-4 mr-1" /> {profile?.username || 'Perfil'}</Link>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleSignOut}>
                     <LogOut className="h-4 w-4" />
@@ -75,8 +75,8 @@ export function Header() {
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" asChild><Link to="/login">Log in</Link></Button>
-                  <Button size="sm" className="gradient-primary border-0" asChild><Link to="/signup">Sign up</Link></Button>
+                  <Button variant="ghost" size="sm" asChild><Link to="/login">Entrar</Link></Button>
+                  <Button size="sm" className="gradient-primary border-0" asChild><Link to="/signup">Criar conta</Link></Button>
                 </>
               )}
             </div>
@@ -91,12 +91,11 @@ export function Header() {
           <div className="pb-3 animate-fade-in">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input type="text" placeholder="Search markets..." className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-800 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" autoFocus onKeyDown={e => { if (e.key === 'Enter') { navigate(`/search?q=${(e.target as HTMLInputElement).value}`); setSearchOpen(false); } }} />
+              <input type="text" placeholder="Buscar mercados..." className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-800 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" autoFocus onKeyDown={e => { if (e.key === 'Enter') { navigate(`/search?q=${(e.target as HTMLInputElement).value}`); setSearchOpen(false); } }} />
             </div>
           </div>
         )}
 
-        {/* Category bar - scrollable on mobile when menu is open, always visible on desktop */}
         <div className="hidden lg:flex items-center gap-1 pb-2 -mt-1 overflow-x-auto">
           {CATEGORIES.map(cat => (
             <Link key={cat.key} to={`/category/${cat.key}`} className={cn('px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap', location.pathname === `/category/${cat.key}` ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-surface-800')}>
@@ -114,7 +113,6 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            {/* Scrollable categories */}
             <div className="flex gap-2 pt-2 border-t border-border overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
               {CATEGORIES.map(cat => (
                 <Link key={cat.key} to={`/category/${cat.key}`} onClick={() => setMobileOpen(false)} className="px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground bg-surface-800 whitespace-nowrap shrink-0">
@@ -126,19 +124,19 @@ export function Header() {
               {user ? (
                 <>
                   <Button variant="ghost" size="sm" className="flex-1" asChild>
-                    <Link to="/dashboard" onClick={() => setMobileOpen(false)}>Dashboard</Link>
+                    <Link to="/dashboard" onClick={() => setMobileOpen(false)}>Painel</Link>
                   </Button>
                   <Button size="sm" variant="outline" className="flex-1" onClick={() => { handleSignOut(); setMobileOpen(false); }}>
-                    Sign out
+                    Sair
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="ghost" size="sm" className="flex-1" asChild>
-                    <Link to="/login" onClick={() => setMobileOpen(false)}>Log in</Link>
+                    <Link to="/login" onClick={() => setMobileOpen(false)}>Entrar</Link>
                   </Button>
                   <Button size="sm" className="flex-1 gradient-primary border-0" asChild>
-                    <Link to="/signup" onClick={() => setMobileOpen(false)}>Sign up</Link>
+                    <Link to="/signup" onClick={() => setMobileOpen(false)}>Criar conta</Link>
                   </Button>
                 </>
               )}

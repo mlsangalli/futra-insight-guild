@@ -18,10 +18,10 @@ export function DailyBonusBanner() {
         </div>
         <div>
           <p className="text-sm font-semibold text-primary-foreground">
-            Daily bonus: +{bonusAmount} credits
+            Bônus diário: +{bonusAmount} créditos
           </p>
           <p className="text-xs text-primary-foreground/70">
-            {streak > 0 ? `${streak}-day streak bonus!` : 'Claim your daily reward'}
+            {streak > 0 ? `Sequência de ${streak} dias!` : 'Resgate sua recompensa diária'}
           </p>
         </div>
       </div>
@@ -31,7 +31,7 @@ export function DailyBonusBanner() {
         onClick={() => claimBonus.mutate()}
         disabled={claimBonus.isPending}
       >
-        {claimBonus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Claim'}
+        {claimBonus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Resgatar'}
       </Button>
     </div>
   );

@@ -27,7 +27,7 @@ export function useCreatePrediction() {
       return data;
     },
     onSuccess: (_data, variables) => {
-      toast.success('Prediction confirmed!');
+      toast.success('Previsão confirmada!');
       queryClient.invalidateQueries({ queryKey: ['markets'] });
       queryClient.invalidateQueries({ queryKey: ['market', variables.marketId] });
       if (user) {
@@ -36,7 +36,16 @@ export function useCreatePrediction() {
       refreshProfile();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to place prediction');
+      const msg = error.message;
+      if (msg.includes('Insufficient credits')) {
+        toast.error('Créditos insuficientes');
+      } else if (msg.includes('not open')) {
+        toast.error('Este mercado não está aberto');
+      } else if (msg.includes('Already predicted')) {
+        toast.error('Você já fez uma previsão neste mercado');
+      } else {
+        toast.error(msg || 'Falha ao fazer previsão');
+      }
     },
   });
 }

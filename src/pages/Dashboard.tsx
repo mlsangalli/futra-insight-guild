@@ -16,13 +16,13 @@ import { DailyBonusBanner } from '@/components/futra/DailyBonusBanner';
 import { ReferralCard } from '@/components/futra/ReferralCard';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 
-const TABS = ['Open', 'Resolved', 'Saved'];
+const TABS = ['Abertas', 'Resolvidas', 'Salvas'];
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const { data: predictions, isLoading: loadingPredictions } = useUserPredictions(user?.id);
   const { data: transactions } = useCreditTransactions();
-  const [tab, setTab] = useState('Open');
+  const [tab, setTab] = useState('Abertas');
 
   if (loading) {
     return (
@@ -55,8 +55,8 @@ export default function DashboardPage() {
         <DailyBonusBanner />
         <div className="flex items-center justify-between mb-8 mt-4">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, {profile?.display_name || profile?.username}</p>
+            <h1 className="font-display text-3xl font-bold text-foreground">Painel</h1>
+            <p className="text-muted-foreground mt-1">Bem-vindo de volta, {profile?.display_name || profile?.username}</p>
           </div>
           <div className="flex items-center gap-3">
             <EditProfileDialog />
@@ -67,8 +67,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatCard label="Futra Credits" value={(profile?.futra_credits || 0).toLocaleString()} icon={Coins} />
           <StatCard label="Futra Score" value={profile?.futra_score || 0} icon={Trophy} />
-          <StatCard label="Accuracy" value={`${profile?.accuracy_rate || 0}%`} icon={Target} />
-          <StatCard label="Global Rank" value={profile?.global_rank ? `#${profile.global_rank}` : '—'} icon={TrendingUp} />
+          <StatCard label="Precisão" value={`${profile?.accuracy_rate || 0}%`} icon={Target} />
+          <StatCard label="Ranking Global" value={profile?.global_rank ? `#${profile.global_rank}` : '—'} icon={TrendingUp} />
         </div>
 
         <div className="flex gap-1 mb-6 border-b border-border">
@@ -79,50 +79,50 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {tab === 'Open' && (
+        {tab === 'Abertas' && (
           <div className="space-y-3">
             {loadingPredictions ? (
               Array.from({ length: 3 }).map((_, i) => <PredictionRowSkeleton key={i} />)
             ) : openPredictions.length === 0 ? (
               <EmptyState
                 icon={<BarChart3 className="h-10 w-10 text-muted-foreground" />}
-                title="No open predictions"
-                description="Explore markets and make your first prediction!"
-                action={<Button variant="outline" asChild><Link to="/browse">Explore markets</Link></Button>}
+                title="Nenhuma previsão aberta"
+                description="Explore mercados e faça sua primeira previsão!"
+                action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
               />
             ) : openPredictions.map((p: any) => (
               <Link key={p.id} to={`/market/${p.market_id}`} className="block rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Market'}</p>
+                  <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Mercado'}</p>
                   <StatusBadge status="pending" />
                 </div>
                 <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                  <span>Choice: <span className="text-primary">{p.selected_option}</span></span>
-                  <span>Credits: <span className="text-foreground">{p.credits_allocated} FC</span></span>
+                  <span>Escolha: <span className="text-primary">{p.selected_option}</span></span>
+                  <span>Créditos: <span className="text-foreground">{p.credits_allocated} FC</span></span>
                 </div>
               </Link>
             ))}
           </div>
         )}
 
-        {tab === 'Resolved' && (
+        {tab === 'Resolvidas' && (
           <div className="space-y-3">
             {loadingPredictions ? (
               Array.from({ length: 3 }).map((_, i) => <PredictionRowSkeleton key={i} />)
             ) : resolvedPredictions.length === 0 ? (
               <EmptyState
                 icon={<Target className="h-10 w-10 text-muted-foreground" />}
-                title="No resolved predictions"
-                description="Your resolved predictions will appear here."
+                title="Nenhuma previsão resolvida"
+                description="Suas previsões resolvidas aparecerão aqui."
               />
             ) : resolvedPredictions.map((p: any) => (
               <div key={p.id} className="rounded-xl border border-border bg-card p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Market'}</p>
+                  <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Mercado'}</p>
                   <StatusBadge status={p.status} />
                 </div>
                 <div className="flex gap-4 mt-2 text-xs">
-                  <span className="text-muted-foreground">{p.credits_allocated} FC staked</span>
+                  <span className="text-muted-foreground">{p.credits_allocated} FC apostados</span>
                   {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
                 </div>
               </div>
@@ -130,24 +130,23 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {tab === 'Saved' && (
+        {tab === 'Salvas' && (
           <EmptyState
             icon={<Bookmark className="h-10 w-10 text-muted-foreground" />}
-            title="No saved markets"
-            description="Save markets to track them here."
+            title="Nenhum mercado salvo"
+            description="Salve mercados para acompanhá-los aqui."
           />
         )}
 
-        {/* Credit History */}
         {transactions && transactions.length > 0 && (
           <div className="mt-8">
-            <h2 className="font-display text-lg font-bold text-foreground mb-4">Recent credit activity</h2>
+            <h2 className="font-display text-lg font-bold text-foreground mb-4">Atividade recente de créditos</h2>
             <div className="rounded-xl border border-border bg-card divide-y divide-border">
               {transactions.slice(0, 10).map((tx: any) => (
                 <div key={tx.id} className="flex items-center justify-between p-3 text-sm">
                   <div className="min-w-0">
                     <p className="text-foreground truncate">{tx.description || tx.type}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString('pt-BR')}</p>
                   </div>
                   <span className={cn('font-display font-bold shrink-0 ml-3', tx.amount > 0 ? 'text-emerald' : 'text-destructive')}>
                     {tx.amount > 0 ? '+' : ''}{tx.amount} FC
@@ -158,7 +157,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Referral Card */}
         <div className="mt-8">
           <ReferralCard />
         </div>

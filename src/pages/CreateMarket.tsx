@@ -1,11 +1,13 @@
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Lock } from 'lucide-react';
+import { Lock, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { CATEGORIES } from '@/types';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { useAdmin } from '@/hooks/useAdmin';
+import { Link } from 'react-router-dom';
 
 const marketSchema = z.object({
   question: z.string().trim()
@@ -22,7 +24,7 @@ const marketSchema = z.object({
 type FieldErrors = Partial<Record<'question' | 'category' | 'endDate' | 'resolutionSource', string>>;
 
 export default function CreateMarketPage() {
-  const [hasAccess] = useState(false);
+  const { isAdmin, loading: adminLoading } = useAdmin();
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -46,24 +48,33 @@ export default function CreateMarketPage() {
       return;
     }
     setErrors({});
-    toast.success('Market submitted for review!');
+    toast.success('Mercado enviado para análise!');
   };
 
-  if (!hasAccess) {
+  if (adminLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-20 text-center">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!isAdmin) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-20 text-center max-w-md">
           <div className="w-16 h-16 rounded-full bg-surface-700 flex items-center justify-center mx-auto mb-4">
             <Lock className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Create a market</h1>
+          <h1 className="font-display text-2xl font-bold text-foreground">Criar mercado</h1>
           <p className="text-muted-foreground mt-3">
-            You need <span className="text-primary font-medium">High Influence</span> or above to create markets. Keep making accurate predictions to level up!
+            Apenas moderadores podem criar mercados. Em breve você poderá sugerir mercados.
           </p>
-          <div className="mt-6 rounded-lg bg-surface-800 p-4">
-            <p className="text-sm text-muted-foreground">Your current level: <span className="text-foreground font-medium">Low Influence</span></p>
-            <p className="text-sm text-muted-foreground mt-1">Required: <span className="text-emerald font-medium">High Influence</span></p>
-          </div>
+          <Button variant="outline" className="mt-6" asChild>
+            <Link to="/browse"><ArrowLeft className="h-4 w-4 mr-2" /> Explorar mercados</Link>
+          </Button>
         </div>
       </Layout>
     );
@@ -72,12 +83,12 @@ export default function CreateMarketPage() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <h1 className="font-display text-3xl font-bold text-foreground mb-6">Create a market</h1>
+        <h1 className="font-display text-3xl font-bold text-foreground mb-6">Criar mercado</h1>
         <form onSubmit={handleSubmit} className="space-y-6 rounded-xl border border-border bg-card p-6">
           <div>
-            <label className="text-sm font-medium text-foreground">Question</label>
+            <label className="text-sm font-medium text-foreground">Pergunta</label>
             <Input
-              placeholder="Will X happen by Y date?"
+              placeholder="X vai acontecer até a data Y?"
               value={question}
               onChange={e => { setQuestion(e.target.value); clearError('question'); }}
               className={`mt-1 bg-surface-800 ${errors.question ? 'border-destructive' : ''}`}
@@ -87,19 +98,19 @@ export default function CreateMarketPage() {
             <p className="text-xs text-muted-foreground mt-1 text-right">{question.length}/200</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Category</label>
+            <label className="text-sm font-medium text-foreground">Categoria</label>
             <select
               value={category}
               onChange={e => { setCategory(e.target.value); clearError('category'); }}
               className={`w-full mt-1 rounded-lg bg-surface-800 border p-2.5 text-sm text-foreground ${errors.category ? 'border-destructive' : 'border-border'}`}
             >
-              <option value="">Select a category</option>
+              <option value="">Selecione uma categoria</option>
               {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
             </select>
             {errors.category && <p className="text-xs text-destructive mt-1">{errors.category}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">End date</label>
+            <label className="text-sm font-medium text-foreground">Data de encerramento</label>
             <Input
               type="date"
               value={endDate}
@@ -109,16 +120,16 @@ export default function CreateMarketPage() {
             {errors.endDate && <p className="text-xs text-destructive mt-1">{errors.endDate}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Resolution source <span className="text-muted-foreground">(optional)</span></label>
+            <label className="text-sm font-medium text-foreground">Fonte de resolução <span className="text-muted-foreground">(opcional)</span></label>
             <Input
-              placeholder="e.g., Official government data"
+              placeholder="Ex.: Dados oficiais do governo"
               value={resolutionSource}
               onChange={e => setResolutionSource(e.target.value)}
               className="mt-1 bg-surface-800"
               maxLength={200}
             />
           </div>
-          <Button type="submit" className="w-full gradient-primary border-0">Submit for review</Button>
+          <Button type="submit" className="w-full gradient-primary border-0">Enviar para análise</Button>
         </form>
       </div>
     </Layout>
