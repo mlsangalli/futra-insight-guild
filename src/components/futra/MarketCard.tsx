@@ -69,7 +69,7 @@ export function MarketCard({ market, className, featured }: MarketCardProps) {
         {market.question}
       </h3>
 
-      <VoteBar options={market.options} type={market.type} compact />
+      <VoteBar options={market.options} type={market.type as 'binary' | 'multiple'} compact />
 
       <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-border/50">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
