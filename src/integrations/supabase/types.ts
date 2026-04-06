@@ -74,6 +74,81 @@ export type Database = {
         }
         Relationships: []
       }
+      comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          market_id: string
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          market_id: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          market_id?: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       faq_items: {
         Row: {
           active: boolean
@@ -157,6 +232,7 @@ export type Database = {
           resolution_rules: string | null
           resolution_source: string | null
           resolved_option: string | null
+          search_vector: unknown
           status: Database["public"]["Enums"]["market_status"]
           total_credits: number
           total_participants: number
@@ -178,6 +254,7 @@ export type Database = {
           resolution_rules?: string | null
           resolution_source?: string | null
           resolved_option?: string | null
+          search_vector?: unknown
           status?: Database["public"]["Enums"]["market_status"]
           total_credits?: number
           total_participants?: number
@@ -199,12 +276,46 @@ export type Database = {
           resolution_rules?: string | null
           resolution_source?: string | null
           resolved_option?: string | null
+          search_vector?: unknown
           status?: Database["public"]["Enums"]["market_status"]
           total_credits?: number
           total_participants?: number
           trending?: boolean
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          data: Json | null
+          id: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          read?: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -264,7 +375,10 @@ export type Database = {
           global_rank: number
           id: string
           influence_level: Database["public"]["Enums"]["influence_level"]
+          last_daily_bonus: string | null
           onboarding_completed: boolean | null
+          referral_code: string | null
+          referred_by: string | null
           resolved_predictions: number
           specialties: string[] | null
           streak: number
@@ -284,7 +398,10 @@ export type Database = {
           global_rank?: number
           id?: string
           influence_level?: Database["public"]["Enums"]["influence_level"]
+          last_daily_bonus?: string | null
           onboarding_completed?: boolean | null
+          referral_code?: string | null
+          referred_by?: string | null
           resolved_predictions?: number
           specialties?: string[] | null
           streak?: number
@@ -304,7 +421,10 @@ export type Database = {
           global_rank?: number
           id?: string
           influence_level?: Database["public"]["Enums"]["influence_level"]
+          last_daily_bonus?: string | null
           onboarding_completed?: boolean | null
+          referral_code?: string | null
+          referred_by?: string | null
           resolved_predictions?: number
           specialties?: string[] | null
           streak?: number
@@ -371,6 +491,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      watchlist: {
+        Row: {
+          created_at: string
+          id: string
+          market_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          market_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          market_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlist_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
