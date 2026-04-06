@@ -13,7 +13,7 @@ export function Layout({ children, hideFooter }: LayoutProps) {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 pb-20 lg:pb-0">{children}</main>
-      {!hideFooter && <Footer />}
+      {!hideFooter && <div className="hidden lg:block"><Footer /></div>}
       <BottomNav />
     </div>
   );

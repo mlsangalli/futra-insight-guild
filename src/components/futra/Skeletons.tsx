@@ -128,11 +128,11 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
       <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
         <span className="text-2xl">⚠️</span>
       </div>
-      <p className="text-foreground font-medium mb-1">Algo deu errado</p>
-      <p className="text-sm text-muted-foreground mb-4">{message || 'Não foi possível carregar os dados. Tente novamente.'}</p>
+      <p className="text-foreground font-medium mb-1">Something went wrong</p>
+      <p className="text-sm text-muted-foreground mb-4">{message || 'Could not load the data. Please try again.'}</p>
       {onRetry && (
         <button onClick={onRetry} className="px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors">
-          Tentar novamente
+          Try again
         </button>
       )}
     </div>

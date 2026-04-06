@@ -47,9 +47,9 @@ export default function LeaderboardPage() {
         ) : !users?.length ? (
           <EmptyState
             icon={<Trophy className="h-10 w-10 text-muted-foreground" />}
-            title="Nenhum forecaster ainda"
-            description="Seja o primeiro a fazer previsões e aparecer no ranking!"
-            action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
+            title="No forecasters yet"
+            description="Be the first to make predictions and appear on the leaderboard!"
+            action={<Button variant="outline" asChild><Link to="/browse">Explore markets</Link></Button>}
           />
         ) : (
           <div className="rounded-xl border border-border bg-card divide-y divide-border">

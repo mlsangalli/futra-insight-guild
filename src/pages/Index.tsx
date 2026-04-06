@@ -1,13 +1,17 @@
 import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
+import { StatusBadge } from '@/components/futra/StatusBadge';
+import { CountdownTimer } from '@/components/futra/CountdownTimer';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Target, Coins, Trophy, TrendingUp } from 'lucide-react';
+import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users } from 'lucide-react';
 import { useMarkets, useLeaderboard } from '@/hooks/useMarkets';
 import { CATEGORIES } from '@/data/types';
 import { MarketGridSkeleton, HeroMarketSkeleton, LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
 import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';
+import { cn } from '@/lib/utils';
 
 function dbToCard(m: any) {
   return {
@@ -36,14 +40,24 @@ export default function HomePage() {
     ? [...heroCard.options].sort((a: any, b: any) => b.percentage - a.percentage)[0]
     : null;
 
+  const totalParticipants = useMemo(() => markets.reduce((sum, m) => sum + m.total_participants, 0), [markets]);
+
+  const countByCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    markets.filter(m => m.status === 'open').forEach(m => {
+      counts[m.category] = (counts[m.category] || 0) + 1;
+    });
+    return counts;
+  }, [markets]);
+
   return (
     <Layout>
       <SEO />
       {/* Hero */}
       <section className="relative overflow-hidden particle-bg">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full bg-[radial-gradient(ellipse,hsl(var(--neon-blue)/0.12)_0%,hsl(var(--emerald)/0.06)_40%,transparent_70%)] pointer-events-none" />
-        <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="container mx-auto px-4 py-12 md:py-24 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="max-w-xl">
               <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
                 Predict the future.<br /><span className="gradient-primary-text">Build your reputation.</span>
@@ -53,27 +67,43 @@ export default function HomePage() {
                 <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild><Link to="/browse">Explore markets <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
                 <Button size="lg" variant="outline" className="text-base px-8" asChild><Link to="/leaderboard">See leaderboard</Link></Button>
               </div>
+
+              {/* Social proof */}
+              {!isLoading && markets.length > 0 && (
+                <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span>{markets.length} active markets</span>
+                  <span>•</span>
+                  <span>{totalParticipants.toLocaleString()} predictions made</span>
+                </div>
+              )}
             </div>
 
-            <div className="hidden lg:block">
+            <div className="mt-8 lg:mt-0">
               {isLoading ? (
                 <HeroMarketSkeleton />
               ) : heroCard && heroLeader ? (
-                <div className="glass-card gradient-border rounded-2xl p-8 animate-fade-in">
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Featured Market</p>
-                  <h3 className="font-display text-xl font-bold text-foreground mb-6 leading-snug">{heroCard.question}</h3>
-                  <div className="flex items-end gap-3 mb-6">
-                    <span className="font-display text-6xl font-bold text-emerald glow-text-emerald leading-none">{heroLeader.percentage}%</span>
-                    <span className="text-lg text-muted-foreground font-medium pb-1">{heroLeader.label}</span>
+                <Link to={`/market/${heroCard.id}`} className="block glass-card gradient-border rounded-2xl p-6 sm:p-8 animate-fade-in hover:scale-[1.01] transition-transform cursor-pointer">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest">Featured Market</p>
+                    <StatusBadge status={heroMarket.status} />
+                  </div>
+                  <h3 className="font-display text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6 leading-snug">{heroCard.question}</h3>
+                  <div className="flex items-end gap-3 mb-4 sm:mb-6">
+                    <span className="font-display text-4xl lg:text-6xl font-bold text-emerald glow-text-emerald leading-none">{heroLeader.percentage}%</span>
+                    <span className="text-base sm:text-lg text-muted-foreground font-medium pb-1">{heroLeader.label}</span>
                   </div>
                   <div className="h-3 rounded-full bg-muted/50 overflow-hidden mb-4">
                     <div className="h-full bg-emerald rounded-full bar-glow-emerald transition-all duration-700" style={{ width: `${heroLeader.percentage}%` }} />
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{heroCard.totalParticipants.toLocaleString()} participants</span>
-                    <span>{heroCard.totalCredits.toLocaleString()} FC staked</span>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4">
+                      <span>{heroCard.totalParticipants.toLocaleString()} participants</span>
+                      <span>{heroCard.totalCredits.toLocaleString()} FC staked</span>
+                    </div>
+                    <CountdownTimer endDate={heroCard.endDate} />
                   </div>
-                </div>
+                </Link>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   {featured.slice(0, 4).map((m, i) => (
@@ -105,7 +135,7 @@ export default function HomePage() {
                 {trending.slice(0, 6).map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
               </div>
             ) : (
-              <EmptyState title="Nenhum mercado em alta" description="Novos mercados em alta aparecerão aqui." />
+              <EmptyState title="No trending markets" description="Trending markets will appear here." />
             )}
           </section>
 
@@ -120,7 +150,7 @@ export default function HomePage() {
                 {popular.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
               </div>
             ) : (
-              <EmptyState title="Nenhum mercado popular ainda" description="Mercados com mais participantes aparecerão aqui." />
+              <EmptyState title="No popular markets yet" description="Markets with the most participants will appear here." />
             )}
           </section>
 
@@ -135,7 +165,7 @@ export default function HomePage() {
                 {ending.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
               </div>
             ) : (
-              <EmptyState title="Nenhum mercado encerrando" description="Mercados próximos do prazo aparecerão aqui." />
+              <EmptyState title="No markets ending soon" description="Markets nearing their deadline will appear here." />
             )}
           </section>
         </>
@@ -164,7 +194,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <EmptyState title="Nenhum forecaster ainda" description="Seja o primeiro a fazer previsões!" action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>} />
+          <EmptyState title="No forecasters yet" description="Be the first to make predictions!" action={<Button variant="outline" asChild><Link to="/browse">Explore markets</Link></Button>} />
         )}
       </section>
 
@@ -172,12 +202,23 @@ export default function HomePage() {
       <section className="container mx-auto px-4 py-12">
         <h2 className="font-display text-2xl font-bold text-foreground mb-6">Explore categories</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {CATEGORIES.map(cat => (
-            <Link key={cat.key} to={`/category/${cat.key}`} className="flex flex-col items-center gap-2 p-6 rounded-xl glass-card transition-all duration-300">
-              <span className="text-3xl">{cat.emoji}</span>
-              <span className="font-medium text-sm text-foreground">{cat.label}</span>
-            </Link>
-          ))}
+          {CATEGORIES.map(cat => {
+            const count = countByCategory[cat.key] || 0;
+            return (
+              <Link
+                key={cat.key}
+                to={`/category/${cat.key}`}
+                className={cn(
+                  'flex flex-col items-center gap-2 p-6 rounded-xl glass-card transition-all duration-300 hover:border-primary/50 hover:scale-[1.02]',
+                  count === 0 && 'opacity-60'
+                )}
+              >
+                <span className="text-3xl">{cat.emoji}</span>
+                <span className="font-medium text-sm text-foreground">{cat.label}</span>
+                <span className="text-xs text-muted-foreground">{count} {count === 1 ? 'market' : 'markets'}</span>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
