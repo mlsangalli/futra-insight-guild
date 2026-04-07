@@ -52,6 +52,13 @@ export default function MarketDetailPage() {
   const [confirmed, setConfirmed] = useState(false);
   const { user, profile } = useAuth();
   const createPrediction = useCreatePrediction();
+  const { data: userPredictions } = useUserPredictions(user?.id);
+
+  // Check if user already predicted on this market
+  const existingPrediction = useMemo(() => {
+    if (!userPredictions || !id) return null;
+    return userPredictions.find((p: any) => p.market_id === id) || null;
+  }, [userPredictions, id]);
 
   if (isLoading) {
     return <Layout><div className="container mx-auto px-4 py-8 max-w-4xl"><MarketDetailSkeleton /></div></Layout>;
@@ -79,7 +86,8 @@ export default function MarketDetailPage() {
   const isLocked = market.status === 'open' && market.lock_date && new Date(market.lock_date) <= new Date();
   const isResolved = market.status === 'resolved';
   const isClosed = market.status === 'closed';
-  const canBet = market.status === 'open' && !isLocked;
+  const canBet = market.status === 'open' && !isLocked && !existingPrediction;
+  const hasAlreadyPredicted = !!existingPrediction;
 
   const winningOption = isResolved && market.resolved_option
     ? market.options.find(o => o.id === market.resolved_option)
@@ -87,8 +95,18 @@ export default function MarketDetailPage() {
 
   const topOption = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
   const selectedOpt = market.options.find(o => o.id === selectedOption);
-  const maxCredits = Math.min(1000, profile?.futra_credits || 1000);
-  const potentialReward = selectedOpt ? Math.round(credits * (100 / (selectedOpt.percentage || 1)) * 0.85) : 0;
+  const maxCredits = Math.min(1000, profile?.futra_credits || 0);
+  const effectiveCredits = Math.min(credits, maxCredits);
+
+  // Parimutuel potential reward: your share of the total pool
+  const potentialReward = useMemo(() => {
+    if (!selectedOpt) return 0;
+    const totalPool = market.total_credits + effectiveCredits;
+    const winningPool = selectedOpt.creditsAllocated + effectiveCredits;
+    if (winningPool <= 0) return effectiveCredits;
+    return Math.round((effectiveCredits / winningPool) * totalPool);
+  }, [selectedOpt, market.total_credits, effectiveCredits]);
+
   const submitting = createPrediction.isPending;
 
   const shareUrl = `${window.location.origin}/market/${market.id}`;
