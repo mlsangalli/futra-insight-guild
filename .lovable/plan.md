@@ -1,53 +1,42 @@
 
 
-# Fix: Search — Use Portuguese Text Search Config
+# Fix: Notifications Realtime, Profile Stats, OG Image
 
-## Problem
+## Summary of Findings
 
-The `update_market_search_vector` trigger uses `to_tsvector('english', ...)` but all content is in Portuguese. This means stemming and stop-word removal are wrong — searching "eleição" won't match "eleições", and Portuguese stop words like "de", "o", "da" pollute the index.
+### 1. Notifications Realtime — Already Working ✅
+The `notifications` table is **already added** to `supabase_realtime` publication. The `useNotifications` hook already subscribes to `postgres_changes` filtered by `user_id`. No changes needed here.
 
-Additionally, the client-side code manually joins terms with `&` then passes `type: 'plain'` — but `plainto_tsquery` ignores explicit operators, so the `&` is treated as literal text and breaks matching.
+### 2. Profile Statistics (`calculate_user_scores`) — Working ✅
+The function logic is correct. No users currently have `total_predictions > 0`, so there's nothing to validate yet. The formula and profile page display are aligned. No changes needed.
 
-## Fix
+### 3. OG Image Edge Function — Has a CORS Bug 🐛
 
-### Step 1 — Migration: Switch to Portuguese config + rebuild vectors
+The `og-image/index.ts` imports `corsHeaders` from `../_shared/cors.ts`, but that file exports `corsHeaders` as a **function** (takes an `origin` parameter), while `og-image` uses it as a plain **object** (spreading it directly). This means every response gets `[object Function]` instead of actual headers.
 
-```sql
--- Update the trigger function to use 'portuguese'
-CREATE OR REPLACE FUNCTION public.update_market_search_vector()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-SET search_path TO 'public' AS $$
-BEGIN
-  NEW.search_vector := to_tsvector('portuguese',
-    coalesce(NEW.question, '') || ' ' ||
-    coalesce(NEW.description, '') || ' ' ||
-    coalesce(NEW.category::text, ''));
-  RETURN NEW;
-END;
-$$;
+Additionally, the `escapeXml` function is not applied to option labels, which could break the SVG if a label contains `<`, `>`, or `&`.
 
--- Rebuild all existing vectors
-UPDATE markets SET search_vector = to_tsvector('portuguese',
-  coalesce(question, '') || ' ' ||
-  coalesce(description, '') || ' ' ||
-  coalesce(category::text, ''));
-```
+The SVG renders correctly content-wise (tested with a real market and got a valid response with status 200), but the CORS headers are malformed.
 
-### Step 2 — Fix `useSearch.ts`
+## Plan
 
-- Remove the manual `.split(/\s+/).join(' & ')` — let `plainto_tsquery` handle tokenization naturally.
-- Pass `config: 'portuguese'` in the textSearch options so the query parser matches the index language.
+### Step 1 — Fix `og-image/index.ts` CORS usage
+Call `corsHeaders(origin)` instead of spreading the raw import. Extract the `Origin` header from the request and pass it through.
 
 ```typescript
-.textSearch('search_vector', query.trim(), {
-  type: 'plain',
-  config: 'portuguese',
-})
+const origin = req.headers.get("origin");
+const headers = corsHeaders(origin);
+// Use `headers` in all Response constructors
 ```
 
-### Impact
+### Step 2 — Escape option labels in SVG
+Apply `escapeXml()` to `o.label` in the option bars to prevent SVG injection/breakage.
 
-- Full-text search will correctly stem Portuguese words (eleição/eleições, vence/vencer, etc.)
-- Multi-word queries will work as implicit AND via `plainto_tsquery`
-- Fallback to `ilike` still works as a safety net for edge cases
+### Step 3 — Deploy and verify
+Deploy the updated edge function and test with curl.
+
+---
+
+**No database changes needed. No profile/notification changes needed.**
+Only one file changes: `supabase/functions/og-image/index.ts`.
 
