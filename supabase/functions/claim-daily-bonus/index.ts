@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       futra_credits: profile.futra_credits + amount,
       last_daily_bonus: now.toISOString(),
       streak: newStreak,
-    } as any).eq("user_id", user.id);
+    }).eq("user_id", user.id);
 
     // Insert credit transaction
     await supabase.from("credit_transactions").insert({
