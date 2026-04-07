@@ -1,83 +1,53 @@
 
 
-# Fix: Daily Bonus Claim — Credits Never Applied
+# Fix: Search — Use Portuguese Text Search Config
 
 ## Problem
 
-The `protect_profile_fields` trigger silently reverts `futra_credits` and `streak` on **every** profile update, including service_role updates from the `claim-daily-bonus` edge function. Result: the bonus appears claimed (`last_daily_bonus` is set) but credits and streak are never actually applied.
+The `update_market_search_vector` trigger uses `to_tsvector('english', ...)` but all content is in Portuguese. This means stemming and stop-word removal are wrong — searching "eleição" won't match "eleições", and Portuguese stop words like "de", "o", "da" pollute the index.
 
-This same bug affects **all server-side credit operations**: `resolve_market_and_score`, `apply-referral`, and the initial allocation — any edge function that updates `futra_credits` via a direct profile update.
-
-The `place_prediction` and `resolve_market_and_score` DB functions work correctly because they use `UPDATE profiles SET futra_credits = futra_credits + X` directly in PL/pgSQL as SECURITY DEFINER, which runs as the function owner — but the trigger still fires. Let me re-check: actually the trigger fires for those too. This means `resolve_market_and_score` is also broken for credit distribution.
-
-## Root Cause
-
-```sql
--- protect_profile_fields() — runs on EVERY update unconditionally
-NEW.futra_credits := OLD.futra_credits;  -- blocks ALL credit changes
-NEW.streak := OLD.streak;                -- blocks ALL streak changes
--- ... plus futra_score, accuracy_rate, global_rank, etc.
-```
-
-The trigger was designed to prevent **users** from self-modifying these fields via RLS, but it blocks server-side operations too.
+Additionally, the client-side code manually joins terms with `&` then passes `type: 'plain'` — but `plainto_tsquery` ignores explicit operators, so the `&` is treated as literal text and breaks matching.
 
 ## Fix
 
-**Step 1 — Update `protect_profile_fields` trigger function** (migration)
-
-Only protect fields when the caller is a regular authenticated user (not service_role or a SECURITY DEFINER function):
+### Step 1 — Migration: Switch to Portuguese config + rebuild vectors
 
 ```sql
-CREATE OR REPLACE FUNCTION public.protect_profile_fields()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
+-- Update the trigger function to use 'portuguese'
+CREATE OR REPLACE FUNCTION public.update_market_search_vector()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path TO 'public' AS $$
 BEGIN
-  -- Allow service-role and DB function callers to modify all fields
-  IF current_setting('role', true) = 'service_role' 
-     OR current_setting('request.jwt.claim.role', true) IS NULL THEN
-    RETURN NEW;
-  END IF;
-
-  -- For regular users: preserve server-managed fields
-  NEW.futra_credits := OLD.futra_credits;
-  NEW.futra_score := OLD.futra_score;
-  NEW.accuracy_rate := OLD.accuracy_rate;
-  NEW.global_rank := OLD.global_rank;
-  NEW.influence_level := OLD.influence_level;
-  NEW.total_predictions := OLD.total_predictions;
-  NEW.resolved_predictions := OLD.resolved_predictions;
-  NEW.streak := OLD.streak;
-  NEW.user_id := OLD.user_id;
+  NEW.search_vector := to_tsvector('portuguese',
+    coalesce(NEW.question, '') || ' ' ||
+    coalesce(NEW.description, '') || ' ' ||
+    coalesce(NEW.category::text, ''));
   RETURN NEW;
 END;
 $$;
+
+-- Rebuild all existing vectors
+UPDATE markets SET search_vector = to_tsvector('portuguese',
+  coalesce(question, '') || ' ' ||
+  coalesce(description, '') || ' ' ||
+  coalesce(category::text, ''));
 ```
 
-**Step 2 — Fix the edge function's `as any` cast**
+### Step 2 — Fix `useSearch.ts`
 
-Remove the `as any` type assertion in the edge function update call (line 72). This was hiding the fact that the update was being silently ignored.
+- Remove the manual `.split(/\s+/).join(' & ')` — let `plainto_tsquery` handle tokenization naturally.
+- Pass `config: 'portuguese'` in the textSearch options so the query parser matches the index language.
 
-**Step 3 — Repair existing data**
-
-Run a one-time query to credit the admin user the 55 FC that was lost:
-
-```sql
-UPDATE profiles SET futra_credits = 1055, streak = 1 WHERE user_id = 'cd400de6-50a9-46c9-81fa-131c8b697195';
+```typescript
+.textSearch('search_vector', query.trim(), {
+  type: 'plain',
+  config: 'portuguese',
+})
 ```
 
-(This will also be blocked by the current trigger, so it must run after the migration.)
+### Impact
 
-## Impact
-
-This single migration fixes credit application for:
-- Daily bonus claims
-- Market resolution rewards (`resolve_market_and_score`)  
-- Referral bonuses (`apply-referral`)
-- Rank recalculation (`recalculate_global_ranks`)
-- Score calculation (`calculate_user_scores`)
-
-No client-side code changes needed beyond removing the `as any`.
+- Full-text search will correctly stem Portuguese words (eleição/eleições, vence/vencer, etc.)
+- Multi-word queries will work as implicit AND via `plainto_tsquery`
+- Fallback to `ilike` still works as a safety net for edge cases
 
