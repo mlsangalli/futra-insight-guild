@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { Market, MarketOption } from '@/types';
+import { useTrackMission } from '@/hooks/useMissions';
 
 function parseRow(row: any): Market {
   const rawOptions = row.markets?.market_options || row.markets?.options || [];
@@ -51,6 +52,7 @@ export function useIsWatching(marketId: string) {
 export function useToggleWatchlist() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const trackMission = useTrackMission();
 
   return useMutation({
     mutationFn: async (marketId: string) => {
@@ -75,6 +77,9 @@ export function useToggleWatchlist() {
       toast.success(result.added ? 'Adicionado à watchlist' : 'Removido da watchlist');
       queryClient.invalidateQueries({ queryKey: ['watchlist'] });
       queryClient.invalidateQueries({ queryKey: ['watching', marketId] });
+      if (result.added) {
+        trackMission.mutate({ actionType: 'watchlist' });
+      }
     },
     onError: () => toast.error('Falha ao atualizar watchlist'),
   });

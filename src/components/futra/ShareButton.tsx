@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { useTrackMission } from '@/hooks/useMissions';
 
 interface ShareButtonProps {
   title: string;
@@ -15,11 +16,16 @@ interface ShareButtonProps {
 }
 
 export function ShareButton({ title, text, url }: ShareButtonProps) {
+  const trackMission = useTrackMission();
+
+  const trackShare = () => trackMission.mutate({ actionType: 'share' });
+
   const shareToTwitter = () => {
     window.open(
       `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
       '_blank'
     );
+    trackShare();
   };
 
   const shareToTelegram = () => {
@@ -27,6 +33,7 @@ export function ShareButton({ title, text, url }: ShareButtonProps) {
       `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
       '_blank'
     );
+    trackShare();
   };
 
   const shareToWhatsApp = () => {
@@ -34,11 +41,13 @@ export function ShareButton({ title, text, url }: ShareButtonProps) {
       `https://wa.me/?text=${encodeURIComponent(text + '\n' + url)}`,
       '_blank'
     );
+    trackShare();
   };
 
   const copyLink = () => {
     navigator.clipboard.writeText(url);
     toast.success('Link copiado!');
+    trackShare();
   };
 
   return (

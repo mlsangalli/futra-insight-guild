@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isOnCooldown } from '@/lib/rate-limiter';
+import { useTrackMission } from '@/hooks/useMissions';
 
 interface CreatePredictionPayload {
   marketId: string;
@@ -16,6 +17,7 @@ interface CreatePredictionPayload {
 export function useCreatePrediction() {
   const queryClient = useQueryClient();
   const { user, refreshProfile } = useAuth();
+  const trackMission = useTrackMission();
 
   return useMutation({
     mutationFn: async (payload: CreatePredictionPayload) => {
@@ -38,6 +40,10 @@ export function useCreatePrediction() {
         queryClient.invalidateQueries({ queryKey: ['predictions', user.id] });
       }
       refreshProfile();
+      // Track missions
+      trackMission.mutate({ actionType: 'prediction' });
+      trackMission.mutate({ actionType: 'category_diversity' });
+      trackMission.mutate({ actionType: 'pre_lock' });
     },
     onError: (error: Error) => {
       const msg = error.message;

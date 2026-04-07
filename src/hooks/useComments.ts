@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isOnCooldown } from '@/lib/rate-limiter';
+import { useTrackMission } from '@/hooks/useMissions';
 
 export interface Comment {
   id: string;
@@ -48,6 +49,7 @@ export function useComments(marketId: string) {
 export function useCreateComment() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const trackMission = useTrackMission();
 
   return useMutation({
     mutationFn: async ({ marketId, body, parentId }: { marketId: string; body: string; parentId?: string }) => {
@@ -65,6 +67,7 @@ export function useCreateComment() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['comments', variables.marketId] });
+      trackMission.mutate({ actionType: 'comment' });
     },
     onError: (err: Error) => toast.error(err.message || 'Falha ao publicar comentário'),
   });
