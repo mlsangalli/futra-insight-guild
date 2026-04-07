@@ -11,7 +11,7 @@ import { CommentSection } from '@/components/futra/CommentSection';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy } from 'lucide-react';
-import { useMarket } from '@/hooks/useMarkets';
+import { useMarket, useUserPredictions } from '@/hooks/useMarkets';
 import { useRealtimeMarket } from '@/hooks/useRealtimeMarket';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreatePrediction } from '@/hooks/usePrediction';
