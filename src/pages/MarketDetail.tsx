@@ -337,6 +337,16 @@ export default function MarketDetailPage() {
 // Extracted to keep things clean
 function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, confirmed, submitting, selectedOption, selectedOpt, credits, maxCredits, potentialReward, winningOption, user, profile, setSelectedOption, setCredits, handleConfirm, existingPrediction }: any) {
   if (isResolved) {
+    const won = existingPrediction?.status === 'won';
+    const predShareUrl = existingPrediction
+      ? `${window.location.origin}/market/${market.id}`
+      : '';
+    const predShareText = existingPrediction
+      ? won
+        ? `Acertei! "${market.question}" → ${winningOption?.label}. +${existingPrediction.reward} FC na FUTRA`
+        : `"${market.question}" → Resultado: ${winningOption?.label} | FUTRA`
+      : '';
+
     return (
       <div className="text-center py-6">
         <Trophy className="h-12 w-12 text-emerald mx-auto mb-3" />
@@ -353,6 +363,16 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
             {existingPrediction.status === 'won' && existingPrediction.reward > 0 && (
               <p className="text-emerald font-bold mt-1">+{existingPrediction.reward} FC ganhos!</p>
             )}
+          </div>
+        )}
+        {existingPrediction && (
+          <div className="mt-3 flex justify-center">
+            <ShareButton
+              title={market.question}
+              text={predShareText}
+              url={predShareUrl}
+              label={won ? 'Compartilhar vitória' : 'Compartilhar'}
+            />
           </div>
         )}
         <Button className="mt-4 w-full" variant="outline" asChild>

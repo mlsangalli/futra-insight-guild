@@ -1,9 +1,10 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, TrendingUp } from 'lucide-react';
+import { CheckCircle, XCircle, TrendingUp, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { ShareButton } from '@/components/futra/ShareButton';
 
 export function RecentResultsCard() {
   const { user } = useAuth();
@@ -36,31 +37,44 @@ export function RecentResultsCard() {
       <div className="space-y-2">
         {results.map((r: any) => {
           const won = r.status === 'won';
+          const shareText = won
+            ? `Acertei! "${r.markets?.question || 'Mercado'}". +${r.reward} FC na FUTRA`
+            : `"${r.markets?.question || 'Mercado'}" — Resultado na FUTRA`;
+          const shareUrl = `${window.location.origin}/market/${r.market_id}`;
+
           return (
-            <Link
-              key={r.id}
-              to={`/market/${r.market_id}`}
-              className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              {won
-                ? <CheckCircle className="h-4 w-4 text-emerald shrink-0 mt-0.5" />
-                : <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-foreground truncate">
-                  {r.markets?.question || 'Mercado'}
-                </p>
-                <div className="flex gap-3 text-xs mt-0.5">
-                  <span className={cn(won ? 'text-emerald' : 'text-destructive')}>
-                    {won ? `+${r.reward}` : `-${r.credits_allocated}`} FC
-                  </span>
-                  {r.score_delta != null && (
-                    <span className={cn(r.score_delta >= 0 ? 'text-emerald' : 'text-destructive')}>
-                      {r.score_delta >= 0 ? '+' : ''}{r.score_delta} score
+            <div key={r.id} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+              <Link
+                to={`/market/${r.market_id}`}
+                className="flex items-start gap-2.5 flex-1 min-w-0"
+              >
+                {won
+                  ? <CheckCircle className="h-4 w-4 text-emerald shrink-0 mt-0.5" />
+                  : <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground truncate">
+                    {r.markets?.question || 'Mercado'}
+                  </p>
+                  <div className="flex gap-3 text-xs mt-0.5">
+                    <span className={cn(won ? 'text-emerald' : 'text-destructive')}>
+                      {won ? `+${r.reward}` : `-${r.credits_allocated}`} FC
                     </span>
-                  )}
+                    {r.score_delta != null && (
+                      <span className={cn(r.score_delta >= 0 ? 'text-emerald' : 'text-destructive')}>
+                        {r.score_delta >= 0 ? '+' : ''}{r.score_delta} score
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+              {won && (
+                <ShareButton
+                  title={r.markets?.question || 'FUTRA'}
+                  text={shareText}
+                  url={shareUrl}
+                />
+              )}
+            </div>
           );
         })}
       </div>
