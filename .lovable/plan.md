@@ -1,42 +1,57 @@
 
 
-# Fix: Notifications Realtime, Profile Stats, OG Image
+# Fix: Align `calculate_user_scores` with Documented Formula
 
-## Summary of Findings
+## Problem
 
-### 1. Notifications Realtime — Already Working ✅
-The `notifications` table is **already added** to `supabase_realtime` publication. The `useNotifications` hook already subscribes to `postgres_changes` filtered by `user_id`. No changes needed here.
+The `calculate_user_scores` DB function computes `futra_score` as:
 
-### 2. Profile Statistics (`calculate_user_scores`) — Working ✅
-The function logic is correct. No users currently have `total_predictions > 0`, so there's nothing to validate yet. The formula and profile page display are aligned. No changes needed.
+```sql
+v_score := ROUND(v_resolved * v_accuracy);
+-- e.g. 50 resolved × 80% accuracy = 4000
+```
 
-### 3. OG Image Edge Function — Has a CORS Bug 🐛
+But the documented formula is:
 
-The `og-image/index.ts` imports `corsHeaders` from `../_shared/cors.ts`, but that file exports `corsHeaders` as a **function** (takes an `origin` parameter), while `og-image` uses it as a plain **object** (spreading it directly). This means every response gets `[object Function]` instead of actual headers.
+```
+accuracy_rate × log(resolved_predictions + 1) × 100
+-- e.g. 0.80 × log(51) × 100 ≈ 136
+```
 
-Additionally, the `escapeXml` function is not applied to option labels, which could break the SVG if a label contains `<`, `>`, or `&`.
+The current formula is **linear** in resolved predictions, meaning users who spam predictions get disproportionately rewarded. The logarithmic formula rewards accuracy more heavily.
 
-The SVG renders correctly content-wise (tested with a real market and got a valid response with status 200), but the CORS headers are malformed.
+The influence level thresholds (500/2000/5000) were designed for the logarithmic scale — with the linear formula, any user with 50+ resolved predictions and decent accuracy would instantly hit "elite" status.
+
+Everything else is correct: the profile page displays all fields from `profiles`, and `calculate_user_scores` is called correctly from `resolve_market_and_score`.
 
 ## Plan
 
-### Step 1 — Fix `og-image/index.ts` CORS usage
-Call `corsHeaders(origin)` instead of spreading the raw import. Extract the `Origin` header from the request and pass it through.
+### Step 1 — Migration: Fix the score formula
 
-```typescript
-const origin = req.headers.get("origin");
-const headers = corsHeaders(origin);
-// Use `headers` in all Response constructors
+Update `calculate_user_scores` to use the logarithmic formula:
+
+```sql
+v_score := ROUND((v_accuracy / 100.0) * ln(v_resolved + 1) * 100);
 ```
 
-### Step 2 — Escape option labels in SVG
-Apply `escapeXml()` to `o.label` in the option bars to prevent SVG injection/breakage.
+Note: PostgreSQL uses `ln()` for natural log. Using `log()` would give log base 10 — either works but the thresholds should match. With `ln()`:
+- 10 resolved, 80% accuracy → `0.8 × ln(11) × 100 ≈ 192`
+- 50 resolved, 90% accuracy → `0.9 × ln(51) × 100 ≈ 353`
+- 200 resolved, 85% accuracy → `0.85 × ln(201) × 100 ≈ 451`
 
-### Step 3 — Deploy and verify
-Deploy the updated edge function and test with curl.
+This aligns with the documented influence thresholds where "elite" (5000) is genuinely hard to reach.
 
----
+### Step 2 — No client-side changes needed
 
-**No database changes needed. No profile/notification changes needed.**
-Only one file changes: `supabase/functions/og-image/index.ts`.
+The profile page already reads `futra_score` directly from the DB. The `StatCard`, `InfluenceBadge`, and leaderboard components all use the stored values.
+
+## Files Changed
+
+- **1 migration file** — update `calculate_user_scores` function
+
+## Impact
+
+- Correct scoring formula applied on next market resolution
+- No existing data affected (no users have predictions yet)
+- Influence level thresholds will work as designed
 
