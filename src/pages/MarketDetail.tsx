@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { VoteBar } from '@/components/futra/VoteBar';
@@ -11,7 +11,7 @@ import { CommentSection } from '@/components/futra/CommentSection';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy } from 'lucide-react';
-import { useMarket } from '@/hooks/useMarkets';
+import { useMarket, useUserPredictions } from '@/hooks/useMarkets';
 import { useRealtimeMarket } from '@/hooks/useRealtimeMarket';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreatePrediction } from '@/hooks/usePrediction';
@@ -52,6 +52,26 @@ export default function MarketDetailPage() {
   const [confirmed, setConfirmed] = useState(false);
   const { user, profile } = useAuth();
   const createPrediction = useCreatePrediction();
+  const { data: userPredictions } = useUserPredictions(user?.id);
+
+  // Check if user already predicted on this market
+  const existingPrediction = useMemo(() => {
+    if (!userPredictions || !id) return null;
+    return userPredictions.find((p: any) => p.market_id === id) || null;
+  }, [userPredictions, id]);
+
+  // Parimutuel potential reward calculation
+  const potentialReward = useMemo(() => {
+    if (!market) return 0;
+    const selectedOpt = market.options.find(o => o.id === selectedOption);
+    if (!selectedOpt) return 0;
+    const maxCr = Math.min(1000, profile?.futra_credits || 0);
+    const effectiveCr = Math.min(credits, maxCr);
+    const totalPool = market.total_credits + effectiveCr;
+    const winningPool = selectedOpt.creditsAllocated + effectiveCr;
+    if (winningPool <= 0) return effectiveCr;
+    return Math.round((effectiveCr / winningPool) * totalPool);
+  }, [market, selectedOption, credits, profile?.futra_credits]);
 
   if (isLoading) {
     return <Layout><div className="container mx-auto px-4 py-8 max-w-4xl"><MarketDetailSkeleton /></div></Layout>;
@@ -79,7 +99,8 @@ export default function MarketDetailPage() {
   const isLocked = market.status === 'open' && market.lock_date && new Date(market.lock_date) <= new Date();
   const isResolved = market.status === 'resolved';
   const isClosed = market.status === 'closed';
-  const canBet = market.status === 'open' && !isLocked;
+  const canBet = market.status === 'open' && !isLocked && !existingPrediction;
+  const hasAlreadyPredicted = !!existingPrediction;
 
   const winningOption = isResolved && market.resolved_option
     ? market.options.find(o => o.id === market.resolved_option)
@@ -87,8 +108,7 @@ export default function MarketDetailPage() {
 
   const topOption = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
   const selectedOpt = market.options.find(o => o.id === selectedOption);
-  const maxCredits = Math.min(1000, profile?.futra_credits || 1000);
-  const potentialReward = selectedOpt ? Math.round(credits * (100 / (selectedOpt.percentage || 1)) * 0.85) : 0;
+  const maxCredits = Math.min(1000, profile?.futra_credits || 0);
   const submitting = createPrediction.isPending;
 
   const shareUrl = `${window.location.origin}/market/${market.id}`;
@@ -223,7 +243,7 @@ export default function MarketDetailPage() {
           {/* Voting panel - desktop */}
           <div className="lg:col-span-1 hidden lg:block">
             <div className="sticky top-20 rounded-2xl border border-border bg-card p-6 space-y-5">
-              <VotingPanelContent
+               <VotingPanelContent
                 market={market}
                 isResolved={isResolved}
                 isClosed={isClosed}
@@ -241,8 +261,8 @@ export default function MarketDetailPage() {
                 profile={profile}
                 setSelectedOption={setSelectedOption}
                 setCredits={setCredits}
-                setConfirmed={setConfirmed}
                 handleConfirm={handleConfirm}
+                existingPrediction={existingPrediction}
               />
             </div>
           </div>
@@ -251,7 +271,14 @@ export default function MarketDetailPage() {
 
       {/* Mobile floating action bar */}
       <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 p-4 glass-header" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        {canBet ? (
+        {confirmed || hasAlreadyPredicted ? (
+          <div className="text-center text-sm">
+            <CheckCircle className="h-5 w-5 text-emerald inline mr-1" />
+            <span className="text-foreground font-medium">
+              {confirmed ? 'Previsão confirmada!' : `Você já previu: ${market.options.find(o => o.id === existingPrediction?.selected_option)?.label || existingPrediction?.selected_option}`}
+            </span>
+          </div>
+        ) : canBet ? (
           <div className="space-y-3">
             {selectedOption ? (
               <>
@@ -270,8 +297,8 @@ export default function MarketDetailPage() {
                   className="w-full"
                 />
                 {user ? (
-                  <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting}>
-                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : 'Fazer previsão'}
+                  <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting || maxCredits < 10}>
+                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : maxCredits < 10 ? 'Créditos insuficientes' : 'Fazer previsão'}
                   </Button>
                 ) : (
                   <Button className="w-full gradient-primary border-0" asChild>
@@ -308,7 +335,7 @@ export default function MarketDetailPage() {
 }
 
 // Extracted to keep things clean
-function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, confirmed, submitting, selectedOption, selectedOpt, credits, maxCredits, potentialReward, winningOption, user, profile, setSelectedOption, setCredits, setConfirmed, handleConfirm }: any) {
+function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, confirmed, submitting, selectedOption, selectedOpt, credits, maxCredits, potentialReward, winningOption, user, profile, setSelectedOption, setCredits, handleConfirm, existingPrediction }: any) {
   if (isResolved) {
     return (
       <div className="text-center py-6">
@@ -318,6 +345,15 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
           <p className="text-sm text-muted-foreground mt-2">
             Resultado: <span className="text-emerald font-bold">{winningOption.label}</span>
           </p>
+        )}
+        {existingPrediction && (
+          <div className="mt-3 rounded-lg bg-surface-800 p-3 text-sm">
+            <p className="text-muted-foreground">Sua previsão: <span className="text-foreground font-medium">{existingPrediction.selected_option}</span></p>
+            <p className="text-muted-foreground">Créditos: <span className="text-foreground">{existingPrediction.credits_allocated} FC</span></p>
+            {existingPrediction.status === 'won' && existingPrediction.reward > 0 && (
+              <p className="text-emerald font-bold mt-1">+{existingPrediction.reward} FC ganhos!</p>
+            )}
+          </div>
         )}
         <Button className="mt-4 w-full" variant="outline" asChild>
           <Link to="/browse">Explorar outros mercados</Link>
@@ -343,13 +379,26 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
     );
   }
 
-  if (confirmed) {
+  if (confirmed || existingPrediction) {
+    const predOpt = existingPrediction
+      ? market.options.find((o: any) => o.id === existingPrediction.selected_option)
+      : selectedOpt;
+    const predCredits = existingPrediction?.credits_allocated || credits;
     return (
       <div className="text-center py-6">
         <CheckCircle className="h-12 w-12 text-emerald mx-auto mb-3" />
-        <h3 className="font-display font-bold text-foreground text-lg">Previsão confirmada!</h3>
-        <p className="text-sm text-muted-foreground mt-2">Você escolheu <span className="text-emerald font-medium">{selectedOpt?.label}</span> com {credits} créditos.</p>
-        <Button className="mt-4 w-full" variant="outline" onClick={() => { setConfirmed(false); setSelectedOption(null); }}>Fazer outra previsão</Button>
+        <h3 className="font-display font-bold text-foreground text-lg">
+          {confirmed ? 'Previsão confirmada!' : 'Você já previu'}
+        </h3>
+        <p className="text-sm text-muted-foreground mt-2">
+          Você escolheu <span className="text-emerald font-medium">{predOpt?.label || existingPrediction?.selected_option}</span> com {predCredits} créditos.
+        </p>
+        <p className="text-xs text-muted-foreground mt-3">
+          Acompanhe o resultado na aba "Abertas" do seu painel.
+        </p>
+        <Button className="mt-4 w-full" variant="outline" asChild>
+          <Link to="/dashboard">Ir para o painel</Link>
+        </Button>
       </div>
     );
   }
@@ -406,27 +455,27 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
           <div>
             <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Alocar créditos</label>
             <Slider
-              value={[credits]}
+              value={[Math.min(credits, maxCredits)]}
               onValueChange={([v]) => setCredits(v)}
               min={10}
-              max={maxCredits}
+              max={Math.max(10, maxCredits)}
               step={10}
               className="w-full mt-3"
             />
             <div className="flex justify-between text-sm mt-1">
               <span className="text-muted-foreground">10</span>
-              <span className="font-display font-bold text-foreground">{credits} FC</span>
+              <span className="font-display font-bold text-foreground">{Math.min(credits, maxCredits)} FC</span>
               <span className="text-muted-foreground">{maxCredits}</span>
             </div>
           </div>
           <div className="rounded-lg bg-surface-800 p-4 space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Você arrisca</span><span className="text-foreground font-medium">{credits} FC</span></div>
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Você arrisca</span><span className="text-foreground font-medium">{Math.min(credits, maxCredits)} FC</span></div>
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Recompensa potencial</span><span className="text-emerald font-bold">{potentialReward} FC</span></div>
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Seu saldo</span><span className="text-foreground">{profile?.futra_credits?.toLocaleString() || '—'} FC</span></div>
           </div>
           {user ? (
-            <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting}>
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : 'Fazer previsão'}
+            <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting || maxCredits < 10}>
+              {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : maxCredits < 10 ? 'Créditos insuficientes' : 'Fazer previsão'}
             </Button>
           ) : (
             <Button className="w-full gradient-primary border-0" asChild>
