@@ -319,6 +319,45 @@ export type Database = {
         }
         Relationships: []
       }
+      missions: {
+        Row: {
+          action_type: string
+          active: boolean
+          created_at: string
+          description: string
+          goal_value: number
+          id: string
+          period: string
+          reward_credits: number
+          reward_score: number
+          title: string
+        }
+        Insert: {
+          action_type: string
+          active?: boolean
+          created_at?: string
+          description: string
+          goal_value?: number
+          id?: string
+          period: string
+          reward_credits?: number
+          reward_score?: number
+          title: string
+        }
+        Update: {
+          action_type?: string
+          active?: boolean
+          created_at?: string
+          description?: string
+          goal_value?: number
+          id?: string
+          period?: string
+          reward_credits?: number
+          reward_score?: number
+          title?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string
@@ -510,6 +549,50 @@ export type Database = {
         }
         Relationships: []
       }
+      user_missions: {
+        Row: {
+          claimed_at: string | null
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          current_value: number
+          id: string
+          mission_id: string
+          period_start: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          id?: string
+          mission_id: string
+          period_start: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          id?: string
+          mission_id?: string
+          period_start?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_missions_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -566,6 +649,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      claim_mission_reward: {
+        Args: { p_user_mission_id: string }
+        Returns: Json
+      }
       get_leaderboard: {
         Args: {
           p_category?: Database["public"]["Enums"]["market_category"]
@@ -603,6 +690,10 @@ export type Database = {
       resolve_market_and_score: {
         Args: { p_market_id: string; p_winning_option: string }
         Returns: Json
+      }
+      track_mission_progress: {
+        Args: { p_action_type: string; p_metadata?: Json }
+        Returns: undefined
       }
     }
     Enums: {
