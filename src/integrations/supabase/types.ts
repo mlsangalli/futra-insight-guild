@@ -359,6 +359,7 @@ export type Database = {
           id: string
           market_id: string
           reward: number | null
+          score_delta: number | null
           selected_option: string
           status: Database["public"]["Enums"]["prediction_status"]
           updated_at: string
@@ -370,6 +371,7 @@ export type Database = {
           id?: string
           market_id: string
           reward?: number | null
+          score_delta?: number | null
           selected_option: string
           status?: Database["public"]["Enums"]["prediction_status"]
           updated_at?: string
@@ -381,6 +383,7 @@ export type Database = {
           id?: string
           market_id?: string
           reward?: number | null
+          score_delta?: number | null
           selected_option?: string
           status?: Database["public"]["Enums"]["prediction_status"]
           updated_at?: string
