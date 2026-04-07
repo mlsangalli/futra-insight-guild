@@ -111,6 +111,77 @@ export function useClaimMission() {
   });
 }
 
+export interface MissionHistoryItem {
+  id: string;
+  title: string;
+  period: string;
+  reward_credits: number;
+  reward_score: number;
+  claimed_at: string;
+}
+
+export interface MissionStatsData {
+  totalCompleted: number;
+  totalCredits: number;
+  totalScore: number;
+}
+
+export function useMissionHistory() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['mission-history', user?.id],
+    enabled: !!user,
+    queryFn: async (): Promise<MissionHistoryItem[]> => {
+      const { data, error } = await supabase
+        .from('user_missions')
+        .select('id, claimed_at, mission_id, missions(title, period, reward_credits, reward_score)')
+        .eq('user_id', user!.id)
+        .not('claimed_at', 'is', null)
+        .order('claimed_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        title: row.missions?.title || 'Missão',
+        period: row.missions?.period || 'daily',
+        reward_credits: row.missions?.reward_credits || 0,
+        reward_score: row.missions?.reward_score || 0,
+        claimed_at: row.claimed_at,
+      }));
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useMissionStats() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['mission-stats', user?.id],
+    enabled: !!user,
+    queryFn: async (): Promise<MissionStatsData> => {
+      const { data, error } = await supabase
+        .from('user_missions')
+        .select('mission_id, missions(reward_credits, reward_score)')
+        .eq('user_id', user!.id)
+        .not('claimed_at', 'is', null);
+
+      if (error) throw error;
+
+      const rows = data || [];
+      return {
+        totalCompleted: rows.length,
+        totalCredits: rows.reduce((sum: number, r: any) => sum + (r.missions?.reward_credits || 0), 0),
+        totalScore: rows.reduce((sum: number, r: any) => sum + (r.missions?.reward_score || 0), 0),
+      };
+    },
+    staleTime: 30_000,
+  });
+}
+
 export function useTrackMission() {
   const queryClient = useQueryClient();
 

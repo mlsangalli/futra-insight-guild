@@ -32,6 +32,7 @@ const CreateMarket = React.lazy(() => import("./pages/CreateMarket"));
 const Watchlist = React.lazy(() => import("./pages/Watchlist"));
 const SearchResults = React.lazy(() => import("./pages/SearchResults"));
 const Notifications = React.lazy(() => import("./pages/Notifications"));
+const Missions = React.lazy(() => import("./pages/Missions"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const About = React.lazy(() => import("./pages/About"));
 const Terms = React.lazy(() => import("./pages/Terms"));
