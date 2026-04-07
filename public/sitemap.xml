@@ -51,6 +51,26 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://futra.app/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://futra.app/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://futra.app/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://futra.app/contact</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://futra.app/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>

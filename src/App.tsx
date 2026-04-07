@@ -33,6 +33,10 @@ const Watchlist = React.lazy(() => import("./pages/Watchlist"));
 const SearchResults = React.lazy(() => import("./pages/SearchResults"));
 const Notifications = React.lazy(() => import("./pages/Notifications"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
+const About = React.lazy(() => import("./pages/About"));
+const Terms = React.lazy(() => import("./pages/Terms"));
+const Privacy = React.lazy(() => import("./pages/Privacy"));
+const Contact = React.lazy(() => import("./pages/Contact"));
 const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminMarkets = React.lazy(() => import("./pages/admin/AdminMarkets"));
 const AdminCategories = React.lazy(() => import("./pages/admin/AdminCategories"));
@@ -114,6 +118,10 @@ const App = () => {
                       <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
                       <Route path="/search" element={<SearchResults />} />
                       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/terms" element={<Terms />} />
+                      <Route path="/privacy" element={<Privacy />} />
+                      <Route path="/contact" element={<Contact />} />
                       <Route path="/forbidden" element={<Forbidden />} />
                       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                       <Route path="/admin/markets" element={<AdminRoute><AdminMarkets /></AdminRoute>} />
