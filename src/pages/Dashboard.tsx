@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/futra/StatusBadge';
 import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { LevelProgressBar } from '@/components/futra/LevelProgressBar';
 import { RecentResultsCard } from '@/components/futra/RecentResultsCard';
+import { MissionsCard } from '@/components/futra/MissionsCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPredictions } from '@/hooks/useMarkets';
 import { Trophy, Coins, Target, TrendingUp, Bookmark, BarChart3 } from 'lucide-react';
@@ -82,6 +83,10 @@ export default function DashboardPage() {
         )}
 
         <RecentResultsCard />
+
+        <div className="mt-6">
+          <MissionsCard />
+        </div>
 
         <div className="flex gap-1 mb-6 mt-6 border-b border-border">
           {TABS.map(t => (
