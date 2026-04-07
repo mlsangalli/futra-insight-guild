@@ -271,7 +271,14 @@ export default function MarketDetailPage() {
 
       {/* Mobile floating action bar */}
       <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 p-4 glass-header" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        {canBet ? (
+        {confirmed || hasAlreadyPredicted ? (
+          <div className="text-center text-sm">
+            <CheckCircle className="h-5 w-5 text-emerald inline mr-1" />
+            <span className="text-foreground font-medium">
+              {confirmed ? 'Previsão confirmada!' : `Você já previu: ${market.options.find(o => o.id === existingPrediction?.selected_option)?.label || existingPrediction?.selected_option}`}
+            </span>
+          </div>
+        ) : canBet ? (
           <div className="space-y-3">
             {selectedOption ? (
               <>
@@ -290,8 +297,8 @@ export default function MarketDetailPage() {
                   className="w-full"
                 />
                 {user ? (
-                  <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting}>
-                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : 'Fazer previsão'}
+                  <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting || maxCredits < 10}>
+                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : maxCredits < 10 ? 'Créditos insuficientes' : 'Fazer previsão'}
                   </Button>
                 ) : (
                   <Button className="w-full gradient-primary border-0" asChild>
