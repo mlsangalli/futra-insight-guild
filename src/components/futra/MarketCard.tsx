@@ -59,7 +59,7 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
         <StatusBadge status={market.status} />
       </div>
 
-      <h3 className="font-display font-bold text-foreground leading-snug mb-3 line-clamp-2 text-base sm:text-lg">
+      <h3 className="font-bold text-foreground leading-snug mb-3 line-clamp-2 text-base">
         {market.question}
       </h3>
 
