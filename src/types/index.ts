@@ -211,7 +211,21 @@ export const INFLUENCE_LABELS: Record<InfluenceLevel, string> = {
   elite: 'Elite',
 };
 
+export const INFLUENCE_THRESHOLDS: Record<InfluenceLevel, { min: number; max: number | null; nextLabel: string | null }> = {
+  low: { min: 0, max: 499, nextLabel: 'Média Influência' },
+  medium: { min: 500, max: 1999, nextLabel: 'Alta Influência' },
+  high: { min: 2000, max: 4999, nextLabel: 'Elite' },
+  elite: { min: 5000, max: null, nextLabel: null },
+};
+
+export const INFLUENCE_ORDER: InfluenceLevel[] = ['low', 'medium', 'high', 'elite'];
+
 export const INFLUENCE_COLORS: Record<InfluenceLevel, string> = {
+  low: 'text-muted-foreground',
+  medium: 'text-neon-blue',
+  high: 'text-emerald',
+  elite: 'gradient-primary-text',
+};
   low: 'text-muted-foreground',
   medium: 'text-neon-blue',
   high: 'text-emerald',
