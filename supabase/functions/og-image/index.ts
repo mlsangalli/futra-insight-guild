@@ -2,15 +2,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const headers = corsHeaders(origin);
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers });
   }
 
   try {
     const url = new URL(req.url);
     const marketId = url.searchParams.get("id");
     if (!marketId) {
-      return new Response("Missing id param", { status: 400, headers: corsHeaders });
+      return new Response("Missing id param", { status: 400, headers });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -24,7 +27,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (!market) {
-      return new Response("Market not found", { status: 404, headers: corsHeaders });
+      return new Response("Market not found", { status: 404, headers });
     }
 
     const options = (market.market_options || [])
@@ -38,7 +41,7 @@ Deno.serve(async (req) => {
       const barWidth = Math.max(20, (o.percentage || 0) * 7);
       return `
         <rect x="80" y="${y}" width="${barWidth}" height="40" rx="8" fill="${barColors[i % barColors.length]}" opacity="0.8"/>
-        <text x="100" y="${y + 27}" font-size="20" fill="white" font-weight="600">${o.label}: ${o.percentage || 0}%</text>
+        <text x="100" y="${y + 27}" font-size="20" fill="white" font-weight="600">${escapeXml(o.label)}: ${o.percentage || 0}%</text>
       `;
     }).join("");
 
@@ -47,7 +50,7 @@ Deno.serve(async (req) => {
         <rect width="1200" height="630" fill="#09090b"/>
         <text x="80" y="80" font-size="28" fill="#6366f1" font-weight="bold" font-family="system-ui">FUTRA</text>
         <rect x="160" y="60" width="100" height="28" rx="14" fill="#6366f120"/>
-        <text x="175" y="80" font-size="14" fill="#a78bfa" font-family="system-ui">${market.category}</text>
+        <text x="175" y="80" font-size="14" fill="#a78bfa" font-family="system-ui">${escapeXml(market.category)}</text>
         <text x="80" y="180" font-size="42" fill="white" font-weight="bold" font-family="system-ui">
           ${escapeXml(market.question.length > 60 ? market.question.substring(0, 57) + "..." : market.question)}
         </text>
@@ -56,16 +59,15 @@ Deno.serve(async (req) => {
       </svg>
     `;
 
-    // Return SVG as PNG fallback (social crawlers accept SVG in many cases)
     return new Response(svg, {
       headers: {
-        ...corsHeaders,
+        ...headers,
         "Content-Type": "image/svg+xml",
         "Cache-Control": "public, max-age=3600",
       },
     });
   } catch (err) {
-    return new Response((err as Error).message, { status: 500, headers: corsHeaders });
+    return new Response((err as Error).message, { status: 500, headers });
   }
 });
 
