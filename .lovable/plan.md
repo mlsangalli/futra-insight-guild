@@ -1,53 +1,48 @@
 
 
-# Image Optimization — WebP & Lazy Loading
+# Implement Real Leaderboard Filters
 
-## Current State
+## Overview
+Wire the existing time/category filter UI in the Leaderboard page to a new Supabase RPC function that computes rankings dynamically based on period and category.
 
-This project uses almost **no raster images** in its UI. Avatars render initials (letter circles), charts are SVGs, icons are Lucide components. The only actual images are:
+## Step 1 — Database Migration: Create `get_leaderboard` RPC
 
-- `public/icon-192.png` and `public/icon-512.png` (PWA icons)
-- `public/og-default.svg` (OG image fallback)
-- `public/placeholder.svg`
-- External avatar URLs entered by users in their profile
+Create a SQL function `public.get_leaderboard(p_period text DEFAULT 'all', p_category public.market_category DEFAULT null)` that:
 
-There are no `<img>` tags anywhere in the React components. The only place user-provided images appear is through the Radix `AvatarImage` component (which doesn't currently use `loading="lazy"`).
+- **`all` period, no category**: Returns from `profiles` ordered by `futra_score DESC` (current behavior, unchanged).
+- **`week`/`month` period and/or category filter**: Aggregates from `predictions` joined with `markets`, computing wins/resolved/accuracy within the filtered scope, then scores using the same `ln()` formula. Returns the same column shape.
 
-## What Actually Needs to Be Done
+Return type: `TABLE(id uuid, user_id uuid, username text, display_name text, avatar_url text, influence_level influence_level, futra_score integer, accuracy_rate numeric, resolved_predictions bigint, total_predictions bigint)`
 
-### Step 1 — Convert PWA icons to WebP
+The function uses `SECURITY DEFINER` with `search_path = public` and is callable by `anon`/`authenticated`.
 
-Convert `icon-192.png` and `icon-512.png` to WebP format (significantly smaller file size), update `manifest.json` to reference the new files with correct MIME types.
+## Step 2 — Update `fetchLeaderboard` in `src/lib/market-queries.ts`
 
-### Step 2 — Add `loading="lazy"` to AvatarImage
+Change from a direct `profiles` select to `supabase.rpc('get_leaderboard', { p_period, p_category })`. Accept `period` and `category` parameters. When category is `'all'`, pass `null`.
 
-The Radix `AvatarImage` renders an `<img>` under the hood. Pass `loading="lazy"` to `AvatarImage` usage sites (Profile page, LeaderboardRow, ProfileCard) so external avatar URLs don't block initial paint. Currently these components render letter initials — but once users upload real avatar URLs, lazy loading will matter.
+## Step 3 — Update `useLeaderboard` in `src/hooks/useMarkets.ts`
 
-### Step 3 — Create a reusable `OptimizedImage` component
+Accept `{ period?: string; category?: string }` filters. Include them in the `queryKey` so TanStack Query caches per filter combination. Pass them through to `fetchLeaderboard`.
 
-A thin wrapper around `<img>` that:
-- Sets `loading="lazy"` and `decoding="async"` by default
-- Accepts WebP source with fallback via `<picture>` element
-- Applies consistent sizing classes
+## Step 4 — Update `src/pages/Leaderboard.tsx`
 
-This ensures any future image additions follow best practices automatically.
-
-### Step 4 — Fix `og-default` reference
-
-`SEO.tsx` references `og-default.png` but the actual file is `og-default.svg`. Fix the reference.
+- Map time filter labels to API values: `'Todos' → 'all'`, `'Esta semana' → 'week'`, `'Este mês' → 'month'`.
+- Pass `{ period, category }` to `useLeaderboard(...)`.
+- No layout/styling changes — same top-3 cards + remaining rows + empty/error/loading states.
 
 ## Files Changed
 
-1. **`public/manifest.json`** — update icon entries to WebP format
-2. **`src/components/ui/avatar.tsx`** — add `loading="lazy"` default prop to AvatarImage
-3. **`src/components/futra/OptimizedImage.tsx`** — new reusable component
-4. **`src/components/SEO.tsx`** — fix `og-default.png` → `og-default.svg`
-5. **PWA icons** — convert PNG to WebP via script
+1. **New migration** — `get_leaderboard` RPC function
+2. **`src/lib/market-queries.ts`** — update `fetchLeaderboard` signature + implementation
+3. **`src/hooks/useMarkets.ts`** — update `useLeaderboard` to accept filters
+4. **`src/pages/Leaderboard.tsx`** — wire filter state to hook params
 
-## Impact
+## Technical Detail: SQL Function Logic
 
-- Smaller PWA icon payloads (~30-50% reduction)
-- Lazy-loaded avatars prevent unnecessary network requests
-- Reusable pattern for any future image additions
-- Correct OG image reference in meta tags
+```sql
+-- When p_period = 'all' AND p_category IS NULL → fast path from profiles
+-- Otherwise → aggregate from predictions + markets with date/category filters
+-- Date filter: week = now() - interval '7 days', month = now() - interval '30 days'
+-- Score formula: ROUND((accuracy / 100.0) * ln(resolved + 1) * 100)
+```
 
