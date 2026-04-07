@@ -46,10 +46,10 @@ export function useMarket(id: string) {
   });
 }
 
-export function useLeaderboard() {
+export function useLeaderboard(filters?: { period?: string; category?: string }) {
   return useQuery({
-    queryKey: ['leaderboard'],
-    queryFn: fetchLeaderboard,
+    queryKey: ['leaderboard', filters?.period ?? 'all', filters?.category ?? 'all'],
+    queryFn: () => fetchLeaderboard(filters),
     staleTime: 60_000,
   });
 }

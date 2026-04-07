@@ -10,12 +10,19 @@ import { LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 
-const TIME_FILTERS = ['Todos', 'Esta semana', 'Este mês'];
+const TIME_FILTERS = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Esta semana', value: 'week' },
+  { label: 'Este mês', value: 'month' },
+];
 
 export default function LeaderboardPage() {
-  const [timeFilter, setTimeFilter] = useState('Todos');
+  const [timeFilter, setTimeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const { data: users, isLoading, isError, refetch } = useLeaderboard();
+  const { data: users, isLoading, isError, refetch } = useLeaderboard({
+    period: timeFilter,
+    category: categoryFilter,
+  });
 
   return (
     <Layout>
@@ -26,8 +33,8 @@ export default function LeaderboardPage() {
 
         <div className="flex flex-wrap gap-2 mb-4">
           {TIME_FILTERS.map(f => (
-            <button key={f} onClick={() => setTimeFilter(f)} className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-colors', timeFilter === f ? 'bg-surface-700 text-foreground' : 'text-muted-foreground hover:text-foreground')}>
-              {f}
+            <button key={f.value} onClick={() => setTimeFilter(f.value)} className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-colors', timeFilter === f.value ? 'bg-surface-700 text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+              {f.label}
             </button>
           ))}
         </div>
