@@ -107,7 +107,7 @@ export async function fetchMarketById(id: string): Promise<Market> {
 
 export async function fetchLeaderboard(filters?: { period?: string; category?: string }) {
   const p_period = filters?.period || 'all';
-  const p_category = filters?.category && filters.category !== 'all' ? filters.category : null;
+  const p_category = filters?.category && filters.category !== 'all' ? filters.category as any : null;
   const { data, error } = await supabase.rpc('get_leaderboard', {
     p_period,
     p_category,
