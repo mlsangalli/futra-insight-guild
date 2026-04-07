@@ -32,6 +32,7 @@ const CreateMarket = React.lazy(() => import("./pages/CreateMarket"));
 const Watchlist = React.lazy(() => import("./pages/Watchlist"));
 const SearchResults = React.lazy(() => import("./pages/SearchResults"));
 const Notifications = React.lazy(() => import("./pages/Notifications"));
+const Missions = React.lazy(() => import("./pages/Missions"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const About = React.lazy(() => import("./pages/About"));
 const Terms = React.lazy(() => import("./pages/Terms"));
@@ -118,6 +119,7 @@ const App = () => {
                       <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
                       <Route path="/search" element={<SearchResults />} />
                       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                      <Route path="/missions" element={<ProtectedRoute><Missions /></ProtectedRoute>} />
                       <Route path="/about" element={<About />} />
                       <Route path="/terms" element={<Terms />} />
                       <Route path="/privacy" element={<Privacy />} />

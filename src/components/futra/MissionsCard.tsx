@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Target, MessageCircle, Bookmark, Share2, Trophy, Layers, Clock, Check, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -99,7 +100,9 @@ export function MissionsCard() {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display text-sm font-bold text-foreground">Missões</h3>
+        <Link to="/missions" className="font-display text-sm font-bold text-foreground hover:text-primary transition-colors">
+          Missões <span className="text-xs font-normal text-muted-foreground">→ Ver todas</span>
+        </Link>
         <div className="flex gap-1 rounded-lg bg-muted p-0.5">
           <button
             onClick={() => setTab('daily')}

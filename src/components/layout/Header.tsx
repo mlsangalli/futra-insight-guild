@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { label: 'Recentes', path: '/browse?filter=new' },
   { label: 'Encerrando', path: '/browse?filter=ending' },
   { label: 'Ranking', path: '/leaderboard' },
+  { label: 'Missões', path: '/missions' },
 ];
 
 export function Header() {
