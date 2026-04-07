@@ -23,7 +23,7 @@ export function useSearchMarkets(query: string) {
       const { data, error } = await supabase
         .from('markets')
         .select('*, market_options(*)')
-        .textSearch('search_vector', query.trim().split(/\s+/).join(' & '), { type: 'plain' })
+        .textSearch('search_vector', query.trim(), { type: 'plain', config: 'portuguese' })
         .order('created_at', { ascending: false })
         .limit(20);
 
