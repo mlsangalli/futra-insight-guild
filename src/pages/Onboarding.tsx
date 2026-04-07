@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Target, Coins, ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,8 +56,7 @@ export default function OnboardingPage() {
   };
 
   if (profile?.onboarding_completed) {
-    navigate('/');
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   return (

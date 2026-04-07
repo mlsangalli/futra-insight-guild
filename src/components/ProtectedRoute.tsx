@@ -23,8 +23,23 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   if (!user) return <Navigate to="/login" replace />;
 
+  // Wait for profile to load before deciding on onboarding redirect
+  if (!profile) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 flex items-center justify-center">
+          <div className="space-y-4 w-full max-w-md">
+            <Skeleton className="h-8 w-48 mx-auto" />
+            <Skeleton className="h-4 w-64 mx-auto" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   // Redirect to onboarding if not completed (skip if already on /onboarding)
-  if (profile && !profile.onboarding_completed && location.pathname !== '/onboarding') {
+  if (!profile.onboarding_completed && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
   }
 

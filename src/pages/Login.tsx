@@ -45,9 +45,14 @@ export default function LoginPage() {
     const { error } = await signIn(email.trim(), password);
     setLoading(false);
     if (error) {
-      toast.error(error.message === 'Invalid login credentials'
-        ? 'Email ou senha incorretos'
-        : error.message);
+      if (error.message === 'Invalid login credentials') {
+        toast.error('Email ou senha incorretos');
+      } else if (error.message === 'Email not confirmed') {
+        toast.error('Email não confirmado. Verifique sua caixa de entrada.');
+        navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+      } else {
+        toast.error(error.message);
+      }
     } else {
       toast.success('Bem-vindo de volta!');
       navigate('/dashboard');
