@@ -1,127 +1,85 @@
 
 
-# Achievements/Badges System v1
+# Social Share Cards System
 
-## Overview
+## Architecture Decision
 
-Permanent achievements that reinforce reputation, consistency, and expertise. Backend-driven unlock logic via a `SECURITY DEFINER` RPC, displayed on Profile and Dashboard with a dark, understated visual style.
+Extend the existing `og-image` edge function into a unified `share-card` edge function that generates SVG cards for all three types (market, win, profile). SVGs are lightweight, render perfectly at any size, and avoid heavy image generation dependencies. The existing og-image already uses this pattern successfully.
 
-## Architecture
+The edge function serves as both OG image source (for social previews) and direct share asset. On the frontend, the ShareButton is enhanced to generate better copy per context, and new share actions are added to the Profile page and resolved market results.
 
-```text
-┌─────────────────────────────────────────────┐
-│ DB: achievements (static definitions)       │
-│   + user_achievements (unlocked per user)   │
-├─────────────────────────────────────────────┤
-│ RPC: check_achievements(p_user_id)          │
-│   - evaluates all criteria against user data│
-│   - inserts new unlocks + notifications     │
-│   - called after key events (resolve, etc.) │
-├─────────────────────────────────────────────┤
-│ Hook: useAchievements(userId)               │
-│   - fetches user's unlocked achievements    │
-│ Hook: useAllAchievements()                  │
-│   - fetches all active achievements         │
-├─────────────────────────────────────────────┤
-│ Components:                                 │
-│   AchievementBadge — single badge w/tooltip │
-│   AchievementsSection — profile section     │
-│   RecentAchievements — dashboard card       │
-└─────────────────────────────────────────────┘
-```
+## Step 1 — Edge Function: `share-card`
 
-## Step 1 — Database Migration
+Replace/extend `supabase/functions/og-image/index.ts` to handle three card types via `?type=market|win|profile`:
 
-### Table: `achievements`
-- `id uuid PK`, `key text UNIQUE`, `name text`, `description text`, `icon text` (lucide icon name), `category text` (milestone/accuracy/category/social/special), `rarity text` (common/rare/epic/legendary), `criteria_type text`, `criteria_value integer`, `active boolean DEFAULT true`, `created_at timestamptz`
-- RLS: public SELECT, no insert/update/delete for users
+### A) Market Odds Card (`?type=market&id=XXX`)
+- Dark background (#060B18)
+- FUTRA logo text top-left, category badge top-right
+- Market question (large, bold)
+- Leader option with large percentage + neon glow
+- All options as horizontal bars with percentages
+- Participant count + credit pool footer
+- "futra.app" watermark
 
-### Table: `user_achievements`
-- `id uuid PK`, `user_id uuid NOT NULL`, `achievement_id uuid REFERENCES achievements`, `unlocked_at timestamptz DEFAULT now()`
-- UNIQUE (user_id, achievement_id)
-- RLS: public SELECT (achievements are public on profiles), authenticated INSERT with `auth.uid() = user_id`
+### B) Win/Result Card (`?type=win&prediction_id=XXX`)
+- Queries prediction + market + user profile
+- Shows market question, user's choice, correct answer
+- Green checkmark or red X seal
+- Credits won/lost, score delta
+- User display name + accuracy rate
+- Requires service role (accesses prediction data)
 
-### RPC: `check_achievements(p_user_id uuid)`
-A `SECURITY DEFINER` function that checks all active achievements against user data and unlocks any newly earned ones. Logic per `criteria_type`:
+### C) Profile Card (`?type=profile&username=XXX`)
+- User avatar initial + display name + @username
+- Global rank, score, accuracy rate, streak
+- Influence level badge
+- Achievement count
+- Clean dark layout with subtle borders
 
-| criteria_type | Check |
-|---|---|
-| `first_prediction` | `total_predictions >= 1` |
-| `wins_count` | count of `status='won'` predictions >= criteria_value |
-| `resolved_count` | `resolved_predictions >= criteria_value` |
-| `streak_days` | `streak >= criteria_value` |
-| `category_expert` | count of `status='won'` in specific category >= criteria_value |
-| `early_caller` | exists prediction won where selected option had <20% when predicted |
-| `contrarian` | exists prediction won where selected option was not the majority |
-| `referral_count` | count of referred users >= criteria_value |
+### Visual tokens (shared across all cards):
+- Background: `#060B18`
+- Primary accent: `#6366f1` (indigo/primary)
+- Green: `#22c55e`
+- Text: white + `#71717a` for muted
+- Font: system-ui
+- Size: 1200x630 (OG standard)
 
-For each newly unlocked achievement, inserts into `user_achievements` and creates a notification.
+## Step 2 — Frontend: Enhanced ShareButton
 
-### Seed data (7 initial achievements via insert tool)
+Update `ShareButton` to accept an optional `ogImageUrl` prop and `variant` to customize share copy per context. No breaking changes — existing usage keeps working.
 
-| Key | Name | Category | Rarity | Criteria |
-|---|---|---|---|---|
-| `first_prediction` | Primeiro Palpite | milestone | common | first_prediction, 1 |
-| `five_wins` | Analista Certeiro | accuracy | rare | wins_count, 5 |
-| `ten_resolved` | Veterano | milestone | common | resolved_count, 10 |
-| `streak_7` | Sequência de Ferro | milestone | rare | streak_days, 7 |
-| `expert_politics` | Estrategista Político | category | rare | category_expert, 5 (politics) |
-| `expert_football` | Craque dos Palpites | category | rare | category_expert, 5 (football) |
-| `expert_crypto` | Oráculo Cripto | category | rare | category_expert, 5 (crypto) |
-| `early_caller` | Visionário | special | epic | early_caller, 1 |
-| `contrarian` | Contra a Maré | special | epic | contrarian, 1 |
-| `community_3` | Formador de Comunidade | social | rare | referral_count, 3 |
+Add a new `ShareCardButton` wrapper used in specific contexts:
 
-## Step 2 — Trigger Integration
+### Market Detail page
+- Already has ShareButton — update share text to include the leader percentage
+- OG URL already points to og-image function
 
-Add `PERFORM check_achievements(rec.user_id)` calls inside `resolve_market_and_score` (after score calculation for each winner/loser). This ensures achievements are checked after every market resolution.
+### Resolved market / Result card
+- Add share button to the `VotingPanelContent` resolved state
+- Share text: `"Acertei! {question} → {result}. +{reward} FC na FUTRA"` or `"Errei {question}. Resultado: {result}"`
+- OG URL: `share-card?type=win&prediction_id=XXX`
 
-Also call from `calculate_user_scores` at the end, so streak-based achievements are caught.
+### Profile page
+- Already has `handleShareProfile` — enhance to use structured share text
+- OG URL: `share-card?type=profile&username=XXX`
+- Add share to X/Twitter/Telegram options (currently only copies link)
 
-## Step 3 — Frontend
+## Step 3 — SEO Meta Tags
 
-### New hook: `src/hooks/useAchievements.ts`
-- `useUserAchievements(userId)` — fetches `user_achievements` joined with `achievements` for a given user (public, works on any profile)
-- `useAllAchievements()` — fetches all active achievements (for showing locked ones)
+Update the `SEO` component usage in:
+- `MarketDetail.tsx` — already done, keep pointing to share-card?type=market
+- `Profile.tsx` — add `ogImage` pointing to `share-card?type=profile&username=XXX`
 
-### New component: `src/components/futra/AchievementBadge.tsx`
-- Small hexagonal or circular badge with lucide icon
-- Rarity determines border glow: common (muted), rare (primary/blue), epic (emerald), legendary (gradient)
-- Tooltip on hover showing name + description
-- Locked state: grayscale, reduced opacity
+## Step 4 — RecentResultsCard share action
 
-### New component: `src/components/futra/AchievementsSection.tsx`
-- Used on Profile page
-- Grid of AchievementBadge components
-- Shows unlocked first, then locked (dimmed) with "X/Y desbloqueados" counter
-- Compact, 2-row grid on mobile
-
-### Dashboard integration
-- Add a small "Conquistas recentes" row below MissionsCard if user has any achievements
-- Show last 3 unlocked badges with dates
-
-### Profile page integration
-- Add AchievementsSection between the stats grid and the predictions history
-- Works for both own profile and viewing others' profiles
-
-## Step 4 — Visual Identity
-
-- Icons: lucide-react icons (Target, Award, Flame, Shield, TrendingDown, Users, Eye, Zap, Crown)
-- Rarity colors via border/ring only, not background fills:
-  - common: `border-border`
-  - rare: `border-primary/40 ring-1 ring-primary/20`
-  - epic: `border-emerald/40 ring-1 ring-emerald/20`
-  - legendary: `border-amber-400/40 ring-1 ring-amber-400/20`
-- Badge container: `bg-card` with subtle border, 40x40px icon area
-- No animations, no confetti — just a toast notification on unlock
+Add a small share icon per result row in `RecentResultsCard` so users can quickly share wins from the dashboard.
 
 ## Files Changed
 
-1. **New migration** — `achievements` + `user_achievements` tables, `check_achievements` RPC, update `resolve_market_and_score` to call it
-2. **Seed data** (insert tool) — 10 achievements
-3. **`src/hooks/useAchievements.ts`** — new hooks
-4. **`src/components/futra/AchievementBadge.tsx`** — new badge component with tooltip
-5. **`src/components/futra/AchievementsSection.tsx`** — new profile section
-6. **`src/pages/Profile.tsx`** — add AchievementsSection
-7. **`src/pages/Dashboard.tsx`** — add recent achievements row
+1. **`supabase/functions/og-image/index.ts`** — rewrite to support 3 card types (market, win, profile) with shared SVG rendering utilities
+2. **`src/components/futra/ShareButton.tsx`** — add optional `ogImageUrl` prop, enhance share text formatting
+3. **`src/pages/MarketDetail.tsx`** — add share button in resolved panel with win/loss card URL
+4. **`src/pages/Profile.tsx`** — enhance share to use profile card OG image, add X/Telegram/WhatsApp share options
+5. **`src/components/futra/RecentResultsCard.tsx`** — add per-row share icon for wins
+6. **`src/pages/MarketDetail.tsx` (SEO)** — update ogImage URL to use new endpoint format
 
