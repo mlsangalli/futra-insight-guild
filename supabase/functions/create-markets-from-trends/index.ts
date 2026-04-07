@@ -354,16 +354,10 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // Fetch trends from available sources in parallel
-    const trendPromises: Promise<TrendTopic[]>[] = [];
+    // RSS is always available (no API key needed)
+    const trendPromises: Promise<TrendTopic[]>[] = [fetchRssHeadlines()];
     if (serpApiKey) trendPromises.push(fetchGoogleTrends(serpApiKey));
     if (twitterToken) trendPromises.push(fetchTwitterTrends(twitterToken));
-
-    if (trendPromises.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "No API keys configured (SERPAPI_KEY or TWITTER_BEARER_TOKEN)" }),
-        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
-      );
-    }
 
     const trendResults = await Promise.all(trendPromises);
     const allTrends = trendResults.flat();
