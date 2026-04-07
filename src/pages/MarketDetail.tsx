@@ -335,7 +335,7 @@ export default function MarketDetailPage() {
 }
 
 // Extracted to keep things clean
-function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, confirmed, submitting, selectedOption, selectedOpt, credits, maxCredits, potentialReward, winningOption, user, profile, setSelectedOption, setCredits, setConfirmed, handleConfirm }: any) {
+function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, confirmed, submitting, selectedOption, selectedOpt, credits, maxCredits, potentialReward, winningOption, user, profile, setSelectedOption, setCredits, handleConfirm, existingPrediction }: any) {
   if (isResolved) {
     return (
       <div className="text-center py-6">
@@ -345,6 +345,15 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
           <p className="text-sm text-muted-foreground mt-2">
             Resultado: <span className="text-emerald font-bold">{winningOption.label}</span>
           </p>
+        )}
+        {existingPrediction && (
+          <div className="mt-3 rounded-lg bg-surface-800 p-3 text-sm">
+            <p className="text-muted-foreground">Sua previsão: <span className="text-foreground font-medium">{existingPrediction.selected_option}</span></p>
+            <p className="text-muted-foreground">Créditos: <span className="text-foreground">{existingPrediction.credits_allocated} FC</span></p>
+            {existingPrediction.status === 'won' && existingPrediction.reward > 0 && (
+              <p className="text-emerald font-bold mt-1">+{existingPrediction.reward} FC ganhos!</p>
+            )}
+          </div>
         )}
         <Button className="mt-4 w-full" variant="outline" asChild>
           <Link to="/browse">Explorar outros mercados</Link>
@@ -370,13 +379,26 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
     );
   }
 
-  if (confirmed) {
+  if (confirmed || existingPrediction) {
+    const predOpt = existingPrediction
+      ? market.options.find((o: any) => o.id === existingPrediction.selected_option)
+      : selectedOpt;
+    const predCredits = existingPrediction?.credits_allocated || credits;
     return (
       <div className="text-center py-6">
         <CheckCircle className="h-12 w-12 text-emerald mx-auto mb-3" />
-        <h3 className="font-display font-bold text-foreground text-lg">Previsão confirmada!</h3>
-        <p className="text-sm text-muted-foreground mt-2">Você escolheu <span className="text-emerald font-medium">{selectedOpt?.label}</span> com {credits} créditos.</p>
-        <Button className="mt-4 w-full" variant="outline" onClick={() => { setConfirmed(false); setSelectedOption(null); }}>Fazer outra previsão</Button>
+        <h3 className="font-display font-bold text-foreground text-lg">
+          {confirmed ? 'Previsão confirmada!' : 'Você já previu'}
+        </h3>
+        <p className="text-sm text-muted-foreground mt-2">
+          Você escolheu <span className="text-emerald font-medium">{predOpt?.label || existingPrediction?.selected_option}</span> com {predCredits} créditos.
+        </p>
+        <p className="text-xs text-muted-foreground mt-3">
+          Acompanhe o resultado na aba "Abertas" do seu painel.
+        </p>
+        <Button className="mt-4 w-full" variant="outline" asChild>
+          <Link to="/dashboard">Ir para o painel</Link>
+        </Button>
       </div>
     );
   }
@@ -433,27 +455,27 @@ function VotingPanelContent({ market, isResolved, isClosed, isLocked, canBet, co
           <div>
             <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Alocar créditos</label>
             <Slider
-              value={[credits]}
+              value={[Math.min(credits, maxCredits)]}
               onValueChange={([v]) => setCredits(v)}
               min={10}
-              max={maxCredits}
+              max={Math.max(10, maxCredits)}
               step={10}
               className="w-full mt-3"
             />
             <div className="flex justify-between text-sm mt-1">
               <span className="text-muted-foreground">10</span>
-              <span className="font-display font-bold text-foreground">{credits} FC</span>
+              <span className="font-display font-bold text-foreground">{Math.min(credits, maxCredits)} FC</span>
               <span className="text-muted-foreground">{maxCredits}</span>
             </div>
           </div>
           <div className="rounded-lg bg-surface-800 p-4 space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Você arrisca</span><span className="text-foreground font-medium">{credits} FC</span></div>
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Você arrisca</span><span className="text-foreground font-medium">{Math.min(credits, maxCredits)} FC</span></div>
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Recompensa potencial</span><span className="text-emerald font-bold">{potentialReward} FC</span></div>
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Seu saldo</span><span className="text-foreground">{profile?.futra_credits?.toLocaleString() || '—'} FC</span></div>
           </div>
           {user ? (
-            <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting}>
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : 'Fazer previsão'}
+            <Button className="w-full gradient-primary border-0" onClick={handleConfirm} disabled={submitting || maxCredits < 10}>
+              {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Confirmando...</> : maxCredits < 10 ? 'Créditos insuficientes' : 'Fazer previsão'}
             </Button>
           ) : (
             <Button className="w-full gradient-primary border-0" asChild>
