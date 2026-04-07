@@ -3,6 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { StatCard } from '@/components/futra/StatCard';
+import { LevelProgressBar } from '@/components/futra/LevelProgressBar';
 import { useProfile } from '@/hooks/useMarkets';
 import { usePublicPredictions } from '@/hooks/useProfilePredictions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -97,6 +98,10 @@ export default function ProfilePage() {
           <StatCard label="Sequência" value={user.streak} icon={Zap} />
         </div>
 
+        <div className="mt-6">
+          <LevelProgressBar score={user.futra_score} influenceLevel={user.influence_level} />
+        </div>
+
         <div className="grid md:grid-cols-2 gap-6 mt-6">
           <div className="rounded-xl border border-border bg-card p-6">
             <h2 className="font-semibold text-foreground mb-4">Histórico de previsões</h2>
@@ -112,6 +117,11 @@ export default function ProfilePage() {
                       <div className="flex gap-3 text-xs text-muted-foreground mt-1">
                         <span>{p.credits_allocated} FC apostados</span>
                         {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
+                        {p.score_delta != null && (
+                          <span className={cn(p.score_delta >= 0 ? 'text-emerald' : 'text-destructive')}>
+                            {p.score_delta >= 0 ? '+' : ''}{p.score_delta} score
+                          </span>
+                        )}
                         <span>{new Date(p.updated_at).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
