@@ -10,12 +10,19 @@ import { LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 
-const TIME_FILTERS = ['Todos', 'Esta semana', 'Este mês'];
+const TIME_FILTERS = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Esta semana', value: 'week' },
+  { label: 'Este mês', value: 'month' },
+];
 
 export default function LeaderboardPage() {
-  const [timeFilter, setTimeFilter] = useState('Todos');
+  const [timeFilter, setTimeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const { data: users, isLoading, isError, refetch } = useLeaderboard();
+  const { data: users, isLoading, isError, refetch } = useLeaderboard({
+    period: timeFilter,
+    category: categoryFilter,
+  });
 
   return (
     <Layout>

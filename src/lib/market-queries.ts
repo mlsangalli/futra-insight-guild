@@ -105,12 +105,13 @@ export async function fetchMarketById(id: string): Promise<Market> {
   return parseMarketRow(data as unknown as MarketRow);
 }
 
-export async function fetchLeaderboard() {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('futra_score', { ascending: false })
-    .limit(50);
+export async function fetchLeaderboard(filters?: { period?: string; category?: string }) {
+  const p_period = filters?.period || 'all';
+  const p_category = filters?.category && filters.category !== 'all' ? filters.category : null;
+  const { data, error } = await supabase.rpc('get_leaderboard', {
+    p_period,
+    p_category,
+  });
   if (error) throw error;
   return data || [];
 }
