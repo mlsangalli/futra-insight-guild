@@ -226,8 +226,3 @@ export const INFLUENCE_COLORS: Record<InfluenceLevel, string> = {
   high: 'text-emerald',
   elite: 'gradient-primary-text',
 };
-  low: 'text-muted-foreground',
-  medium: 'text-neon-blue',
-  high: 'text-emerald',
-  elite: 'gradient-primary-text',
-};

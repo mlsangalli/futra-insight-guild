@@ -3,6 +3,8 @@ import { SEO } from '@/components/SEO';
 import { StatCard } from '@/components/futra/StatCard';
 import { StatusBadge } from '@/components/futra/StatusBadge';
 import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
+import { LevelProgressBar } from '@/components/futra/LevelProgressBar';
+import { RecentResultsCard } from '@/components/futra/RecentResultsCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPredictions } from '@/hooks/useMarkets';
 import { Trophy, Coins, Target, TrendingUp, Bookmark, BarChart3 } from 'lucide-react';
@@ -73,7 +75,15 @@ export default function DashboardPage() {
           <StatCard label="Ranking Global" value={profile?.global_rank ? `#${profile.global_rank}` : '—'} icon={TrendingUp} />
         </div>
 
-        <div className="flex gap-1 mb-6 border-b border-border">
+        {profile && (
+          <div className="mb-6">
+            <LevelProgressBar score={profile.futra_score} influenceLevel={profile.influence_level} />
+          </div>
+        )}
+
+        <RecentResultsCard />
+
+        <div className="flex gap-1 mb-6 mt-6 border-b border-border">
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)} className={cn('px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px', tab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}>
               {t}
@@ -126,6 +136,11 @@ export default function DashboardPage() {
                 <div className="flex gap-4 mt-2 text-xs">
                   <span className="text-muted-foreground">{p.credits_allocated} FC apostados</span>
                   {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
+                  {p.score_delta != null && (
+                    <span className={cn(p.score_delta >= 0 ? 'text-emerald' : 'text-destructive')}>
+                      {p.score_delta >= 0 ? '+' : ''}{p.score_delta} score
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
