@@ -4,15 +4,14 @@ import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { StatCard } from '@/components/futra/StatCard';
 import { LevelProgressBar } from '@/components/futra/LevelProgressBar';
+import { ShareButton } from '@/components/futra/ShareButton';
 import { useProfile } from '@/hooks/useMarkets';
 import { usePublicPredictions } from '@/hooks/useProfilePredictions';
 import { useAuth } from '@/contexts/AuthContext';
-import { Target, Coins, Trophy, Zap, UserX, Share2, CheckCircle, XCircle } from 'lucide-react';
+import { Target, Coins, Trophy, Zap, UserX, CheckCircle, XCircle } from 'lucide-react';
 import { MarketCategory } from '@/types';
 import { ProfileSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import EditProfileDialog from '@/components/EditProfileDialog';
 import { AchievementsSection } from '@/components/futra/AchievementsSection';
@@ -24,18 +23,9 @@ export default function ProfilePage() {
   const isOwn = !!currentUser && !!user && currentUser.id === user.user_id;
   const { data: predictions } = usePublicPredictions(user?.user_id);
 
-  const handleShareProfile = async () => {
-    const text = `Meu perfil na FUTRA:\n🏆 Rank #${user?.global_rank}\n⭐ Score: ${user?.futra_score}\n🎯 Precisão: ${Math.round(user?.accuracy_rate || 0)}%\n\nVeja meu histórico de previsões:`;
-    const url = `${window.location.origin}/profile/${username}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `${user?.display_name} na FUTRA`, text, url });
-        return;
-      } catch {}
-    }
-    navigator.clipboard.writeText(`${text}\n${url}`);
-    toast.success('Link do perfil copiado!');
-  };
+  const profileUrl = `${window.location.origin}/profile/${username}`;
+  const profileShareText = `Meu perfil na FUTRA:\n🏆 Rank #${user?.global_rank}\n⭐ Score: ${user?.futra_score}\n🎯 Precisão: ${Math.round(user?.accuracy_rate || 0)}%`;
+  const profileOgImage = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/og-image?type=profile&username=${username}`;
 
   if (isLoading) return <Layout><div className="container mx-auto px-4 py-8"><ProfileSkeleton /></div></Layout>;
   if (isError) return <Layout><div className="container mx-auto px-4 py-8"><ErrorState onRetry={() => refetch()} /></div></Layout>;
@@ -56,7 +46,7 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <SEO title={`${user.display_name} (@${user.username})`} description={`🏆 Rank #${user.global_rank} | ⭐ Score: ${user.futra_score} | 🎯 Precisão: ${Math.round(user.accuracy_rate)}% | 🔥 Sequência: ${user.streak} — Perfil de previsor na FUTRA`} />
+      <SEO title={`${user.display_name} (@${user.username})`} description={`🏆 Rank #${user.global_rank} | ⭐ Score: ${user.futra_score} | 🎯 Precisão: ${Math.round(user.accuracy_rate)}% | 🔥 Sequência: ${user.streak} — Perfil de previsor na FUTRA`} ogImage={profileOgImage} />
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start gap-6">
@@ -81,13 +71,13 @@ export default function ProfilePage() {
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Ranking Global</p>
                 <p className="font-display text-3xl font-bold text-foreground">#{user.global_rank || '—'}</p>
               </div>
-              {isOwn ? (
-                <EditProfileDialog />
-              ) : (
-                <Button variant="outline" size="sm" onClick={handleShareProfile}>
-                  <Share2 className="h-4 w-4 mr-1" /> Compartilhar
-                </Button>
-              )}
+              {isOwn && <EditProfileDialog />}
+              <ShareButton
+                title={`${user.display_name} na FUTRA`}
+                text={profileShareText}
+                url={profileUrl}
+                label="Compartilhar"
+              />
             </div>
           </div>
         </div>
