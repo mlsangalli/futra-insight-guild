@@ -13,9 +13,13 @@ interface ShareButtonProps {
   title: string;
   text: string;
   url: string;
+  /** Optional label override for button (default: icon only) */
+  label?: string;
+  /** Optional size variant */
+  size?: 'icon' | 'sm';
 }
 
-export function ShareButton({ title, text, url }: ShareButtonProps) {
+export function ShareButton({ title, text, url, label, size = 'icon' }: ShareButtonProps) {
   const trackMission = useTrackMission();
 
   const trackShare = () => trackMission.mutate({ actionType: 'share' });
@@ -53,14 +57,26 @@ export function ShareButton({ title, text, url }: ShareButtonProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Share2 className="h-3.5 w-3.5" />
-        </Button>
+        {label ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Share2 className="h-3.5 w-3.5 mr-1.5" />
+            {label}
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Share2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem onClick={shareToTwitter}>
