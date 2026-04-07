@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import EditProfileDialog from '@/components/EditProfileDialog';
+import { AchievementsSection } from '@/components/futra/AchievementsSection';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -100,6 +101,10 @@ export default function ProfilePage() {
 
         <div className="mt-6">
           <LevelProgressBar score={user.futra_score} influenceLevel={user.influence_level} />
+        </div>
+
+        <div className="mt-6">
+          <AchievementsSection userId={user.user_id} />
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mt-6">

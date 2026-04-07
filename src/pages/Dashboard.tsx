@@ -19,6 +19,7 @@ import EditProfileDialog from '@/components/EditProfileDialog';
 import { DailyBonusBanner } from '@/components/futra/DailyBonusBanner';
 import { ReferralCard } from '@/components/futra/ReferralCard';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
+import { AchievementsSection } from '@/components/futra/AchievementsSection';
 
 const TABS = ['Abertas', 'Resolvidas', 'Salvas'];
 
@@ -87,6 +88,12 @@ export default function DashboardPage() {
         <div className="mt-6">
           <MissionsCard />
         </div>
+
+        {user && (
+          <div className="mt-6">
+            <AchievementsSection userId={user.id} compact />
+          </div>
+        )}
 
         <div className="flex gap-1 mb-6 mt-6 border-b border-border">
           {TABS.map(t => (

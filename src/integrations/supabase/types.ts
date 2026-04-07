@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          criteria_meta: Json | null
+          criteria_type: string
+          criteria_value: number
+          description: string
+          icon: string
+          id: string
+          key: string
+          name: string
+          rarity: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          criteria_meta?: Json | null
+          criteria_type: string
+          criteria_value?: number
+          description?: string
+          icon?: string
+          id?: string
+          key: string
+          name: string
+          rarity?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          criteria_meta?: Json | null
+          criteria_type?: string
+          criteria_value?: number
+          description?: string
+          icon?: string
+          id?: string
+          key?: string
+          name?: string
+          rarity?: string
+        }
+        Relationships: []
+      }
       admin_logs: {
         Row: {
           action_type: string
@@ -549,6 +594,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_missions: {
         Row: {
           claimed_at: string | null
@@ -649,6 +723,7 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      check_achievements: { Args: { p_user_id: string }; Returns: undefined }
       claim_mission_reward: {
         Args: { p_user_mission_id: string }
         Returns: Json
