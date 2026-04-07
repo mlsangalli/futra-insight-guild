@@ -555,6 +555,47 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_markets: {
+        Row: {
+          category: Database["public"]["Enums"]["market_category"]
+          created_at: string
+          id: string
+          market_id: string | null
+          source: string
+          source_topic: string
+          status: string
+          topic_hash: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["market_category"]
+          created_at?: string
+          id?: string
+          market_id?: string | null
+          source: string
+          source_topic: string
+          status?: string
+          topic_hash: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["market_category"]
+          created_at?: string
+          id?: string
+          market_id?: string | null
+          source?: string
+          source_topic?: string
+          status?: string
+          topic_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_markets_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_content: {
         Row: {
           active: boolean
