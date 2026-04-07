@@ -68,7 +68,7 @@ async function hashTopic(topic: string): Promise<string> {
 
 interface TrendTopic {
   topic: string;
-  source: "google_trends" | "twitter" | "rss";
+  source: "google_trends" | "rss";
   category: string;
   hash: string;
 }
@@ -163,38 +163,6 @@ async function fetchGoogleTrends(apiKey: string): Promise<TrendTopic[]> {
   }
 }
 
-async function fetchTwitterTrends(bearerToken: string): Promise<TrendTopic[]> {
-  try {
-    // Brazil WOEID = 23424768
-    const url = "https://api.x.com/1.1/trends/place.json?id=23424768";
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${bearerToken}` },
-    });
-    if (!res.ok) {
-      console.error("Twitter API error:", res.status, await res.text());
-      return [];
-    }
-    const data = await res.json();
-    const trends: TrendTopic[] = [];
-
-    const trendList = data[0]?.trends || [];
-    for (const item of trendList.slice(0, 10)) {
-      const topic = item.name?.replace(/^#/, "") || "";
-      if (!topic || topic.length < 3) continue;
-
-      const category = classifyCategory(topic);
-      if (!category) continue;
-
-      const hash = await hashTopic(`twitter:${topic}`);
-      trends.push({ topic, source: "twitter", category, hash });
-    }
-
-    return trends;
-  } catch (e) {
-    console.error("Twitter Trends fetch error:", e);
-    return [];
-  }
-}
 
 async function generateMarketFromAI(
   topic: string,
@@ -348,7 +316,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const serpApiKey = Deno.env.get("SERPAPI_KEY");
-    const twitterToken = Deno.env.get("TWITTER_BEARER_TOKEN");
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -357,7 +324,6 @@ Deno.serve(async (req) => {
     // RSS is always available (no API key needed)
     const trendPromises: Promise<TrendTopic[]>[] = [fetchRssHeadlines()];
     if (serpApiKey) trendPromises.push(fetchGoogleTrends(serpApiKey));
-    if (twitterToken) trendPromises.push(fetchTwitterTrends(twitterToken));
 
     const trendResults = await Promise.all(trendPromises);
     const allTrends = trendResults.flat();
