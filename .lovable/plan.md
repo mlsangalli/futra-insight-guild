@@ -1,127 +1,192 @@
 
 
-# Progression Layer — Level Bar, Score Delta & Result Recap
+# Missions System v1
 
-## Progression Model
+## Overview
 
-The influence thresholds already exist in the DB (`calculate_user_scores`):
+A daily/weekly missions system that rewards users for core behaviors (predictions, comments, watchlist, sharing) with credits and score. Backend-driven with automatic progress tracking and manual claim.
 
-| Level | Min Score | Max Score |
-|-------|----------|----------|
-| low | 0 | 499 |
-| medium | 500 | 1999 |
-| high | 2000 | 4999 |
-| elite | 5000 | ∞ |
-
-These thresholds will be formalized as a shared constant and used for the progress bar calculation.
-
-## What Goes Where
+## Architecture
 
 ```text
-┌─────────────────────────────────────────────┐
-│ DASHBOARD                                   │
-│  ┌─────────────────────────────────────────┐│
-│  │ LevelProgressBar (below stat cards)     ││
-│  │ [low ████████░░░░ medium] 320/500       ││
-│  └─────────────────────────────────────────┘│
-│  ┌─────────────────────────────────────────┐│
-│  │ RecentResultsCard (above credit txns)   ││
-│  │ ✅ "Quem vence o campeonato?" +120FC +18││
-│  │ ❌ "Bitcoin acima de 100k?" -50FC  -3   ││
-│  └─────────────────────────────────────────┘│
-├─────────────────────────────────────────────┤
-│ PROFILE                                     │
-│  LevelProgressBar (below stat cards grid)   │
-├─────────────────────────────────────────────┤
-│ RESOLVED PREDICTIONS (Dashboard tab)        │
-│  Each row shows: +reward FC, +/-score delta │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ DB: missions (static definitions)            │
+│   + user_missions (per-user per-period)      │
+├──────────────────────────────────────────────┤
+│ RPC: track_mission_progress(action, metadata)│
+│   - called after each user action            │
+│   - upserts user_missions row for today/week │
+│   - increments current_value                 │
+├──────────────────────────────────────────────┤
+│ RPC: claim_mission_reward(user_mission_id)   │
+│   - validates completed && not claimed       │
+│   - awards credits + score                   │
+│   - creates notification + credit_transaction│
+├──────────────────────────────────────────────┤
+│ Edge Function: reset-missions (cron daily)   │
+│   - creates fresh user_missions rows daily   │
+│   - weekly rows on Mondays                   │
+│   - uses UTC dates, no timezone bugs         │
+├──────────────────────────────────────────────┤
+│ Hook: useMissions()                          │
+│   - fetches user's active missions + progress│
+│ Hook: useTrackMission()                      │
+│   - fire-and-forget RPC call after actions   │
+│ Hook: useClaimMission()                      │
+│   - claim mutation with query invalidation   │
+├──────────────────────────────────────────────┤
+│ Component: MissionsCard (dashboard)          │
+│   - compact card with progress bars          │
+│   - daily/weekly tabs                        │
+│   - claim button per completed mission       │
+└──────────────────────────────────────────────┘
 ```
 
-## Implementation Plan
+## Step 1 — Database Migration
 
-### Step 1 — DB Migration: Add `score_delta` to `predictions`
-
-Add a nullable integer column `score_delta` to `predictions`. Update `resolve_market_and_score` to compute and store the score change per user (score after − score before) when resolving.
-
+### Table: `missions`
 ```sql
-ALTER TABLE predictions ADD COLUMN score_delta integer DEFAULT NULL;
+CREATE TABLE missions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  action_type text NOT NULL,        -- 'prediction','comment','watchlist','share','win','category_diversity','pre_lock'
+  title text NOT NULL,
+  description text NOT NULL,
+  period text NOT NULL CHECK (period IN ('daily','weekly')),
+  goal_value integer NOT NULL DEFAULT 1,
+  reward_credits integer NOT NULL DEFAULT 0,
+  reward_score integer NOT NULL DEFAULT 0,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE missions ENABLE ROW LEVEL SECURITY;
+-- Public read
+CREATE POLICY "Missions viewable by everyone" ON missions FOR SELECT TO public USING (true);
 ```
 
-Then update `resolve_market_and_score` to capture `old_score` before calling `calculate_user_scores`, then set `score_delta = new_score - old_score` on the prediction row.
+### Table: `user_missions`
+```sql
+CREATE TABLE user_missions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  mission_id uuid NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+  period_start date NOT NULL,       -- e.g. 2026-04-07 for daily, Monday date for weekly
+  current_value integer NOT NULL DEFAULT 0,
+  completed boolean NOT NULL DEFAULT false,
+  completed_at timestamptz,
+  claimed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, mission_id, period_start)
+);
+ALTER TABLE user_missions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users see own missions" ON user_missions FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "System manages missions" ON user_missions FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+```
 
-### Step 2 — Shared constants: `INFLUENCE_THRESHOLDS`
+### RPC: `track_mission_progress`
+A `SECURITY DEFINER` function that:
+1. Takes `p_action_type text` and optional `p_metadata jsonb`
+2. Gets today's date (UTC) and current week's Monday
+3. For each active mission matching `action_type`:
+   - Upserts `user_missions` row for the correct period_start
+   - Increments `current_value` (capped at `goal_value`)
+   - Sets `completed = true` and `completed_at` when goal reached
+4. Returns void (fire-and-forget)
 
-Add to `src/types/index.ts`:
+Special handling for `category_diversity`: metadata contains `{category: "..."}`, the function counts distinct categories from predictions this week instead of simple increment.
+
+### RPC: `claim_mission_reward`
+A `SECURITY DEFINER` function that:
+1. Takes `p_user_mission_id uuid`
+2. Validates: belongs to caller, completed = true, claimed_at IS NULL
+3. Looks up mission reward amounts
+4. Updates `profiles.futra_credits += reward_credits`
+5. If `reward_score > 0`, updates `profiles.futra_score += reward_score`
+6. Inserts `credit_transaction` (type: `mission_reward`)
+7. Inserts notification
+8. Sets `claimed_at = now()`
+9. Returns reward info
+
+### Seed: Initial missions (via insert tool, not migration)
+| Period | Action Type | Title | Goal | Credits | Score |
+|--------|------------|-------|------|---------|-------|
+| daily | prediction | Fazer 1 previsão | 1 | 25 | 5 |
+| daily | comment | Comentar em 1 mercado | 1 | 15 | 3 |
+| daily | watchlist | Salvar 2 mercados | 2 | 10 | 2 |
+| weekly | win | Acertar 3 previsões | 3 | 100 | 25 |
+| weekly | category_diversity | Prever em 3 categorias | 3 | 75 | 15 |
+| weekly | share | Compartilhar 1 mercado | 1 | 30 | 5 |
+| weekly | pre_lock | 5 previsões antes do lock | 5 | 50 | 10 |
+
+## Step 2 — Edge Function: `initialize-user-missions`
+
+A cron-triggered function (runs daily at 00:05 UTC) that:
+1. For all users with at least 1 prediction, creates `user_missions` rows for today's daily missions (if not exists)
+2. On Mondays, also creates weekly mission rows
+3. Uses `ON CONFLICT DO NOTHING` for idempotency
+
+Alternative: missions rows are created lazily by `track_mission_progress` on first action. This avoids the cron entirely and is simpler. **I'll use the lazy approach** — `track_mission_progress` upserts rows as needed.
+
+## Step 3 — Frontend Integration: Track Actions
+
+Modify existing mutation hooks to call `track_mission_progress` after success:
+
+- **`useCreatePrediction`** → `track('prediction', { category, market_id })`; also `track('pre_lock')` if market has lock_date and it's in the future
+- **`useCreateComment`** → `track('comment')`
+- **`useToggleWatchlist`** → `track('watchlist')` (only on add, not remove)
+- **`ShareButton`** → `track('share')` on any share action
+
+For `win` tracking: already handled in `resolve_market_and_score`. Add a call to `track_mission_progress` inside that RPC for each winner.
+
+## Step 4 — Hook: `useMissions`
 
 ```typescript
-export const INFLUENCE_THRESHOLDS: Record<InfluenceLevel, { min: number; max: number | null }> = {
-  low: { min: 0, max: 499 },
-  medium: { min: 500, max: 1999 },
-  high: { min: 2000, max: 4999 },
-  elite: { min: 5000, max: null },
-};
+// src/hooks/useMissions.ts
+export function useMissions() { ... }      // fetches user_missions + missions for current day/week
+export function useClaimMission() { ... }   // mutation to claim reward
+export function useTrackMission() { ... }   // fire-and-forget tracking
 ```
 
-### Step 3 — Component: `LevelProgressBar`
+`useMissions` query: joins `user_missions` with `missions` table, filtered to current day's daily + current week's weekly missions. Returns typed array with progress info.
 
-New file: `src/components/futra/LevelProgressBar.tsx`
+## Step 5 — Component: `MissionsCard`
 
-A reusable component accepting `score` and `influenceLevel`. Displays:
-- Current level badge (reuses `InfluenceBadge`)
-- Progress bar from current threshold min to next threshold min
-- "320 / 500 para Média Influência" text
-- Elite shows a full bar with a "Max level" label
+New file: `src/components/futra/MissionsCard.tsx`
 
-Uses the existing `Progress` component from `src/components/ui/progress.tsx` and the dark card styling.
+A compact card with:
+- "Missões" header with daily/weekly toggle
+- Each mission row: icon + title + progress bar + reward badge + claim button
+- Completed missions show checkmark, claimed ones are dimmed
+- Uses existing `Progress` component
+- Dark card styling consistent with `RecentResultsCard`
 
-### Step 4 — Component: `RecentResultsCard`
+## Step 6 — Dashboard Integration
 
-New file: `src/components/futra/RecentResultsCard.tsx`
-
-Fetches the last 5 resolved predictions (won/lost) with market question, reward, and score_delta. Shows a compact card with:
-- Market question (truncated)
-- ✅/❌ status icon
-- "+120 FC" / "-50 FC" credit change
-- "+18 score" / "-3 score" delta (if available)
-
-Uses `usePublicPredictions` or a similar query scoped to the current user.
-
-### Step 5 — Update Dashboard
-
-In `src/pages/Dashboard.tsx`:
-- Add `LevelProgressBar` after the stat cards grid
-- Add `RecentResultsCard` before the credit transactions section
-- In the "Resolvidas" tab, show `score_delta` inline on each resolved prediction row (when available)
-
-### Step 6 — Update Profile
-
-In `src/pages/Profile.tsx`:
-- Add `LevelProgressBar` after the stat cards grid
-- In the prediction history section, show `score_delta` on each row (when available)
-
-### Step 7 — Update `resolve_market_and_score` (Migration)
-
-Modify the function to:
-1. Before calling `calculate_user_scores(rec.user_id)`, read `old_score` from `profiles`
-2. After calling it, read `new_score` from `profiles`
-3. `UPDATE predictions SET score_delta = new_score - old_score WHERE id = rec.id`
-
-This is a single migration that replaces the function.
+Add `<MissionsCard />` to Dashboard between `RecentResultsCard` and the tabs section. No other page changes needed for v1.
 
 ## Files Changed
 
-1. **New migration** — add `score_delta` column + update `resolve_market_and_score`
-2. **`src/types/index.ts`** — add `INFLUENCE_THRESHOLDS` constant
-3. **`src/components/futra/LevelProgressBar.tsx`** — new component
-4. **`src/components/futra/RecentResultsCard.tsx`** — new component
-5. **`src/pages/Dashboard.tsx`** — integrate both components + show delta in resolved tab
-6. **`src/pages/Profile.tsx`** — integrate `LevelProgressBar` + show delta in history
+1. **New migration** — `missions` + `user_missions` tables, `track_mission_progress` RPC, `claim_mission_reward` RPC
+2. **Seed data** (insert tool) — 7 initial missions
+3. **`src/hooks/useMissions.ts`** — new hook file
+4. **`src/components/futra/MissionsCard.tsx`** — new component
+5. **`src/hooks/usePrediction.ts`** — add tracking call in onSuccess
+6. **`src/hooks/useComments.ts`** — add tracking call in onSuccess
+7. **`src/hooks/useWatchlist.ts`** — add tracking call in onSuccess (add only)
+8. **`src/components/futra/ShareButton.tsx`** — add tracking call on share
+9. **`src/pages/Dashboard.tsx`** — add MissionsCard
+10. **Update `resolve_market_and_score`** — add `track_mission_progress` call for winners
 
-## No changes to
+## Reset Logic
 
-- Prediction mechanics, credit logic, or market resolution outcomes
-- App.tsx, routes, header, bottom nav
-- Leaderboard page
-- Any existing component styling
+- **Daily**: `period_start = CURRENT_DATE` (UTC). Each new day, old daily missions are naturally inactive — new rows are created lazily on first action.
+- **Weekly**: `period_start = date_trunc('week', CURRENT_DATE)::date` (Monday). Same lazy creation.
+- No cron needed. Old rows remain as history.
+
+## Claim Flow
+
+1. User completes mission → row shows `completed = true`
+2. User taps "Resgatar" → `claim_mission_reward` RPC
+3. RPC atomically awards credits/score, creates transaction + notification
+4. Frontend invalidates queries, shows toast
+5. Double-claim prevented by `claimed_at IS NOT NULL` check
 
