@@ -243,27 +243,27 @@ export default function MarketDetailPage() {
           {/* Voting panel - desktop */}
           <div className="lg:col-span-1 hidden lg:block">
             <div className="sticky top-20 rounded-2xl border border-border bg-card p-6 space-y-5">
-              <VotingPanelContent
-                market={market}
-                isResolved={isResolved}
-                isClosed={isClosed}
-                isLocked={!!isLocked}
-                canBet={canBet}
-                confirmed={confirmed}
-                submitting={submitting}
-                selectedOption={selectedOption}
-                selectedOpt={selectedOpt}
-                credits={credits}
-                maxCredits={maxCredits}
-                potentialReward={potentialReward}
-                winningOption={winningOption}
-                user={user}
-                profile={profile}
-                setSelectedOption={setSelectedOption}
-                setCredits={setCredits}
-                setConfirmed={setConfirmed}
-                handleConfirm={handleConfirm}
-              />
+               <VotingPanelContent
+227:                 market={market}
+228:                 isResolved={isResolved}
+229:                 isClosed={isClosed}
+230:                 isLocked={!!isLocked}
+231:                 canBet={canBet}
+232:                 confirmed={confirmed}
+233:                 submitting={submitting}
+234:                 selectedOption={selectedOption}
+235:                 selectedOpt={selectedOpt}
+236:                 credits={credits}
+237:                 maxCredits={maxCredits}
+238:                 potentialReward={potentialReward}
+239:                 winningOption={winningOption}
+240:                 user={user}
+241:                 profile={profile}
+242:                 setSelectedOption={setSelectedOption}
+243:                 setCredits={setCredits}
+244:                 handleConfirm={handleConfirm}
+245:                 existingPrediction={existingPrediction}
+246:               />
             </div>
           </div>
         </div>
