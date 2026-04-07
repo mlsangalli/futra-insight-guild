@@ -563,6 +563,24 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      get_leaderboard: {
+        Args: {
+          p_category?: Database["public"]["Enums"]["market_category"]
+          p_period?: string
+        }
+        Returns: {
+          accuracy_rate: number
+          avatar_url: string
+          display_name: string
+          futra_score: number
+          id: string
+          influence_level: Database["public"]["Enums"]["influence_level"]
+          resolved_predictions: number
+          total_predictions: number
+          user_id: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
