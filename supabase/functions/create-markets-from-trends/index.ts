@@ -68,9 +68,69 @@ async function hashTopic(topic: string): Promise<string> {
 
 interface TrendTopic {
   topic: string;
-  source: "google_trends" | "twitter";
+  source: "google_trends" | "twitter" | "rss";
   category: string;
   hash: string;
+}
+
+// RSS feeds from major Brazilian news portals
+const RSS_FEEDS = [
+  "https://g1.globo.com/rss/g1/",
+  "https://g1.globo.com/rss/g1/economia/",
+  "https://g1.globo.com/rss/g1/politica/",
+  "https://g1.globo.com/rss/g1/tecnologia/",
+  "https://g1.globo.com/rss/g1/pop-arte/",
+  "https://rss.uol.com.br/feed/noticias.xml",
+  "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",
+];
+
+function extractTextFromXml(xml: string, tag: string): string[] {
+  const regex = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([^\\]]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([^<]*?)<\\/${tag}>`, "gi");
+  const results: string[] = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    const text = (match[1] || match[2] || "").trim();
+    if (text) results.push(text);
+  }
+  return results;
+}
+
+async function fetchRssHeadlines(): Promise<TrendTopic[]> {
+  const trends: TrendTopic[] = [];
+  const seen = new Set<string>();
+
+  for (const feedUrl of RSS_FEEDS) {
+    try {
+      const res = await fetch(feedUrl, {
+        headers: { "User-Agent": "FUTRA-Bot/1.0" },
+      });
+      if (!res.ok) {
+        console.error(`RSS fetch error ${feedUrl}:`, res.status);
+        continue;
+      }
+      const xml = await res.text();
+      const titles = extractTextFromXml(xml, "title");
+
+      // Skip first title (usually the feed name)
+      for (const title of titles.slice(1, 8)) {
+        if (!title || title.length < 10) continue;
+
+        const normalized = title.toLowerCase().trim();
+        if (seen.has(normalized)) continue;
+        seen.add(normalized);
+
+        const category = classifyCategory(title);
+        if (!category) continue;
+
+        const hash = await hashTopic(`rss:${title}`);
+        trends.push({ topic: title, source: "rss", category, hash });
+      }
+    } catch (e) {
+      console.error(`RSS error ${feedUrl}:`, e);
+    }
+  }
+
+  return trends;
 }
 
 async function fetchGoogleTrends(apiKey: string): Promise<TrendTopic[]> {
@@ -294,16 +354,10 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // Fetch trends from available sources in parallel
-    const trendPromises: Promise<TrendTopic[]>[] = [];
+    // RSS is always available (no API key needed)
+    const trendPromises: Promise<TrendTopic[]>[] = [fetchRssHeadlines()];
     if (serpApiKey) trendPromises.push(fetchGoogleTrends(serpApiKey));
     if (twitterToken) trendPromises.push(fetchTwitterTrends(twitterToken));
-
-    if (trendPromises.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "No API keys configured (SERPAPI_KEY or TWITTER_BEARER_TOKEN)" }),
-        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
-      );
-    }
 
     const trendResults = await Promise.all(trendPromises);
     const allTrends = trendResults.flat();
