@@ -85,7 +85,7 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
       <VoteBar options={market.options} type={market.type as 'binary' | 'multiple'} compact />
 
       <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-border/30">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground uppercase tracking-wider">
           <span className="flex items-center gap-1">
             <Users className="h-3.5 w-3.5" />
             {formatNumber(market.totalParticipants)}
