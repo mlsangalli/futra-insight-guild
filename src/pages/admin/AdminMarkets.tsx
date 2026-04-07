@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -179,12 +179,55 @@ export default function AdminMarkets() {
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  // Scheduled markets query
+  const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
+    queryKey: ['admin-scheduled-markets'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('scheduled_markets')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      return data || [];
+    },
+  });
+
+  const triggerAutoCreate = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-markets-from-trends`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ time: new Date().toISOString() }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error');
+      }
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-scheduled-markets'] });
+      toast({ title: 'Geração automática concluída', description: `${data.created || 0} mercado(s) criado(s) de ${data.trends_found || 0} tendências encontradas.` });
+    },
+    onError: (e: Error) => toast({ title: 'Erro na geração automática', description: e.message, variant: 'destructive' }),
+  });
+
   return (
     <AdminLayout>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h1 className="text-2xl font-display font-bold">Mercados</h1>
-          <Button onClick={() => { setEditingMarket(null); setFormOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Novo Mercado</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => triggerAutoCreate.mutate()} disabled={triggerAutoCreate.isPending}>
+              <Zap className="h-4 w-4 mr-1" /> {triggerAutoCreate.isPending ? 'Gerando...' : 'Auto-Gerar'}
+            </Button>
+            <Button onClick={() => { setEditingMarket(null); setFormOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Novo Mercado</Button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -312,6 +355,53 @@ export default function AdminMarkets() {
             <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
           </div>
         )}
+
+        {/* Mercados Automáticos */}
+        <div className="mt-8 space-y-3">
+          <h2 className="text-lg font-display font-semibold flex items-center gap-2">
+            <Zap className="h-4 w-4 text-primary" /> Mercados Automáticos
+          </h2>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tópico</TableHead>
+                  <TableHead>Fonte</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Data</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {scheduledLoading ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
+                ) : !scheduledData || scheduledData.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhum mercado automático ainda</TableCell></TableRow>
+                ) : (
+                  (scheduledData as any[]).map((sm: any) => (
+                    <TableRow key={sm.id}>
+                      <TableCell className="max-w-[250px] truncate text-sm">{sm.source_topic}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {sm.source === 'google_trends' ? 'Google' : 'Twitter'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell><Badge variant="secondary" className="text-xs">{sm.category}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant={sm.status === 'created' ? 'default' : sm.status === 'skipped' ? 'secondary' : 'destructive'} className="text-xs">
+                          {sm.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {format(new Date(sm.created_at), 'dd/MM/yy HH:mm')}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
 
         <MarketFormDialog
           open={formOpen}
