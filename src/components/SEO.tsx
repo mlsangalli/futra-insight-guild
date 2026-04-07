@@ -13,7 +13,7 @@ export function SEO({ title, description, image, ogImage, url, type = 'website' 
   const siteTitle = 'FUTRA';
   const fullTitle = title ? `${title} — ${siteTitle}` : `${siteTitle} — Torne a incerteza legível`;
   const defaultDescription = 'Mercados de previsão para política, economia, cripto, futebol e cultura. Veja o que a multidão acha que vai acontecer.';
-  const defaultImage = 'https://futra.app/og-default.png';
+  const defaultImage = 'https://futra.app/og-default.svg';
   const ogImg = ogImage || image || defaultImage;
 
   return (
