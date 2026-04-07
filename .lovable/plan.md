@@ -1,57 +1,53 @@
 
 
-# Fix: Align `calculate_user_scores` with Documented Formula
+# Image Optimization — WebP & Lazy Loading
 
-## Problem
+## Current State
 
-The `calculate_user_scores` DB function computes `futra_score` as:
+This project uses almost **no raster images** in its UI. Avatars render initials (letter circles), charts are SVGs, icons are Lucide components. The only actual images are:
 
-```sql
-v_score := ROUND(v_resolved * v_accuracy);
--- e.g. 50 resolved × 80% accuracy = 4000
-```
+- `public/icon-192.png` and `public/icon-512.png` (PWA icons)
+- `public/og-default.svg` (OG image fallback)
+- `public/placeholder.svg`
+- External avatar URLs entered by users in their profile
 
-But the documented formula is:
+There are no `<img>` tags anywhere in the React components. The only place user-provided images appear is through the Radix `AvatarImage` component (which doesn't currently use `loading="lazy"`).
 
-```
-accuracy_rate × log(resolved_predictions + 1) × 100
--- e.g. 0.80 × log(51) × 100 ≈ 136
-```
+## What Actually Needs to Be Done
 
-The current formula is **linear** in resolved predictions, meaning users who spam predictions get disproportionately rewarded. The logarithmic formula rewards accuracy more heavily.
+### Step 1 — Convert PWA icons to WebP
 
-The influence level thresholds (500/2000/5000) were designed for the logarithmic scale — with the linear formula, any user with 50+ resolved predictions and decent accuracy would instantly hit "elite" status.
+Convert `icon-192.png` and `icon-512.png` to WebP format (significantly smaller file size), update `manifest.json` to reference the new files with correct MIME types.
 
-Everything else is correct: the profile page displays all fields from `profiles`, and `calculate_user_scores` is called correctly from `resolve_market_and_score`.
+### Step 2 — Add `loading="lazy"` to AvatarImage
 
-## Plan
+The Radix `AvatarImage` renders an `<img>` under the hood. Pass `loading="lazy"` to `AvatarImage` usage sites (Profile page, LeaderboardRow, ProfileCard) so external avatar URLs don't block initial paint. Currently these components render letter initials — but once users upload real avatar URLs, lazy loading will matter.
 
-### Step 1 — Migration: Fix the score formula
+### Step 3 — Create a reusable `OptimizedImage` component
 
-Update `calculate_user_scores` to use the logarithmic formula:
+A thin wrapper around `<img>` that:
+- Sets `loading="lazy"` and `decoding="async"` by default
+- Accepts WebP source with fallback via `<picture>` element
+- Applies consistent sizing classes
 
-```sql
-v_score := ROUND((v_accuracy / 100.0) * ln(v_resolved + 1) * 100);
-```
+This ensures any future image additions follow best practices automatically.
 
-Note: PostgreSQL uses `ln()` for natural log. Using `log()` would give log base 10 — either works but the thresholds should match. With `ln()`:
-- 10 resolved, 80% accuracy → `0.8 × ln(11) × 100 ≈ 192`
-- 50 resolved, 90% accuracy → `0.9 × ln(51) × 100 ≈ 353`
-- 200 resolved, 85% accuracy → `0.85 × ln(201) × 100 ≈ 451`
+### Step 4 — Fix `og-default` reference
 
-This aligns with the documented influence thresholds where "elite" (5000) is genuinely hard to reach.
-
-### Step 2 — No client-side changes needed
-
-The profile page already reads `futra_score` directly from the DB. The `StatCard`, `InfluenceBadge`, and leaderboard components all use the stored values.
+`SEO.tsx` references `og-default.png` but the actual file is `og-default.svg`. Fix the reference.
 
 ## Files Changed
 
-- **1 migration file** — update `calculate_user_scores` function
+1. **`public/manifest.json`** — update icon entries to WebP format
+2. **`src/components/ui/avatar.tsx`** — add `loading="lazy"` default prop to AvatarImage
+3. **`src/components/futra/OptimizedImage.tsx`** — new reusable component
+4. **`src/components/SEO.tsx`** — fix `og-default.png` → `og-default.svg`
+5. **PWA icons** — convert PNG to WebP via script
 
 ## Impact
 
-- Correct scoring formula applied on next market resolution
-- No existing data affected (no users have predictions yet)
-- Influence level thresholds will work as designed
+- Smaller PWA icon payloads (~30-50% reduction)
+- Lazy-loaded avatars prevent unnecessary network requests
+- Reusable pattern for any future image additions
+- Correct OG image reference in meta tags
 
