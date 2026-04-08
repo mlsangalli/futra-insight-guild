@@ -257,6 +257,36 @@ export type Database = {
         }
         Relationships: []
       }
+      job_executions: {
+        Row: {
+          created_at: string
+          duration_ms: number
+          error_message: string | null
+          id: string
+          job_name: string
+          metrics: Json
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number
+          error_message?: string | null
+          id?: string
+          job_name: string
+          metrics?: Json
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number
+          error_message?: string | null
+          id?: string
+          job_name?: string
+          metrics?: Json
+          status?: string
+        }
+        Relationships: []
+      }
       market_options: {
         Row: {
           created_at: string | null
@@ -683,6 +713,39 @@ export type Database = {
           subtitle?: string | null
           title?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      suspicious_events: {
+        Row: {
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          metadata: Json
+          reviewed: boolean
+          severity: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          reviewed?: boolean
+          severity?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          reviewed?: boolean
+          severity?: string
+          user_id?: string | null
         }
         Relationships: []
       }
