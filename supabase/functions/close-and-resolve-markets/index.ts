@@ -39,35 +39,37 @@ Deno.serve(async (req) => {
 
     const results = { closed: 0, resolved: 0, skipped: 0, errors: 0, closedIds: [] as string[], resolvedIds: [] as string[] };
 
-    // ─── PHASE 1: Close open markets whose lock_date has passed ───
-    const { data: marketsToClose, error: closeErr } = await adminClient
-      .from("markets")
-      .select("id, question")
-      .eq("status", "open")
-      .not("lock_date", "is", null)
-      .lte("lock_date", new Date().toISOString());
-
-    if (closeErr) throw closeErr;
-
-    if (marketsToClose && marketsToClose.length > 0) {
-      const ids = marketsToClose.map((m: any) => m.id);
-      const { error: updateErr } = await adminClient
+    // ─── PHASE 1: Close open markets whose lock_date has passed (skip in single-market retry mode) ───
+    if (!singleMarketId) {
+      const { data: marketsToClose, error: closeErr } = await adminClient
         .from("markets")
-        .update({ status: "closed" })
-        .in("id", ids);
-      if (updateErr) throw updateErr;
+        .select("id, question")
+        .eq("status", "open")
+        .not("lock_date", "is", null)
+        .lte("lock_date", new Date().toISOString());
 
-      const logRows = marketsToClose.map((m: any) => ({
-        admin_user_id: SYSTEM_USER_ID,
-        action_type: "auto_close_locked",
-        entity_type: "market",
-        entity_id: m.id,
-        description: `Auto-closed locked market: ${m.question}`,
-      }));
-      await adminClient.from("admin_logs").insert(logRows);
+      if (closeErr) throw closeErr;
 
-      results.closed = marketsToClose.length;
-      results.closedIds = ids;
+      if (marketsToClose && marketsToClose.length > 0) {
+        const ids = marketsToClose.map((m: any) => m.id);
+        const { error: updateErr } = await adminClient
+          .from("markets")
+          .update({ status: "closed" })
+          .in("id", ids);
+        if (updateErr) throw updateErr;
+
+        const logRows = marketsToClose.map((m: any) => ({
+          admin_user_id: SYSTEM_USER_ID,
+          action_type: "auto_close_locked",
+          entity_type: "market",
+          entity_id: m.id,
+          description: `Auto-closed locked market: ${m.question}`,
+        }));
+        await adminClient.from("admin_logs").insert(logRows);
+
+        results.closed = marketsToClose.length;
+        results.closedIds = ids;
+      }
     }
 
     // ─── PHASE 2: Resolve closed markets whose end_date has passed ───
