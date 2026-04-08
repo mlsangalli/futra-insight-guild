@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -217,6 +217,34 @@ export default function AdminMarkets() {
     onError: (e: Error) => toast({ title: 'Erro na geração automática', description: e.message, variant: 'destructive' }),
   });
 
+  const retryAiResolve = useMutation({
+    mutationFn: async (marketId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/close-and-resolve-markets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ market_id: marketId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error');
+      }
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+      if (data.resolved > 0) {
+        toast({ title: 'Mercado resolvido pela IA', description: 'A resolução automática foi concluída com sucesso.' });
+      } else {
+        toast({ title: 'IA não conseguiu resolver', description: 'A confiança ainda é baixa ou o resultado não pôde ser determinado.', variant: 'destructive' });
+      }
+    },
+    onError: (e: Error) => toast({ title: 'Erro na re-tentativa', description: e.message, variant: 'destructive' }),
+  });
+
   return (
     <AdminLayout>
       <div className="space-y-4">
@@ -320,6 +348,18 @@ export default function AdminMarkets() {
                             title="Resolver mercado"
                           >
                             <CheckCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {m.status === 'closed' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-accent-foreground hover:text-primary"
+                            onClick={() => retryAiResolve.mutate(m.id)}
+                            disabled={retryAiResolve.isPending}
+                            title="Re-tentar resolução via IA"
+                          >
+                            <RotateCw className={cn("h-3.5 w-3.5", retryAiResolve.isPending && "animate-spin")} />
                           </Button>
                         )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingMarket(m); setFormOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>

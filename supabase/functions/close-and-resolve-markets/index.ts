@@ -10,13 +10,25 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const rl = checkRateLimit(clientIp, 1, 60_000);
-  if (!rl.allowed) {
-    return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-      status: 429,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  // Parse optional body for single-market retry mode
+  let singleMarketId: string | null = null;
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      singleMarketId = body?.market_id || null;
+    } catch { /* no body = cron mode */ }
+  }
+
+  // Rate limit only for cron mode (single-market retry is admin-initiated)
+  if (!singleMarketId) {
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rl = checkRateLimit(clientIp, 1, 60_000);
+    if (!rl.allowed) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   }
 
   try {
@@ -27,35 +39,37 @@ Deno.serve(async (req) => {
 
     const results = { closed: 0, resolved: 0, skipped: 0, errors: 0, closedIds: [] as string[], resolvedIds: [] as string[] };
 
-    // ─── PHASE 1: Close open markets whose lock_date has passed ───
-    const { data: marketsToClose, error: closeErr } = await adminClient
-      .from("markets")
-      .select("id, question")
-      .eq("status", "open")
-      .not("lock_date", "is", null)
-      .lte("lock_date", new Date().toISOString());
-
-    if (closeErr) throw closeErr;
-
-    if (marketsToClose && marketsToClose.length > 0) {
-      const ids = marketsToClose.map((m: any) => m.id);
-      const { error: updateErr } = await adminClient
+    // ─── PHASE 1: Close open markets whose lock_date has passed (skip in single-market retry mode) ───
+    if (!singleMarketId) {
+      const { data: marketsToClose, error: closeErr } = await adminClient
         .from("markets")
-        .update({ status: "closed" })
-        .in("id", ids);
-      if (updateErr) throw updateErr;
+        .select("id, question")
+        .eq("status", "open")
+        .not("lock_date", "is", null)
+        .lte("lock_date", new Date().toISOString());
 
-      const logRows = marketsToClose.map((m: any) => ({
-        admin_user_id: SYSTEM_USER_ID,
-        action_type: "auto_close_locked",
-        entity_type: "market",
-        entity_id: m.id,
-        description: `Auto-closed locked market: ${m.question}`,
-      }));
-      await adminClient.from("admin_logs").insert(logRows);
+      if (closeErr) throw closeErr;
 
-      results.closed = marketsToClose.length;
-      results.closedIds = ids;
+      if (marketsToClose && marketsToClose.length > 0) {
+        const ids = marketsToClose.map((m: any) => m.id);
+        const { error: updateErr } = await adminClient
+          .from("markets")
+          .update({ status: "closed" })
+          .in("id", ids);
+        if (updateErr) throw updateErr;
+
+        const logRows = marketsToClose.map((m: any) => ({
+          admin_user_id: SYSTEM_USER_ID,
+          action_type: "auto_close_locked",
+          entity_type: "market",
+          entity_id: m.id,
+          description: `Auto-closed locked market: ${m.question}`,
+        }));
+        await adminClient.from("admin_logs").insert(logRows);
+
+        results.closed = marketsToClose.length;
+        results.closedIds = ids;
+      }
     }
 
     // ─── PHASE 2: Resolve closed markets whose end_date has passed ───
@@ -66,13 +80,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: marketsToResolve, error: resolveErr } = await adminClient
+    let resolveQuery = adminClient
       .from("markets")
       .select("id, question, category, resolution_source, resolution_rules")
-      .eq("status", "closed")
-      .lte("end_date", new Date().toISOString())
-      .limit(MAX_RESOLVE_PER_RUN);
+      .eq("status", "closed");
 
+    if (singleMarketId) {
+      resolveQuery = resolveQuery.eq("id", singleMarketId);
+    } else {
+      resolveQuery = resolveQuery.lte("end_date", new Date().toISOString());
+    }
+    resolveQuery = resolveQuery.limit(singleMarketId ? 1 : MAX_RESOLVE_PER_RUN);
+
+    const { data: marketsToResolve, error: resolveErr } = await resolveQuery;
     if (resolveErr) throw resolveErr;
 
     if (marketsToResolve && marketsToResolve.length > 0) {
@@ -198,8 +218,9 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
             continue;
           }
 
-          // Only resolve with high confidence
-          if (!decision.winning_option_id || decision.confidence !== "high") {
+          // Only resolve with high confidence (or medium when admin-triggered retry)
+          const acceptableConfidence = singleMarketId ? ["high", "medium"] : ["high"];
+          if (!decision.winning_option_id || !acceptableConfidence.includes(decision.confidence)) {
             results.skipped++;
             await adminClient.from("admin_logs").insert({
               admin_user_id: SYSTEM_USER_ID,
