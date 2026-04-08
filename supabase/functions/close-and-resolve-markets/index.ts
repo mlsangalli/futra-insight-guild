@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
     }
   }
 
+  const jobStart = Date.now();
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -299,12 +300,50 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
       });
     }
 
+    // Log job execution
+    const durationMs = Date.now() - jobStart;
+    const jobStatus = results.errors > 0 && (results.closed > 0 || results.resolved > 0)
+      ? 'partial'
+      : results.errors > 0
+        ? 'failed'
+        : (results.closed === 0 && results.resolved === 0 && results.skipped === 0)
+          ? 'skipped'
+          : 'success';
+
+    await adminClient.from("job_executions").insert({
+      job_name: "close-and-resolve-markets",
+      status: jobStatus,
+      duration_ms: durationMs,
+      metrics: {
+        closed: results.closed,
+        resolved: results.resolved,
+        skipped: results.skipped,
+        errors: results.errors,
+        mode: singleMarketId ? "retry" : "cron",
+      },
+    });
+
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Fatal error:", error);
     await captureException(error as Error, { functionName: "close-and-resolve-markets" });
+
+    // Log failed execution
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const client = createClient(supabaseUrl, serviceRoleKey);
+      await client.from("job_executions").insert({
+        job_name: "close-and-resolve-markets",
+        status: "failed",
+        duration_ms: Date.now() - jobStart,
+        error_message: (error as Error).message,
+        metrics: { mode: singleMarketId ? "retry" : "cron" },
+      });
+    } catch { /* best effort */ }
+
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
