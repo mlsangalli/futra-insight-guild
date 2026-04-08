@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rate-limit.ts";
+import { captureException } from "../_shared/sentry.ts";
 
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
 const MAX_RESOLVE_PER_RUN = 5;
@@ -284,11 +285,26 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
       }
     }
 
+    // Track analytics events
+    if (results.closed > 0) {
+      await adminClient.from("analytics_events").insert({
+        event_name: "market_auto_closed",
+        properties: { count: results.closed, ids: results.closedIds },
+      });
+    }
+    if (results.resolved > 0) {
+      await adminClient.from("analytics_events").insert({
+        event_name: "market_auto_resolved",
+        properties: { count: results.resolved, ids: results.resolvedIds },
+      });
+    }
+
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Fatal error:", error);
+    await captureException(error as Error, { functionName: "close-and-resolve-markets" });
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

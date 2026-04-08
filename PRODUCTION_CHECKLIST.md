@@ -1,4 +1,4 @@
-# FUTRA — Checklist de Produção
+1: # FUTRA — Checklist de Produção
 
 ## Segurança
 - [ ] `.env` removido do histórico git (usar BFG Repo-Cleaner)
@@ -43,11 +43,22 @@
 - [x] index.html traduzido para PT-BR com structured data
 
 ## Monitoramento
-- [ ] Error tracking configurado (Sentry ou similar)
+- [x] Sentry integrado nas Edge Functions via HTTP API (_shared/sentry.ts)
 - [x] Dashboard admin mostra métricas em tempo real
 - [x] Health check endpoint funcional (/health)
 - [x] Logger registra erros de query e mutation (parseSupabaseError)
 - [x] Tabela analytics_events para tracking de uso
+- [x] Health monitor automático a cada 15 min (Edge Function health-monitor)
+- [x] Alertas via webhook (Slack/Discord) para anomalias
+- [x] Métricas de operação (market_auto_closed, market_auto_resolved, maintenance_completed)
+
+## Manutenção
+- [x] Limpeza automática diária às 03:00 UTC (Edge Function maintenance)
+- [x] Arquivo de notificações lidas >90 dias
+- [x] Limpeza de admin_logs >180 dias
+- [x] Poda de scheduled_markets antigos >30 dias
+- [x] Limpeza de push_subscriptions órfãs >90 dias
+- [x] RUNBOOK.md com procedimentos de recuperação
 
 ## Qualidade de Código
 - [x] Tipos duplicados marcados como @deprecated (User, MarketCardData)
