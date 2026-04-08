@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminMetricCard } from '@/components/admin/AdminMetricCard';
 import { MonitoringPanel } from '@/components/admin/MonitoringPanel';
+import { OperationsPanel } from '@/components/admin/OperationsPanel';
 import { Users, Store, FolderOpen, FileText, Activity, TrendingUp, Lock, CheckCircle, Clock } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
