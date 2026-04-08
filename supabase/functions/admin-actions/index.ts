@@ -111,12 +111,10 @@ Deno.serve(async (req) => {
       }
 
       case "update_market_status": {
-        const { market_id, status, resolved_option } = body;
+        const { market_id, status } = body;
         if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
-        if (!status || !["open", "closed", "resolved"].includes(status)) return errResponse("Valid status required (open, closed, resolved)", 400);
-        const updateData: Record<string, unknown> = { status };
-        if (resolved_option) updateData.resolved_option = resolved_option;
-        const { error } = await adminClient.from("markets").update(updateData).eq("id", market_id);
+        if (!status || !["open", "closed"].includes(status)) return errResponse("Valid status required (open, closed). Use resolve_market action to resolve.", 400);
+        const { error } = await adminClient.from("markets").update({ status }).eq("id", market_id);
         if (error) throw error;
         result = { success: true };
         break;
