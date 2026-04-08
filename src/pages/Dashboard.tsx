@@ -59,6 +59,7 @@ export default function DashboardPage() {
     <Layout>
       <SEO title="Painel" description="Seu painel de controle na FUTRA." />
       <div className="container mx-auto px-4 py-8">
+        <PushNotificationBanner />
         <DailyBonusBanner />
         <div className="flex items-center justify-between mb-8 mt-4">
           <div>
