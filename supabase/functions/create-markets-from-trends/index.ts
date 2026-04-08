@@ -778,6 +778,7 @@ Deno.serve(async (req) => {
     );
   }
 
+  const jobStart = Date.now();
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -1007,16 +1008,50 @@ Deno.serve(async (req) => {
       });
     }
 
-    return jsonResponse(headers, {
+    const responseBody = {
       candidates_created: results.length,
       auto_published: results.filter((r) => r.auto_published).length,
       pending_review: results.filter((r) => !r.auto_published).length,
       results,
       trends_found: allTrends.length,
       new_trends: newTrends.length,
+    };
+
+    // Log job execution
+    const durationMs = Date.now() - jobStart;
+    await adminClient.from("job_executions").insert({
+      job_name: "create-markets-from-trends",
+      status: results.length > 0 ? "success" : "skipped",
+      duration_ms: durationMs,
+      metrics: {
+        trends_found: allTrends.length,
+        new_trends: newTrends.length,
+        candidates_created: results.length,
+        auto_published: results.filter((r) => r.auto_published).length,
+        pending_review: results.filter((r) => !r.auto_published).length,
+        avg_quality: results.length > 0
+          ? Math.round((results.reduce((s, r) => s + r.quality_score, 0) / results.length) * 100) / 100
+          : 0,
+      },
     });
+
+    return jsonResponse(headers, responseBody);
   } catch (error) {
     console.error("create-markets-from-trends error:", error);
+
+    // Log failed execution
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const client = createClient(supabaseUrl, serviceRoleKey);
+      await client.from("job_executions").insert({
+        job_name: "create-markets-from-trends",
+        status: "failed",
+        duration_ms: Date.now() - jobStart,
+        error_message: (error as Error).message,
+      });
+    } catch { /* best effort */ }
+
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
