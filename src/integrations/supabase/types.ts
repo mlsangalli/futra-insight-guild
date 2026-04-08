@@ -582,32 +582,59 @@ export type Database = {
       scheduled_markets: {
         Row: {
           category: Database["public"]["Enums"]["market_category"]
+          confidence_score: number | null
           created_at: string
+          end_date: string | null
+          generated_description: string | null
+          generated_options: Json | null
+          generated_question: string | null
           id: string
           market_id: string | null
+          resolution_source: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           source: string
           source_topic: string
           status: string
+          submitted_by: string | null
           topic_hash: string
         }
         Insert: {
           category: Database["public"]["Enums"]["market_category"]
+          confidence_score?: number | null
           created_at?: string
+          end_date?: string | null
+          generated_description?: string | null
+          generated_options?: Json | null
+          generated_question?: string | null
           id?: string
           market_id?: string | null
+          resolution_source?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source: string
           source_topic: string
           status?: string
+          submitted_by?: string | null
           topic_hash: string
         }
         Update: {
           category?: Database["public"]["Enums"]["market_category"]
+          confidence_score?: number | null
           created_at?: string
+          end_date?: string | null
+          generated_description?: string | null
+          generated_options?: Json | null
+          generated_question?: string | null
           id?: string
           market_id?: string | null
+          resolution_source?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source?: string
           source_topic?: string
           status?: string
+          submitted_by?: string | null
           topic_hash?: string
         }
         Relationships: [
