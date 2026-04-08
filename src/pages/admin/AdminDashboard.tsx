@@ -360,8 +360,10 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
+        {/* Monitoring Panel */}
+        <MonitoringPanel />
+
         {/* Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-3">
             <h2 className="text-lg font-semibold">Mercados Recentes</h2>
             <div className="rounded-lg border border-border overflow-hidden">
