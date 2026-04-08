@@ -475,82 +475,287 @@ async function generateMarketFromAI(
   }
 }
 
-// ─── Post-generation validation ──────────────────────────────────────────────
+// ─── Independent AI Reviewer ─────────────────────────────────────────────────
+
+const REVIEWER_PROMPT = `Você é um revisor INDEPENDENTE e RIGOROSO de mercados preditivos da FUTRA.
+Você NÃO criou este mercado — sua função é avaliá-lo criticamente.
+
+Avalie CADA critério de 0.0 a 1.0 com honestidade brutal:
+
+1. objectivity (0-1): O resultado é 100% verificável com dados públicos? Perguntas de opinião = 0. Perguntas com resultado binário claro = 0.9+
+2. timing (0-1): O evento é atual e relevante AGORA? Evento passado = 0. Evento das próximas 2 semanas = 0.8+
+3. resolvability (0-1): Existe fonte ESPECÍFICA e confiável para verificar? Fonte vaga = 0.3. "Placar oficial CBF" = 0.9+
+4. engagement (0-1): Brasileiros apostariam nisso? Tema de nicho = 0.2. Futebol/BBB/eleição = 0.8+
+5. clarity (0-1): A pergunta é clara, sem ambiguidade? Pode ser interpretada de várias formas = 0.3. Cristalina = 0.9+
+
+REGRAS DE PONTUAÇÃO (seja duro):
+- Se a pergunta menciona datas do passado → timing = 0.0
+- Se não há fonte verificável concreta → resolvability ≤ 0.3
+- Se a pergunta é sobre algo que ninguém discutiria com amigos → engagement ≤ 0.3
+- Se a pergunta tem "será que", opinião, ou sentimento → objectivity ≤ 0.2
+- Score médio real deve ficar entre 0.4 e 0.75 para a maioria dos mercados
+- Apenas mercados EXCEPCIONAIS devem ter score > 0.85
+- NUNCA dê 1.0 em qualquer critério individual`;
+
+interface ReviewScores {
+  objectivity: number;
+  timing: number;
+  resolvability: number;
+  engagement: number;
+  clarity: number;
+  overall: number;
+  reasoning: string;
+}
+
+async function reviewMarketWithAI(
+  question: string,
+  options: string[],
+  description: string,
+  resolutionSource: string,
+  category: string,
+  apiKey: string
+): Promise<ReviewScores | null> {
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: REVIEWER_PROMPT },
+          {
+            role: "user",
+            content: `Avalie este mercado preditivo:\n\nPergunta: "${question}"\nOpções: ${JSON.stringify(options)}\nDescrição: "${description}"\nFonte de resolução: "${resolutionSource}"\nCategoria: ${category}\nData de hoje: ${new Date().toISOString().split("T")[0]}`,
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "review_market",
+              description: "Submit quality review scores for a prediction market",
+              parameters: {
+                type: "object",
+                properties: {
+                  objectivity: { type: "number", description: "Is the outcome 100% verifiable? (0.0-1.0)" },
+                  timing: { type: "number", description: "Is the event current and timely? (0.0-1.0)" },
+                  resolvability: { type: "number", description: "Is there a specific reliable source? (0.0-1.0)" },
+                  engagement: { type: "number", description: "Would Brazilians bet on this? (0.0-1.0)" },
+                  clarity: { type: "number", description: "Is the question unambiguous? (0.0-1.0)" },
+                  reasoning: { type: "string", description: "1-2 sentences explaining the scores" },
+                },
+                required: ["objectivity", "timing", "resolvability", "engagement", "clarity", "reasoning"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "review_market" } },
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("Reviewer AI error:", res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) return null;
+
+    const p = JSON.parse(toolCall.function.arguments);
+    const clamp = (v: number) => Math.min(1, Math.max(0, v || 0));
+
+    const scores = {
+      objectivity: clamp(p.objectivity),
+      timing: clamp(p.timing),
+      resolvability: clamp(p.resolvability),
+      engagement: clamp(p.engagement),
+      clarity: clamp(p.clarity),
+    };
+
+    // Weighted average: objectivity and resolvability matter most
+    const overall =
+      scores.objectivity * 0.25 +
+      scores.timing * 0.20 +
+      scores.resolvability * 0.25 +
+      scores.engagement * 0.15 +
+      scores.clarity * 0.15;
+
+    return {
+      ...scores,
+      overall: Math.round(overall * 100) / 100,
+      reasoning: p.reasoning || "",
+    };
+  } catch (e) {
+    console.error("Reviewer error:", e);
+    return null;
+  }
+}
+
+// ─── Post-generation validation (heuristic + AI review) ──────────────────────
 
 interface ValidationResult {
   passed: boolean;
   adjustedScore: number;
   penalties: string[];
+  reviewScores?: ReviewScores;
 }
 
-function validateCandidate(
+function computeHeuristicPenalties(
   ai: AIMarketResult,
   categoryScore: number,
   source: "google_trends" | "rss"
-): ValidationResult {
+): { penalties: string[]; delta: number } {
   const penalties: string[] = [];
-  let score = ai.quality_score;
+  let delta = 0;
 
-  // Penalty: question too short or too long
+  // ── Hard penalties ──
+
+  // Question length
   if (ai.question.length < 20) {
-    score -= 0.15;
-    penalties.push("Question too short");
+    delta -= 0.20;
+    penalties.push("Question too short (<20 chars)");
+  } else if (ai.question.length < 40) {
+    delta -= 0.05;
+    penalties.push("Question somewhat short");
   }
   if (ai.question.length > 200) {
-    score -= 0.05;
-    penalties.push("Question too long");
+    delta -= 0.05;
+    penalties.push("Question too long (>200 chars)");
   }
 
-  // Penalty: too few or too many options
+  // Options validation
   if (ai.options.length < 2) {
-    score -= 0.3;
+    delta -= 0.30;
     penalties.push("Less than 2 options");
   }
-
-  // Penalty: duplicate option labels
   const uniqueOpts = new Set(ai.options.map((o) => o.toLowerCase().trim()));
   if (uniqueOpts.size < ai.options.length) {
-    score -= 0.2;
-    penalties.push("Duplicate options detected");
+    delta -= 0.20;
+    penalties.push("Duplicate option labels");
+  }
+  // Options too similar (short edit distance proxy: same first 10 chars)
+  const optPrefixes = ai.options.map((o) => o.toLowerCase().trim().slice(0, 10));
+  if (new Set(optPrefixes).size < optPrefixes.length) {
+    delta -= 0.10;
+    penalties.push("Options too similar");
   }
 
-  // Penalty: no resolution source
+  // No or weak resolution source
   if (!ai.resolution_source || ai.resolution_source.length < 5) {
-    score -= 0.15;
-    penalties.push("Weak or missing resolution source");
+    delta -= 0.15;
+    penalties.push("Missing resolution source");
+  } else if (ai.resolution_source.length < 15) {
+    delta -= 0.05;
+    penalties.push("Vague resolution source");
   }
 
-  // Penalty: vague question patterns
-  const vaguePatterns = [/será que/i, /o que.*acha/i, /qual.*sua.*opinião/i, /você.*acredita/i];
-  for (const p of vaguePatterns) {
+  // Vague question patterns
+  const vaguePatterns = [
+    { p: /será que/i, w: 0.20 },
+    { p: /o que.*acha/i, w: 0.25 },
+    { p: /qual.*sua.*opinião/i, w: 0.25 },
+    { p: /você.*acredita/i, w: 0.20 },
+    { p: /pode.*acontecer/i, w: 0.10 },
+    { p: /é possível que/i, w: 0.10 },
+  ];
+  for (const { p, w } of vaguePatterns) {
     if (p.test(ai.question)) {
-      score -= 0.2;
+      delta -= w;
       penalties.push(`Vague pattern: ${p.source}`);
       break;
     }
   }
 
-  // Bonus: Google Trends source (higher signal)
+  // Past-date references in the question
+  const yearMatch = ai.question.match(/\b(20\d{2})\b/);
+  if (yearMatch) {
+    const year = parseInt(yearMatch[1]);
+    const currentYear = new Date().getFullYear();
+    if (year < currentYear) {
+      delta -= 0.25;
+      penalties.push(`References past year (${year})`);
+    } else if (year === currentYear) {
+      // Check for past months
+      const monthNames = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
+        "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+      const currentMonth = new Date().getMonth();
+      for (let i = 0; i < currentMonth; i++) {
+        if (ai.question.toLowerCase().includes(monthNames[i]) && ai.question.includes(String(year))) {
+          delta -= 0.20;
+          penalties.push(`References past month (${monthNames[i]} ${year})`);
+          break;
+        }
+      }
+    }
+  }
+
+  // Description too short (low effort)
+  if (!ai.description || ai.description.length < 20) {
+    delta -= 0.05;
+    penalties.push("Description too brief");
+  }
+
+  // ── Bonuses ──
   if (source === "google_trends") {
-    score += 0.05;
+    delta += 0.03;
+  }
+  if (categoryScore >= 5) {
+    delta += 0.05;
+  } else if (categoryScore >= 3) {
+    delta += 0.03;
   }
 
-  // Bonus: strong category classification
-  if (categoryScore >= 3) {
-    score += 0.05;
+  // Question ends with "?" (good form)
+  if (ai.question.trim().endsWith("?")) {
+    delta += 0.02;
   }
 
-  // Bonus: high virality
-  if (ai.virality_score >= 0.8) {
-    score += 0.05;
+  return { penalties, delta };
+}
+
+async function validateCandidate(
+  ai: AIMarketResult,
+  categoryScore: number,
+  source: "google_trends" | "rss",
+  apiKey: string
+): Promise<ValidationResult> {
+  // Step 1: Heuristic penalties (deterministic)
+  const { penalties, delta } = computeHeuristicPenalties(ai, categoryScore, source);
+
+  // Step 2: Independent AI review (ignore generator's self-score)
+  const review = await reviewMarketWithAI(
+    ai.question, ai.options, ai.description,
+    ai.resolution_source, "category", apiKey
+  );
+
+  let finalScore: number;
+
+  if (review) {
+    // Use reviewer's score as base, apply heuristic delta
+    finalScore = review.overall + delta;
+    console.log(`Review scores: obj=${review.objectivity} tim=${review.timing} res=${review.resolvability} eng=${review.engagement} cla=${review.clarity} → overall=${review.overall} | heuristic delta=${delta.toFixed(2)} | final=${(review.overall + delta).toFixed(2)}`);
+    console.log(`Review reasoning: ${review.reasoning}`);
+  } else {
+    // Fallback: use deflated base score + delta
+    // Start from 0.55 (neutral) instead of AI's inflated self-score
+    finalScore = 0.55 + delta;
+    penalties.push("AI review unavailable, using fallback base");
+    console.log(`Fallback score: 0.55 + delta(${delta.toFixed(2)}) = ${finalScore.toFixed(2)}`);
   }
 
-  score = Math.min(1, Math.max(0, score));
+  finalScore = Math.min(1, Math.max(0, finalScore));
+  finalScore = Math.round(finalScore * 100) / 100;
 
   return {
-    passed: score >= MIN_QUALITY_THRESHOLD,
-    adjustedScore: Math.round(score * 100) / 100,
+    passed: finalScore >= MIN_QUALITY_THRESHOLD,
+    adjustedScore: finalScore,
     penalties,
+    reviewScores: review || undefined,
   };
 }
 
@@ -682,7 +887,7 @@ Deno.serve(async (req) => {
       }
 
       // Validate and adjust score
-      const validation = validateCandidate(aiResult, trend.categoryScore, trend.source);
+      const validation = await validateCandidate(aiResult, trend.categoryScore, trend.source, lovableApiKey);
       if (!validation.passed) {
         console.log(`Quality gate failed for "${trend.topic}": score=${validation.adjustedScore}, penalties=${validation.penalties.join(", ")}`);
         await adminClient.from("scheduled_markets").insert({
