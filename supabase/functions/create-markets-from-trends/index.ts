@@ -2,51 +2,106 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rate-limit.ts";
 
-const MAX_CANDIDATES_PER_RUN = 3;
+const MAX_CANDIDATES_PER_RUN = 5;
+const AUTO_PUBLISH_THRESHOLD = 0.85; // quality_score >= this → auto-publish
+const MIN_QUALITY_THRESHOLD = 0.45; // below this → skip entirely
 
-// Category keyword mapping (PT-BR)
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  football: [
-    "futebol", "gol", "campeonato", "copa", "seleção", "flamengo", "corinthians",
-    "palmeiras", "são paulo", "vasco", "botafogo", "grêmio", "cruzeiro", "santos",
-    "fluminense", "atlético", "libertadores", "brasileirão", "premier league",
-    "champions", "neymar", "messi", "mbappé", "premier", "serie a", "la liga",
-  ],
-  politics: [
-    "eleição", "eleições", "presidente", "governo", "congresso", "senado",
-    "câmara", "deputado", "ministro", "política", "lula", "bolsonaro",
-    "stf", "supremo", "impeachment", "votação", "reforma", "prefeito",
-  ],
-  crypto: [
-    "bitcoin", "btc", "ethereum", "eth", "crypto", "criptomoeda", "blockchain",
-    "altcoin", "binance", "solana", "dogecoin", "nft", "defi", "token", "halving",
-  ],
-  economy: [
-    "pib", "inflação", "selic", "dólar", "bolsa", "ibovespa", "juros",
-    "economia", "recessão", "emprego", "desemprego", "ipca", "banco central",
-    "câmbio", "mercado financeiro", "wall street", "nasdaq", "s&p",
-  ],
-  culture: [
-    "filme", "cinema", "oscar", "grammy", "música", "série", "netflix",
-    "streaming", "novela", "reality", "bbb", "show", "artista", "festival",
-    "livro", "tv", "celebridade", "anitta", "taylor swift",
-  ],
-  technology: [
-    "inteligência artificial", "ia", "ai", "openai", "chatgpt", "google",
-    "apple", "iphone", "meta", "tesla", "spacex", "elon musk", "microsoft",
-    "samsung", "startup", "tecnologia", "app", "software",
-  ],
+// ─── Category keyword mapping (PT-BR) ───────────────────────────────────────
+const CATEGORY_KEYWORDS: Record<string, { primary: string[]; secondary: string[] }> = {
+  football: {
+    primary: [
+      "futebol", "campeonato", "copa", "seleção", "libertadores", "brasileirão",
+      "premier league", "champions league", "serie a", "la liga", "copa do mundo",
+      "copa américa", "sul-americana", "copa do brasil", "supercopa",
+    ],
+    secondary: [
+      "gol", "flamengo", "corinthians", "palmeiras", "são paulo", "vasco",
+      "botafogo", "grêmio", "cruzeiro", "santos", "fluminense", "atlético",
+      "neymar", "messi", "mbappé", "endrick", "vini jr", "real madrid",
+      "barcelona", "manchester", "liverpool", "bayern", "psg", "artilheiro",
+      "rebaixamento", "classificação", "rodada", "técnico", "demissão treinador",
+      "contratação", "transferência", "janela", "var", "arbitragem",
+    ],
+  },
+  politics: {
+    primary: [
+      "eleição", "eleições", "presidente", "governo federal", "congresso",
+      "senado", "câmara dos deputados", "stf", "supremo", "impeachment",
+      "reforma tributária", "reforma ministerial", "pec", "cpi",
+    ],
+    secondary: [
+      "deputado", "ministro", "política", "lula", "bolsonaro", "votação",
+      "reforma", "prefeito", "governador", "tse", "urna", "voto",
+      "aprovação", "rejeição", "pesquisa eleitoral", "bancada", "oposição",
+      "base aliada", "medida provisória", "veto", "sanção",
+    ],
+  },
+  crypto: {
+    primary: [
+      "bitcoin", "ethereum", "crypto", "criptomoeda", "blockchain",
+      "halving", "etf crypto", "etf bitcoin", "regulação crypto",
+    ],
+    secondary: [
+      "btc", "eth", "altcoin", "binance", "solana", "dogecoin", "nft",
+      "defi", "token", "stablecoin", "usdt", "usdc", "xrp", "cardano",
+      "polkadot", "avalanche", "arbitrum", "layer 2", "web3", "mineração",
+      "carteira digital", "exchange", "descentralizado",
+    ],
+  },
+  economy: {
+    primary: [
+      "pib", "inflação", "selic", "copom", "banco central", "ipca",
+      "dólar", "câmbio", "ibovespa", "recessão", "juros",
+    ],
+    secondary: [
+      "bolsa", "emprego", "desemprego", "mercado financeiro", "wall street",
+      "nasdaq", "s&p", "fed", "taxa de juros", "fiscal", "dívida pública",
+      "superávit", "déficit", "commodities", "petróleo", "petrobras",
+      "vale", "ações", "investimento", "fundos", "tesouro direto",
+      "rentabilidade", "exportação", "importação", "balança comercial",
+    ],
+  },
+  culture: {
+    primary: [
+      "oscar", "grammy", "bbb", "big brother", "rock in rio", "lollapalooza",
+      "netflix", "disney+", "streaming", "reality show", "novela",
+    ],
+    secondary: [
+      "filme", "cinema", "música", "série", "show", "artista", "festival",
+      "livro", "tv", "celebridade", "anitta", "taylor swift", "beyoncé",
+      "bilheteria", "álbum", "single", "turnê", "premiação", "indicação",
+      "cancelamento", "viral", "tiktok", "meme", "influenciador",
+      "podcast", "youtube", "twitch", "game awards", "k-pop",
+    ],
+  },
+  technology: {
+    primary: [
+      "inteligência artificial", "openai", "chatgpt", "google ai", "gemini",
+      "apple", "meta", "tesla", "spacex", "microsoft", "nvidia",
+    ],
+    secondary: [
+      "ia", "ai", "iphone", "samsung", "startup", "tecnologia", "app",
+      "software", "elon musk", "mark zuckerberg", "tim cook", "sam altman",
+      "llm", "gpt", "claude", "modelo de linguagem", "robô", "automação",
+      "computação quântica", "chip", "semicondutor", "5g", "6g",
+      "realidade virtual", "vr", "ar", "metaverso", "ipo", "unicórnio",
+      "cibersegurança", "vazamento", "regulação tech", "antitruste",
+    ],
+  },
 };
 
-function classifyCategory(topic: string): string | null {
+function classifyCategory(topic: string): { category: string; score: number } | null {
   const lower = topic.toLowerCase();
   let bestCategory: string | null = null;
   let bestScore = 0;
 
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+  for (const [category, { primary, secondary }] of Object.entries(CATEGORY_KEYWORDS)) {
     let score = 0;
-    for (const kw of keywords) {
-      if (lower.includes(kw)) score++;
+    for (const kw of primary) {
+      if (lower.includes(kw)) score += 3;
+    }
+    for (const kw of secondary) {
+      if (lower.includes(kw)) score += 1;
     }
     if (score > bestScore) {
       bestScore = score;
@@ -54,8 +109,10 @@ function classifyCategory(topic: string): string | null {
     }
   }
 
-  return bestScore > 0 ? bestCategory : null;
+  return bestScore > 0 ? { category: bestCategory!, score: bestScore } : null;
 }
+
+// ─── Hashing & Dedup ─────────────────────────────────────────────────────────
 
 async function hashTopic(topic: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -65,25 +122,74 @@ async function hashTopic(topic: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Extract 3+ char words, sorted, for fuzzy dedup */
+function extractKeywords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3)
+    .sort();
+}
+
+/** Jaccard similarity between two keyword sets (0-1) */
+function keywordSimilarity(a: string[], b: string[]): number {
+  const setA = new Set(a);
+  const setB = new Set(b);
+  let intersection = 0;
+  for (const w of setA) if (setB.has(w)) intersection++;
+  const union = setA.size + setB.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+// ─── Exclusion heuristics ────────────────────────────────────────────────────
+
+const EXCLUSION_PATTERNS = [
+  // Generic / non-actionable
+  /^(veja|confira|saiba|entenda|descubra|aprenda)\b/i,
+  /\b(fotos?|vídeos?|galeria|assista|ao vivo)\b/i,
+  // Obituaries / accidents (hard to make markets)
+  /\b(morre|falece|faleceu|obituário|acidente fatal)\b/i,
+  // Clickbait
+  /\b(você não vai acreditar|chocante|inacreditável|surpreendente)\b/i,
+  // Too old / past references
+  /\b(ontem|semana passada|mês passado|ano passado)\b/i,
+];
+
+function shouldExclude(topic: string): string | null {
+  for (const pattern of EXCLUSION_PATTERNS) {
+    if (pattern.test(topic)) return `Matches exclusion pattern: ${pattern.source}`;
+  }
+  if (topic.length < 15) return "Topic too short";
+  if (topic.length > 300) return "Topic too long";
+  return null;
+}
+
+// ─── Trend Sources ───────────────────────────────────────────────────────────
+
 interface TrendTopic {
   topic: string;
   source: "google_trends" | "rss";
   category: string;
+  categoryScore: number;
   hash: string;
 }
 
 const RSS_FEEDS = [
-  "https://g1.globo.com/rss/g1/",
-  "https://g1.globo.com/rss/g1/economia/",
-  "https://g1.globo.com/rss/g1/politica/",
-  "https://g1.globo.com/rss/g1/tecnologia/",
-  "https://g1.globo.com/rss/g1/pop-arte/",
-  "https://rss.uol.com.br/feed/noticias.xml",
-  "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",
+  { url: "https://g1.globo.com/rss/g1/", weight: 1.0 },
+  { url: "https://g1.globo.com/rss/g1/economia/", weight: 1.1 },
+  { url: "https://g1.globo.com/rss/g1/politica/", weight: 1.1 },
+  { url: "https://g1.globo.com/rss/g1/tecnologia/", weight: 1.1 },
+  { url: "https://g1.globo.com/rss/g1/pop-arte/", weight: 1.0 },
+  { url: "https://rss.uol.com.br/feed/noticias.xml", weight: 0.9 },
+  { url: "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml", weight: 1.0 },
 ];
 
 function extractTextFromXml(xml: string, tag: string): string[] {
-  const regex = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([^\\]]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([^<]*?)<\\/${tag}>`, "gi");
+  const regex = new RegExp(
+    `<${tag}[^>]*><!\\[CDATA\\[([^\\]]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([^<]*?)<\\/${tag}>`,
+    "gi"
+  );
   const results: string[] = [];
   let match;
   while ((match = regex.exec(xml)) !== null) {
@@ -97,33 +203,42 @@ async function fetchRssHeadlines(): Promise<TrendTopic[]> {
   const trends: TrendTopic[] = [];
   const seen = new Set<string>();
 
-  for (const feedUrl of RSS_FEEDS) {
+  for (const feed of RSS_FEEDS) {
     try {
-      const res = await fetch(feedUrl, {
+      const res = await fetch(feed.url, {
         headers: { "User-Agent": "FUTRA-Bot/1.0" },
       });
-      if (!res.ok) {
-        console.error(`RSS fetch error ${feedUrl}:`, res.status);
-        continue;
-      }
+      if (!res.ok) continue;
       const xml = await res.text();
       const titles = extractTextFromXml(xml, "title");
 
-      for (const title of titles.slice(1, 8)) {
-        if (!title || title.length < 10) continue;
+      for (const title of titles.slice(1, 10)) {
+        if (!title || title.length < 15) continue;
 
         const normalized = title.toLowerCase().trim();
         if (seen.has(normalized)) continue;
         seen.add(normalized);
 
-        const category = classifyCategory(title);
-        if (!category) continue;
+        const exclusion = shouldExclude(title);
+        if (exclusion) {
+          console.log(`Excluded RSS: "${title}" — ${exclusion}`);
+          continue;
+        }
+
+        const classified = classifyCategory(title);
+        if (!classified) continue;
 
         const hash = await hashTopic(`rss:${title}`);
-        trends.push({ topic: title, source: "rss", category, hash });
+        trends.push({
+          topic: title,
+          source: "rss",
+          category: classified.category,
+          categoryScore: classified.score,
+          hash,
+        });
       }
     } catch (e) {
-      console.error(`RSS error ${feedUrl}:`, e);
+      console.error(`RSS error ${feed.url}:`, e);
     }
   }
 
@@ -135,22 +250,31 @@ async function fetchGoogleTrends(apiKey: string): Promise<TrendTopic[]> {
     const url = `https://serpapi.com/search.json?engine=google_trends_trending_now&geo=BR&api_key=${apiKey}`;
     const res = await fetch(url);
     if (!res.ok) {
-      console.error("SerpApi error:", res.status, await res.text());
+      console.error("SerpApi error:", res.status);
       return [];
     }
     const data = await res.json();
     const trends: TrendTopic[] = [];
 
     const trendingSearches = data.trending_searches || data.daily_searches || [];
-    for (const item of trendingSearches.slice(0, 10)) {
+    for (const item of trendingSearches.slice(0, 15)) {
       const topic = item.query || item.title?.query || item.title || "";
       if (!topic || topic.length < 3) continue;
 
-      const category = classifyCategory(topic);
-      if (!category) continue;
+      const exclusion = shouldExclude(topic);
+      if (exclusion) continue;
+
+      const classified = classifyCategory(topic);
+      if (!classified) continue;
 
       const hash = await hashTopic(`google_trends:${topic}`);
-      trends.push({ topic, source: "google_trends", category, hash });
+      trends.push({
+        topic,
+        source: "google_trends",
+        category: classified.category,
+        categoryScore: classified.score,
+        hash,
+      });
     }
 
     return trends;
@@ -160,100 +284,161 @@ async function fetchGoogleTrends(apiKey: string): Promise<TrendTopic[]> {
   }
 }
 
-async function generateMarketFromAI(
-  topic: string,
-  category: string,
-  apiKey: string
-): Promise<{
+// ─── Semantic Dedup ──────────────────────────────────────────────────────────
+
+interface RecentMarket {
+  question: string;
+  keywords: string[];
+}
+
+async function checkSemanticDuplicate(
+  question: string,
+  recentMarkets: RecentMarket[]
+): Promise<{ isDuplicate: boolean; similarTo?: string; similarity: number }> {
+  const keywords = extractKeywords(question);
+
+  for (const market of recentMarkets) {
+    const sim = keywordSimilarity(keywords, market.keywords);
+    if (sim >= 0.45) {
+      return { isDuplicate: true, similarTo: market.question, similarity: sim };
+    }
+  }
+
+  return { isDuplicate: false, similarity: 0 };
+}
+
+// ─── AI Generation with Quality Scoring ──────────────────────────────────────
+
+interface AIMarketResult {
   question: string;
   options: string[];
   end_date_days: number;
   resolution_source: string;
   description: string;
-} | null> {
+  quality_score: number;
+  quality_reasoning: string;
+  virality_score: number;
+  shareability_hook: string;
+}
+
+const SYSTEM_PROMPT = `Você é o gerador de mercados da FUTRA, a principal plataforma de previsões do Brasil.
+Dado um tópico em tendência, crie um mercado preditivo de alta qualidade em Português Brasileiro.
+
+REGRAS OBRIGATÓRIAS:
+1. A pergunta DEVE ter resultado verificável e binário/objetivo (sim/não, quem, quanto, etc.)
+2. NUNCA crie perguntas sobre opiniões, sentimentos ou coisas não-mensuráveis
+3. A resolução deve ser possível com fontes públicas (placar oficial, decisão judicial, cotação, etc.)
+4. Horizonte temporal: 3 a 14 dias. Prefira prazos curtos e urgentes
+5. 2 a 4 opções claras e mutuamente exclusivas (sempre incluir desfechos opostos)
+6. Linguagem direta e analítica, NUNCA sensacionalista
+7. A pergunta deve ser compartilhável — algo que as pessoas debateriam com amigos
+8. Evite perguntas sobre eventos já resolvidos ou em andamento sem desfecho claro
+
+CRITÉRIOS DE QUALIDADE (avalie honestamente):
+- Objetividade: resultado 100% verificável? (0-1)
+- Timing: evento é atual e relevante agora? (0-1)
+- Engajamento: pessoas apostariam nisso? Gera debate? (0-1)
+- Resolubilidade: existe fonte clara para resolver? (0-1)
+- Viralidade: é compartilhável? Gera conversa? (0-1)
+
+QUALITY_SCORE = média ponderada destes 5 critérios (0.0 a 1.0)
+- Abaixo de 0.5: mercado ruim, não deveria ser publicado
+- 0.5-0.7: mercado aceitável, precisa revisão humana
+- 0.7-0.85: bom mercado
+- 0.85+: excelente mercado, pode ir ao ar automaticamente
+
+VIRALITY_SCORE (0.0 a 1.0):
+- 0.0: ninguém compartilharia
+- 0.5: algumas pessoas se interessariam
+- 1.0: viral, todo mundo quer opinar
+
+Forneça um shareability_hook: frase curta (~10 palavras) que funcionaria como chamada no Twitter/Instagram.
+
+Forneça quality_reasoning: 1 frase explicando por que deu esse score.`;
+
+async function generateMarketFromAI(
+  topic: string,
+  category: string,
+  apiKey: string
+): Promise<AIMarketResult | null> {
   try {
-    const res = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content: `Você é o gerador de mercados da FUTRA, uma plataforma de previsões brasileira.
-Dado um tópico em tendência no Brasil, crie uma pergunta de mercado preditivo em Português (BR).
-
-Regras:
-- A pergunta DEVE ter um resultado verificável e definitivo
-- 2 a 4 opções (sempre incluir desfechos opostos)
-- end_date_days: de 3 a 14 dias, baseado na urgência do tópico
-- resolution_source: fonte verificável (ex: "Placar final do jogo", "Resultado oficial da eleição")
-- description: breve contexto sobre o tópico (1-2 frases)
-- Linguagem analítica, não sensacionalista
-- Não use pontuação dupla na pergunta
-
-Responda SOMENTE com JSON válido (sem markdown): { "question": string, "options": string[], "end_date_days": number, "resolution_source": string, "description": string }`,
-            },
-            {
-              role: "user",
-              content: `Tópico: "${topic}"\nCategoria: "${category}"`,
-            },
-          ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "create_market",
-                description:
-                  "Create a prediction market from a trending topic",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    question: { type: "string", description: "Market question in PT-BR" },
-                    options: {
-                      type: "array",
-                      items: { type: "string" },
-                      minItems: 2,
-                      maxItems: 4,
-                      description: "2-4 answer options",
-                    },
-                    end_date_days: {
-                      type: "number",
-                      description: "Days from now until market closes (3-14)",
-                    },
-                    resolution_source: {
-                      type: "string",
-                      description: "Verification source for the outcome",
-                    },
-                    description: {
-                      type: "string",
-                      description: "Brief context about the topic",
-                    },
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: `Tópico em tendência: "${topic}"\nCategoria: "${category}"\n\nCrie o melhor mercado preditivo possível para este tópico. Seja rigoroso na avaliação de qualidade.`,
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "create_market",
+              description: "Create a high-quality prediction market from a trending topic",
+              parameters: {
+                type: "object",
+                properties: {
+                  question: {
+                    type: "string",
+                    description: "Market question in PT-BR. Must be objective and verifiable.",
                   },
-                  required: [
-                    "question",
-                    "options",
-                    "end_date_days",
-                    "resolution_source",
-                    "description",
-                  ],
-                  additionalProperties: false,
+                  options: {
+                    type: "array",
+                    items: { type: "string" },
+                    minItems: 2,
+                    maxItems: 4,
+                    description: "2-4 mutually exclusive answer options",
+                  },
+                  end_date_days: {
+                    type: "number",
+                    description: "Days until market closes (3-14)",
+                  },
+                  resolution_source: {
+                    type: "string",
+                    description: "Specific verification source (e.g. 'Placar oficial CBF', 'Decisão publicada no DOU')",
+                  },
+                  description: {
+                    type: "string",
+                    description: "Brief context about the topic (1-2 sentences)",
+                  },
+                  quality_score: {
+                    type: "number",
+                    description: "Overall quality score from 0.0 to 1.0 based on objectivity, timing, engagement, resolvability, virality",
+                  },
+                  quality_reasoning: {
+                    type: "string",
+                    description: "One sentence explaining the quality assessment",
+                  },
+                  virality_score: {
+                    type: "number",
+                    description: "How shareable/viral this market is (0.0-1.0)",
+                  },
+                  shareability_hook: {
+                    type: "string",
+                    description: "Short catchy phrase (~10 words) for social media sharing",
+                  },
                 },
+                required: [
+                  "question", "options", "end_date_days", "resolution_source",
+                  "description", "quality_score", "quality_reasoning",
+                  "virality_score", "shareability_hook",
+                ],
+                additionalProperties: false,
               },
             },
-          ],
-          tool_choice: {
-            type: "function",
-            function: { name: "create_market" },
           },
-        }),
-      }
-    );
+        ],
+        tool_choice: { type: "function", function: { name: "create_market" } },
+      }),
+    });
 
     if (!res.ok) {
       console.error("AI Gateway error:", res.status, await res.text());
@@ -268,11 +453,7 @@ Responda SOMENTE com JSON válido (sem markdown): { "question": string, "options
     }
 
     const parsed = JSON.parse(toolCall.function.arguments);
-    if (
-      !parsed.question ||
-      !Array.isArray(parsed.options) ||
-      parsed.options.length < 2
-    ) {
+    if (!parsed.question || !Array.isArray(parsed.options) || parsed.options.length < 2) {
       console.error("Invalid AI output:", parsed);
       return null;
     }
@@ -283,12 +464,97 @@ Responda SOMENTE com JSON válido (sem markdown): { "question": string, "options
       end_date_days: Math.min(14, Math.max(3, parsed.end_date_days || 7)),
       resolution_source: parsed.resolution_source || "",
       description: parsed.description || "",
+      quality_score: Math.min(1, Math.max(0, parsed.quality_score || 0)),
+      quality_reasoning: parsed.quality_reasoning || "",
+      virality_score: Math.min(1, Math.max(0, parsed.virality_score || 0)),
+      shareability_hook: parsed.shareability_hook || "",
     };
   } catch (e) {
     console.error("AI generation error:", e);
     return null;
   }
 }
+
+// ─── Post-generation validation ──────────────────────────────────────────────
+
+interface ValidationResult {
+  passed: boolean;
+  adjustedScore: number;
+  penalties: string[];
+}
+
+function validateCandidate(
+  ai: AIMarketResult,
+  categoryScore: number,
+  source: "google_trends" | "rss"
+): ValidationResult {
+  const penalties: string[] = [];
+  let score = ai.quality_score;
+
+  // Penalty: question too short or too long
+  if (ai.question.length < 20) {
+    score -= 0.15;
+    penalties.push("Question too short");
+  }
+  if (ai.question.length > 200) {
+    score -= 0.05;
+    penalties.push("Question too long");
+  }
+
+  // Penalty: too few or too many options
+  if (ai.options.length < 2) {
+    score -= 0.3;
+    penalties.push("Less than 2 options");
+  }
+
+  // Penalty: duplicate option labels
+  const uniqueOpts = new Set(ai.options.map((o) => o.toLowerCase().trim()));
+  if (uniqueOpts.size < ai.options.length) {
+    score -= 0.2;
+    penalties.push("Duplicate options detected");
+  }
+
+  // Penalty: no resolution source
+  if (!ai.resolution_source || ai.resolution_source.length < 5) {
+    score -= 0.15;
+    penalties.push("Weak or missing resolution source");
+  }
+
+  // Penalty: vague question patterns
+  const vaguePatterns = [/será que/i, /o que.*acha/i, /qual.*sua.*opinião/i, /você.*acredita/i];
+  for (const p of vaguePatterns) {
+    if (p.test(ai.question)) {
+      score -= 0.2;
+      penalties.push(`Vague pattern: ${p.source}`);
+      break;
+    }
+  }
+
+  // Bonus: Google Trends source (higher signal)
+  if (source === "google_trends") {
+    score += 0.05;
+  }
+
+  // Bonus: strong category classification
+  if (categoryScore >= 3) {
+    score += 0.05;
+  }
+
+  // Bonus: high virality
+  if (ai.virality_score >= 0.8) {
+    score += 0.05;
+  }
+
+  score = Math.min(1, Math.max(0, score));
+
+  return {
+    passed: score >= MIN_QUALITY_THRESHOLD,
+    adjustedScore: Math.round(score * 100) / 100,
+    penalties,
+  };
+}
+
+// ─── Main Handler ────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -298,8 +564,7 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers });
   }
 
-  const clientIp =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const rl = checkRateLimit(clientIp, 1, 600_000);
   if (!rl.allowed) {
     return new Response(
@@ -316,6 +581,7 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // ── 1. Fetch trends from all sources ──
     const trendPromises: Promise<TrendTopic[]>[] = [fetchRssHeadlines()];
     if (serpApiKey) trendPromises.push(fetchGoogleTrends(serpApiKey));
 
@@ -323,39 +589,86 @@ Deno.serve(async (req) => {
     const allTrends = trendResults.flat();
 
     if (allTrends.length === 0) {
-      return new Response(
-        JSON.stringify({ created: 0, message: "No suitable trends found" }),
-        { headers: { ...headers, "Content-Type": "application/json" } }
-      );
+      return jsonResponse(headers, { created: 0, message: "No suitable trends found" });
     }
 
+    // ── 2. Hash dedup against scheduled_markets ──
     const hashes = allTrends.map((t) => t.hash);
     const { data: existingHashes } = await adminClient
       .from("scheduled_markets")
       .select("topic_hash")
       .in("topic_hash", hashes);
 
-    const existingSet = new Set(
-      (existingHashes || []).map((e: any) => e.topic_hash)
-    );
-    const newTrends = allTrends.filter((t) => !existingSet.has(t.hash));
+    const existingSet = new Set((existingHashes || []).map((e: any) => e.topic_hash));
+    let newTrends = allTrends.filter((t) => !existingSet.has(t.hash));
 
     if (newTrends.length === 0) {
-      return new Response(
-        JSON.stringify({ created: 0, message: "All trends already processed" }),
-        { headers: { ...headers, "Content-Type": "application/json" } }
-      );
+      return jsonResponse(headers, { created: 0, message: "All trends already processed" });
     }
 
-    const toProcess = newTrends.slice(0, MAX_CANDIDATES_PER_RUN);
-    const candidates: { id: string; question: string; topic: string }[] = [];
+    // ── 3. Semantic dedup against recent markets + candidates ──
+    const { data: recentMarkets } = await adminClient
+      .from("markets")
+      .select("question")
+      .order("created_at", { ascending: false })
+      .limit(50);
 
+    const { data: recentCandidates } = await adminClient
+      .from("scheduled_markets")
+      .select("generated_question")
+      .not("generated_question", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    const recentKeywords: RecentMarket[] = [
+      ...(recentMarkets || []).map((m: any) => ({
+        question: m.question,
+        keywords: extractKeywords(m.question),
+      })),
+      ...(recentCandidates || [])
+        .filter((c: any) => c.generated_question)
+        .map((c: any) => ({
+          question: c.generated_question,
+          keywords: extractKeywords(c.generated_question),
+        })),
+    ];
+
+    // Pre-filter trends by semantic similarity to existing topics
+    const semanticFiltered: TrendTopic[] = [];
+    for (const trend of newTrends) {
+      const trendKw = extractKeywords(trend.topic);
+      let isDup = false;
+      for (const rm of recentKeywords) {
+        if (keywordSimilarity(trendKw, rm.keywords) >= 0.4) {
+          console.log(`Semantic dedup: "${trend.topic}" ≈ "${rm.question}"`);
+          isDup = true;
+          break;
+        }
+      }
+      if (!isDup) semanticFiltered.push(trend);
+    }
+
+    newTrends = semanticFiltered;
+    if (newTrends.length === 0) {
+      return jsonResponse(headers, { created: 0, message: "All trends semantically similar to existing" });
+    }
+
+    // ── 4. Sort by category score (higher = more relevant) ──
+    newTrends.sort((a, b) => b.categoryScore - a.categoryScore);
+
+    const toProcess = newTrends.slice(0, MAX_CANDIDATES_PER_RUN);
+    const results: {
+      id: string;
+      question: string;
+      topic: string;
+      quality_score: number;
+      status: string;
+      auto_published: boolean;
+    }[] = [];
+
+    // ── 5. Generate + validate + insert candidates ──
     for (const trend of toProcess) {
-      const aiResult = await generateMarketFromAI(
-        trend.topic,
-        trend.category,
-        lovableApiKey
-      );
+      const aiResult = await generateMarketFromAI(trend.topic, trend.category, lovableApiKey);
 
       if (!aiResult) {
         await adminClient.from("scheduled_markets").insert({
@@ -364,7 +677,39 @@ Deno.serve(async (req) => {
           topic_hash: trend.hash,
           category: trend.category,
           status: "skipped",
-        }).single();
+        });
+        continue;
+      }
+
+      // Validate and adjust score
+      const validation = validateCandidate(aiResult, trend.categoryScore, trend.source);
+      if (!validation.passed) {
+        console.log(`Quality gate failed for "${trend.topic}": score=${validation.adjustedScore}, penalties=${validation.penalties.join(", ")}`);
+        await adminClient.from("scheduled_markets").insert({
+          source: trend.source,
+          source_topic: trend.topic,
+          topic_hash: trend.hash,
+          category: trend.category,
+          status: "skipped",
+          generated_question: aiResult.question,
+          confidence_score: validation.adjustedScore,
+        });
+        continue;
+      }
+
+      // Semantic dedup against the AI-generated question too
+      const semDup = await checkSemanticDuplicate(aiResult.question, recentKeywords);
+      if (semDup.isDuplicate) {
+        console.log(`Semantic dedup (AI question): "${aiResult.question}" ≈ "${semDup.similarTo}" (${semDup.similarity.toFixed(2)})`);
+        await adminClient.from("scheduled_markets").insert({
+          source: trend.source,
+          source_topic: trend.topic,
+          topic_hash: trend.hash,
+          category: trend.category,
+          status: "skipped",
+          generated_question: aiResult.question,
+          confidence_score: validation.adjustedScore,
+        });
         continue;
       }
 
@@ -373,7 +718,10 @@ Deno.serve(async (req) => {
 
       const optionsJson = aiResult.options.map((label) => ({ label }));
 
-      // Insert as candidate (status: new) instead of directly into markets
+      const shouldAutoPublish = validation.adjustedScore >= AUTO_PUBLISH_THRESHOLD;
+      const candidateStatus = shouldAutoPublish ? "approved" : "new";
+
+      // Insert candidate into scheduled_markets
       const { data: candidate, error: insertErr } = await adminClient
         .from("scheduled_markets")
         .insert({
@@ -381,12 +729,12 @@ Deno.serve(async (req) => {
           source_topic: trend.topic,
           topic_hash: trend.hash,
           category: trend.category,
-          status: "new",
+          status: candidateStatus,
           generated_question: aiResult.question,
           generated_description: aiResult.description,
           generated_options: optionsJson,
           resolution_source: aiResult.resolution_source,
-          confidence_score: 0.7,
+          confidence_score: validation.adjustedScore,
           end_date: endDate.toISOString(),
         })
         .select("id")
@@ -397,30 +745,71 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      await adminClient.from("admin_logs").insert({
-        admin_user_id: "00000000-0000-0000-0000-000000000001",
-        action_type: "auto_candidate_created",
-        entity_type: "scheduled_market",
-        entity_id: candidate.id,
-        description: `Auto-candidate from ${trend.source}: "${trend.topic}" → "${aiResult.question}"`,
+      let autoPublished = false;
+
+      // Auto-publish if above threshold
+      if (shouldAutoPublish) {
+        const { data: market, error: marketErr } = await adminClient
+          .from("markets")
+          .insert({
+            question: aiResult.question,
+            description: aiResult.description,
+            category: trend.category,
+            type: aiResult.options.length === 2 ? "binary" : "multiple",
+            options: optionsJson,
+            end_date: endDate.toISOString(),
+            status: "open",
+            resolution_source: aiResult.resolution_source,
+            resolution_rules: aiResult.resolution_source ? `Fonte: ${aiResult.resolution_source}` : "",
+          })
+          .select("id")
+          .single();
+
+        if (!marketErr && market) {
+          await adminClient
+            .from("scheduled_markets")
+            .update({
+              status: "published",
+              market_id: market.id,
+              reviewed_at: new Date().toISOString(),
+            })
+            .eq("id", candidate.id);
+          autoPublished = true;
+        }
+      }
+
+      // Add to recent keywords to prevent intra-batch duplicates
+      recentKeywords.push({
+        question: aiResult.question,
+        keywords: extractKeywords(aiResult.question),
       });
 
-      candidates.push({
+      await adminClient.from("admin_logs").insert({
+        admin_user_id: "00000000-0000-0000-0000-000000000001",
+        action_type: autoPublished ? "auto_market_published" : "auto_candidate_created",
+        entity_type: "scheduled_market",
+        entity_id: candidate.id,
+        description: `[Q:${validation.adjustedScore}] ${trend.source}: "${trend.topic}" → "${aiResult.question}"${validation.penalties.length ? ` | penalties: ${validation.penalties.join(", ")}` : ""}`,
+      });
+
+      results.push({
         id: candidate.id,
         question: aiResult.question,
         topic: trend.topic,
+        quality_score: validation.adjustedScore,
+        status: autoPublished ? "published" : "new",
+        auto_published: autoPublished,
       });
     }
 
-    return new Response(
-      JSON.stringify({
-        candidates_created: candidates.length,
-        candidates,
-        trends_found: allTrends.length,
-        new_trends: newTrends.length,
-      }),
-      { headers: { ...headers, "Content-Type": "application/json" } }
-    );
+    return jsonResponse(headers, {
+      candidates_created: results.length,
+      auto_published: results.filter((r) => r.auto_published).length,
+      pending_review: results.filter((r) => !r.auto_published).length,
+      results,
+      trends_found: allTrends.length,
+      new_trends: newTrends.length,
+    });
   } catch (error) {
     console.error("create-markets-from-trends error:", error);
     return new Response(
@@ -429,3 +818,10 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+function jsonResponse(headers: Record<string, string>, body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
