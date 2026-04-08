@@ -218,8 +218,9 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
             continue;
           }
 
-          // Only resolve with high confidence
-          if (!decision.winning_option_id || decision.confidence !== "high") {
+          // Only resolve with high confidence (or medium when admin-triggered retry)
+          const acceptableConfidence = singleMarketId ? ["high", "medium"] : ["high"];
+          if (!decision.winning_option_id || !acceptableConfidence.includes(decision.confidence)) {
             results.skipped++;
             await adminClient.from("admin_logs").insert({
               admin_user_id: SYSTEM_USER_ID,
