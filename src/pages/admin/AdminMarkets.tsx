@@ -350,6 +350,18 @@ export default function AdminMarkets() {
                             <CheckCircle className="h-3.5 w-3.5" />
                           </Button>
                         )}
+                        {m.status === 'closed' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-accent-foreground hover:text-primary"
+                            onClick={() => retryAiResolve.mutate(m.id)}
+                            disabled={retryAiResolve.isPending}
+                            title="Re-tentar resolução via IA"
+                          >
+                            <RotateCw className={cn("h-3.5 w-3.5", retryAiResolve.isPending && "animate-spin")} />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingMarket(m); setFormOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateMarket(m)}><Copy className="h-3.5 w-3.5" /></Button>
                         <AlertDialog>
