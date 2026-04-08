@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
     resolveQuery = resolveQuery.limit(singleMarketId ? 1 : MAX_RESOLVE_PER_RUN);
 
     const { data: marketsToResolve, error: resolveErr } = await resolveQuery;
+    if (resolveErr) throw resolveErr;
 
     if (marketsToResolve && marketsToResolve.length > 0) {
       for (const market of marketsToResolve) {
