@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
   const headers = { ...corsHeaders, "Content-Type": "application/json" };
 
   try {
+    const jobStart = Date.now();
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const alertWebhookUrl = Deno.env.get("ALERT_WEBHOOK_URL");
@@ -94,6 +95,14 @@ Deno.serve(async (req) => {
     };
 
     console.log("Health check:", result);
+
+    // Log job execution
+    await admin.from("job_executions").insert({
+      job_name: "health-monitor",
+      status: alerts.length === 0 ? "success" : "partial",
+      duration_ms: Date.now() - jobStart,
+      metrics: { alerts_count: alerts.length, stuck_markets: stuckMarkets?.length ?? 0, recent_errors: recentErrors ?? 0 },
+    });
 
     return new Response(JSON.stringify(result), { status: 200, headers });
   } catch (error) {
