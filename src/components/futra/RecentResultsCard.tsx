@@ -1,13 +1,13 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, TrendingUp, Share2 } from 'lucide-react';
+import { CheckCircle, XCircle, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ShareButton } from '@/components/futra/ShareButton';
+import { ShareButton, winShareText } from '@/components/futra/ShareButton';
 
 export function RecentResultsCard() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const { data: results } = useQuery({
     queryKey: ['recent-results', user?.id],
@@ -37,9 +37,13 @@ export function RecentResultsCard() {
       <div className="space-y-2">
         {results.map((r: any) => {
           const won = r.status === 'won';
-          const shareText = won
-            ? `Acertei! "${r.markets?.question || 'Mercado'}". +${r.reward} FC na FUTRA`
-            : `"${r.markets?.question || 'Mercado'}" — Resultado na FUTRA`;
+          const question = r.markets?.question || 'Mercado';
+          const shareText = winShareText(
+            question,
+            won,
+            r.reward || 0,
+            Math.round(profile?.accuracy_rate || 0)
+          );
           const shareUrl = `${window.location.origin}/market/${r.market_id}`;
 
           return (
@@ -52,9 +56,7 @@ export function RecentResultsCard() {
                   ? <CheckCircle className="h-4 w-4 text-emerald shrink-0 mt-0.5" />
                   : <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-foreground truncate">
-                    {r.markets?.question || 'Mercado'}
-                  </p>
+                  <p className="text-sm text-foreground truncate">{question}</p>
                   <div className="flex gap-3 text-xs mt-0.5">
                     <span className={cn(won ? 'text-emerald' : 'text-destructive')}>
                       {won ? `+${r.reward}` : `-${r.credits_allocated}`} FC
@@ -69,9 +71,10 @@ export function RecentResultsCard() {
               </Link>
               {won && (
                 <ShareButton
-                  title={r.markets?.question || 'FUTRA'}
+                  title={question}
                   text={shareText}
                   url={shareUrl}
+                  shareContext="win"
                 />
               )}
             </div>

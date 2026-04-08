@@ -4,7 +4,7 @@ import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
 import { StatCard } from '@/components/futra/StatCard';
 import { LevelProgressBar } from '@/components/futra/LevelProgressBar';
-import { ShareButton } from '@/components/futra/ShareButton';
+import { ShareButton, profileShareText } from '@/components/futra/ShareButton';
 import { useProfile } from '@/hooks/useMarkets';
 import { usePublicPredictions } from '@/hooks/useProfilePredictions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +24,9 @@ export default function ProfilePage() {
   const { data: predictions } = usePublicPredictions(user?.user_id);
 
   const profileUrl = `${window.location.origin}/profile/${username}`;
-  const profileShareText = `Meu perfil na FUTRA:\n🏆 Rank #${user?.global_rank}\n⭐ Score: ${user?.futra_score}\n🎯 Precisão: ${Math.round(user?.accuracy_rate || 0)}%`;
+  const shareText = user
+    ? profileShareText(user.display_name, user.global_rank, user.futra_score, Math.round(user.accuracy_rate || 0))
+    : '';
   const profileOgImage = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/og-image?type=profile&username=${username}`;
 
   if (isLoading) return <Layout><div className="container mx-auto px-4 py-8"><ProfileSkeleton /></div></Layout>;
@@ -46,7 +48,7 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <SEO title={`${user.display_name} (@${user.username})`} description={`🏆 Rank #${user.global_rank} | ⭐ Score: ${user.futra_score} | 🎯 Precisão: ${Math.round(user.accuracy_rate)}% | 🔥 Sequência: ${user.streak} — Perfil de previsor na FUTRA`} ogImage={profileOgImage} />
+      <SEO title={`${user.display_name} (@${user.username})`} description={`#${user.global_rank} ranking · ${user.futra_score} score · ${Math.round(user.accuracy_rate)}% precisão — Perfil na FUTRA`} ogImage={profileOgImage} />
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start gap-6">
@@ -74,9 +76,10 @@ export default function ProfilePage() {
               {isOwn && <EditProfileDialog />}
               <ShareButton
                 title={`${user.display_name} na FUTRA`}
-                text={profileShareText}
+                text={shareText}
                 url={profileUrl}
                 label="Compartilhar"
+                shareContext="profile"
               />
             </div>
           </div>
