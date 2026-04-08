@@ -6,6 +6,7 @@ import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { LevelProgressBar } from '@/components/futra/LevelProgressBar';
 import { RecentResultsCard } from '@/components/futra/RecentResultsCard';
 import { MissionsCard } from '@/components/futra/MissionsCard';
+import { ShareButton, winShareText } from '@/components/futra/ShareButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPredictions } from '@/hooks/useMarkets';
 import { Trophy, Coins, Target, TrendingUp, Bookmark, BarChart3 } from 'lucide-react';
