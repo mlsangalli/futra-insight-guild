@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
-import { useMarketsInfinite } from '@/hooks/useMarkets';
+import { useBrowseSorted } from '@/hooks/useMarkets';
 import { CATEGORIES, MarketCategory } from '@/types';
 import { cn } from '@/lib/utils';
 import { Search, X } from 'lucide-react';
@@ -45,21 +45,18 @@ export default function BrowsePage() {
     initialFilter === 'ending' ? 'ending' : 'trending'
   );
   const [categoryFilter, setCategoryFilter] = useState<MarketCategory | 'all'>('all');
+  const [page, setPage] = useState(0);
 
-  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useMarketsInfinite(
-    categoryFilter !== 'all' ? { category: categoryFilter } : undefined
-  );
+  const { data, isLoading, isError, refetch } = useBrowseSorted({
+    sort: sortBy,
+    category: categoryFilter !== 'all' ? categoryFilter : undefined,
+    page,
+  });
 
-  const allMarkets = useMemo(() => data?.pages.flatMap(p => p.data) ?? [], [data]);
-
-  const markets = useMemo(() => {
-    let result = allMarkets;
-    if (sortBy === 'trending') result = result.filter(m => m.trending).concat(result.filter(m => !m.trending));
-    else if (sortBy === 'popular') result = [...result].sort((a, b) => b.total_participants - a.total_participants);
-    else if (sortBy === 'newest') result = [...result].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    else if (sortBy === 'ending') result = [...result].sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
-    return result;
-  }, [allMarkets, sortBy]);
+  const markets = data?.data ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const pageSize = 20;
+  const hasMore = (page + 1) * pageSize < totalCount;
 
   const activeCat = CATEGORIES.find(c => c.key === categoryFilter);
 
@@ -76,7 +73,7 @@ export default function BrowsePage() {
             <div className="flex-1 overflow-x-auto scrollbar-hide">
               <div className="flex gap-2 snap-x snap-mandatory">
                 <button
-                  onClick={() => setCategoryFilter('all')}
+                  onClick={() => { setCategoryFilter('all'); setPage(0); }}
                   className={cn(
                     'px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap shrink-0 snap-start',
                     categoryFilter === 'all'
@@ -89,7 +86,7 @@ export default function BrowsePage() {
                 {CATEGORIES.map(cat => (
                   <button
                     key={cat.key}
-                    onClick={() => setCategoryFilter(cat.key)}
+                    onClick={() => { setCategoryFilter(cat.key); setPage(0); }}
                     className={cn(
                       'px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap shrink-0 snap-start',
                       categoryFilter === cat.key
@@ -104,7 +101,7 @@ export default function BrowsePage() {
             </div>
 
             <div className="shrink-0">
-              <Select value={sortBy} onValueChange={setSortBy}>
+              <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(0); }}>
                 <SelectTrigger className="w-[140px] h-8 text-xs bg-surface-800 border-border/50">
                   <SelectValue />
                 </SelectTrigger>
@@ -121,7 +118,7 @@ export default function BrowsePage() {
             <div className="mt-2 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
                 {activeCat.emoji} {activeCat.label}
-                <button onClick={() => setCategoryFilter('all')} className="ml-0.5 hover:text-foreground">
+                <button onClick={() => { setCategoryFilter('all'); setPage(0); }} className="ml-0.5 hover:text-foreground">
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -131,7 +128,7 @@ export default function BrowsePage() {
 
         {!isLoading && !isError && (
           <p className="text-sm text-muted-foreground mb-4">
-            Mostrando {markets.length} {markets.length === 1 ? 'mercado' : 'mercados'}
+            Mostrando {markets.length} de {totalCount} {totalCount === 1 ? 'mercado' : 'mercados'}
           </p>
         )}
 
@@ -144,17 +141,18 @@ export default function BrowsePage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {markets.map(m => <MarketCard key={m.id} market={dbToCard(m)} />)}
             </div>
-            {hasNextPage && (
-              <div className="text-center mt-8">
-                <Button
-                  variant="outline"
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                >
-                  {isFetchingNextPage ? 'Carregando...' : 'Carregar mais mercados'}
+            <div className="flex items-center justify-center gap-3 mt-8">
+              {page > 0 && (
+                <Button variant="outline" onClick={() => setPage(p => p - 1)}>
+                  Anterior
                 </Button>
-              </div>
-            )}
+              )}
+              {hasMore && (
+                <Button variant="outline" onClick={() => setPage(p => p + 1)}>
+                  Próxima página
+                </Button>
+              )}
+            </div>
           </>
         ) : (
           <EmptyState

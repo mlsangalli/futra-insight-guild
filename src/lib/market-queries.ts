@@ -39,6 +39,84 @@ function parseMarketRow(row: MarketRow): Market {
   };
 }
 
+/** Parse a flat market row from RPC (no nested market_options) */
+function parseRpcMarket(row: any): Market {
+  const rawOptions = row.options;
+  const options: MarketOption[] = Array.isArray(rawOptions)
+    ? rawOptions.map((opt: any) => ({
+        id: opt.id || '',
+        label: opt.label || '',
+        votes: opt.votes ?? opt.total_votes ?? 0,
+        creditsAllocated: opt.creditsAllocated ?? opt.credits_allocated ?? opt.total_credits ?? 0,
+        percentage: Number(opt.percentage ?? 0),
+      }))
+    : [];
+  return {
+    id: row.id,
+    question: row.question,
+    description: row.description || '',
+    category: row.category,
+    type: row.type || 'binary',
+    status: row.status,
+    options,
+    total_participants: row.total_participants ?? 0,
+    total_credits: row.total_credits ?? 0,
+    end_date: row.end_date,
+    created_at: row.created_at,
+    resolution_source: row.resolution_source || null,
+    resolution_rules: row.resolution_rules || null,
+    featured: row.featured ?? false,
+    trending: row.trending ?? false,
+    created_by: row.created_by || null,
+    lock_date: row.lock_date || null,
+    resolved_option: row.resolved_option || null,
+  };
+}
+
+/** Home feeds — backend-scored sections */
+export interface HomeFeeds {
+  featured: Market[];
+  trending: Market[];
+  popular: Market[];
+  ending_soon: Market[];
+}
+
+export async function fetchHomeFeeds(): Promise<HomeFeeds> {
+  const { data, error } = await supabase.rpc('get_home_feeds');
+  if (error) throw error;
+
+  const raw = data as any;
+  return {
+    featured: (raw.featured || []).map(parseRpcMarket),
+    trending: (raw.trending || []).map(parseRpcMarket),
+    popular: (raw.popular || []).map(parseRpcMarket),
+    ending_soon: (raw.ending_soon || []).map(parseRpcMarket),
+  };
+}
+
+/** Browse with server-side sorting */
+export async function fetchBrowseSorted(params: {
+  sort?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ data: Market[]; totalCount: number }> {
+  const { data, error } = await supabase.rpc('get_browse_sorted', {
+    p_sort: params.sort || 'trending',
+    p_category: params.category || null,
+    p_limit: params.limit || 20,
+    p_offset: params.offset || 0,
+  } as any);
+  if (error) throw error;
+
+  const rows = (data || []) as any[];
+  const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  return {
+    data: rows.map(parseRpcMarket),
+    totalCount,
+  };
+}
+
 /** Fetch markets with optional cursor pagination */
 export async function fetchMarkets(
   filters: {
@@ -78,7 +156,7 @@ export async function fetchMarkets(
   };
 }
 
-/** Fetch all markets (non-paginated, for Home sections) */
+/** Fetch all markets (non-paginated, legacy fallback) */
 export async function fetchAllMarkets(filters?: {
   category?: string;
   featured?: boolean;
