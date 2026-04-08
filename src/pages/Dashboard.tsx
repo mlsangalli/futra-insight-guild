@@ -142,23 +142,37 @@ export default function DashboardPage() {
                 title="Nenhuma previsão resolvida"
                 description="Suas previsões resolvidas aparecerão aqui."
               />
-            ) : resolvedPredictions.map((p: any) => (
-              <div key={p.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">{p.markets?.question || 'Mercado'}</p>
-                  <StatusBadge status={p.status} />
+            ) : resolvedPredictions.map((p: any) => {
+              const won = p.status === 'won';
+              const question = p.markets?.question || 'Mercado';
+              return (
+                <div key={p.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-foreground flex-1 min-w-0 truncate mr-2">{question}</p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {won && (
+                        <ShareButton
+                          title={question}
+                          text={winShareText(question, true, p.reward || 0, Math.round(profile?.accuracy_rate || 0))}
+                          url={`${window.location.origin}/market/${p.market_id}`}
+                          shareContext="win"
+                        />
+                      )}
+                      <StatusBadge status={p.status} />
+                    </div>
+                  </div>
+                  <div className="flex gap-4 mt-2 text-xs">
+                    <span className="text-muted-foreground">{p.credits_allocated} FC apostados</span>
+                    {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
+                    {p.score_delta != null && (
+                      <span className={cn(p.score_delta >= 0 ? 'text-emerald' : 'text-destructive')}>
+                        {p.score_delta >= 0 ? '+' : ''}{p.score_delta} score
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-4 mt-2 text-xs">
-                  <span className="text-muted-foreground">{p.credits_allocated} FC apostados</span>
-                  {p.reward > 0 && <span className="text-emerald">+{p.reward} FC</span>}
-                  {p.score_delta != null && (
-                    <span className={cn(p.score_delta >= 0 ? 'text-emerald' : 'text-destructive')}>
-                      {p.score_delta >= 0 ? '+' : ''}{p.score_delta} score
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
