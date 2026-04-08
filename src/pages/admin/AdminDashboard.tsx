@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminMetricCard } from '@/components/admin/AdminMetricCard';
+import { MonitoringPanel } from '@/components/admin/MonitoringPanel';
 import { Users, Store, FolderOpen, FileText, Activity, TrendingUp, Lock, CheckCircle, Clock } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -358,6 +359,9 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Monitoring Panel */}
+        <MonitoringPanel />
 
         {/* Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
