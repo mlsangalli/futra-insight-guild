@@ -820,6 +820,37 @@ export type Database = {
         Args: { p_user_mission_id: string }
         Returns: Json
       }
+      get_browse_sorted: {
+        Args: {
+          p_category?: Database["public"]["Enums"]["market_category"]
+          p_limit?: number
+          p_offset?: number
+          p_sort?: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["market_category"]
+          created_at: string
+          created_by: string
+          description: string
+          end_date: string
+          featured: boolean
+          id: string
+          lock_date: string
+          options: Json
+          priority_score: number
+          question: string
+          resolution_rules: string
+          resolution_source: string
+          resolved_option: string
+          status: Database["public"]["Enums"]["market_status"]
+          total_count: number
+          total_credits: number
+          total_participants: number
+          trending: boolean
+          type: string
+        }[]
+      }
+      get_home_feeds: { Args: never; Returns: Json }
       get_leaderboard: {
         Args: {
           p_category?: Database["public"]["Enums"]["market_category"]
