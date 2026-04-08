@@ -6,6 +6,7 @@ const VALID_ACTIONS = [
   "promote_admin", "demote_admin", "delete_market",
   "update_market_status", "toggle_featured", "toggle_trending",
   "schedule_lock", "resolve_market",
+  "approve_candidate", "reject_candidate",
 ] as const;
 
 type ActionType = typeof VALID_ACTIONS[number];

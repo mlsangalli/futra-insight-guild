@@ -2,8 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rate-limit.ts";
 
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
-const MAX_MARKETS_PER_RUN = 3;
+const MAX_CANDIDATES_PER_RUN = 3;
 
 // Category keyword mapping (PT-BR)
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -73,7 +72,6 @@ interface TrendTopic {
   hash: string;
 }
 
-// RSS feeds from major Brazilian news portals
 const RSS_FEEDS = [
   "https://g1.globo.com/rss/g1/",
   "https://g1.globo.com/rss/g1/economia/",
@@ -111,7 +109,6 @@ async function fetchRssHeadlines(): Promise<TrendTopic[]> {
       const xml = await res.text();
       const titles = extractTextFromXml(xml, "title");
 
-      // Skip first title (usually the feed name)
       for (const title of titles.slice(1, 8)) {
         if (!title || title.length < 10) continue;
 
@@ -162,7 +159,6 @@ async function fetchGoogleTrends(apiKey: string): Promise<TrendTopic[]> {
     return [];
   }
 }
-
 
 async function generateMarketFromAI(
   topic: string,
@@ -304,7 +300,7 @@ Deno.serve(async (req) => {
 
   const clientIp =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const rl = checkRateLimit(clientIp, 1, 600_000); // 1 per 10 min
+  const rl = checkRateLimit(clientIp, 1, 600_000);
   if (!rl.allowed) {
     return new Response(
       JSON.stringify({ error: "Rate limit exceeded. Try again later." }),
@@ -320,8 +316,6 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch trends from available sources in parallel
-    // RSS is always available (no API key needed)
     const trendPromises: Promise<TrendTopic[]>[] = [fetchRssHeadlines()];
     if (serpApiKey) trendPromises.push(fetchGoogleTrends(serpApiKey));
 
@@ -335,7 +329,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check existing hashes to deduplicate
     const hashes = allTrends.map((t) => t.hash);
     const { data: existingHashes } = await adminClient
       .from("scheduled_markets")
@@ -354,9 +347,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Process up to MAX_MARKETS_PER_RUN new trends
-    const toProcess = newTrends.slice(0, MAX_MARKETS_PER_RUN);
-    const createdMarkets: { market_id: string; question: string; topic: string }[] = [];
+    const toProcess = newTrends.slice(0, MAX_CANDIDATES_PER_RUN);
+    const candidates: { id: string; question: string; topic: string }[] = [];
 
     for (const trend of toProcess) {
       const aiResult = await generateMarketFromAI(
@@ -366,7 +358,6 @@ Deno.serve(async (req) => {
       );
 
       if (!aiResult) {
-        // Record as skipped
         await adminClient.from("scheduled_markets").insert({
           source: trend.source,
           source_topic: trend.topic,
@@ -382,56 +373,40 @@ Deno.serve(async (req) => {
 
       const optionsJson = aiResult.options.map((label) => ({ label }));
 
-      const { data: market, error: insertErr } = await adminClient
-        .from("markets")
+      // Insert as candidate (status: new) instead of directly into markets
+      const { data: candidate, error: insertErr } = await adminClient
+        .from("scheduled_markets")
         .insert({
-          question: aiResult.question,
-          description: aiResult.description,
+          source: trend.source,
+          source_topic: trend.topic,
+          topic_hash: trend.hash,
           category: trend.category,
-          type: aiResult.options.length === 2 ? "binary" : "multiple",
-          options: optionsJson,
-          end_date: endDate.toISOString(),
-          status: "open",
+          status: "new",
+          generated_question: aiResult.question,
+          generated_description: aiResult.description,
+          generated_options: optionsJson,
           resolution_source: aiResult.resolution_source,
-          resolution_rules: `Fonte: ${aiResult.resolution_source}`,
-          created_by: SYSTEM_USER_ID,
+          confidence_score: 0.7,
+          end_date: endDate.toISOString(),
         })
         .select("id")
         .single();
 
       if (insertErr) {
-        console.error("Market insert error:", insertErr);
-        await adminClient.from("scheduled_markets").insert({
-          source: trend.source,
-          source_topic: trend.topic,
-          topic_hash: trend.hash,
-          category: trend.category,
-          status: "failed",
-        }).single();
+        console.error("Candidate insert error:", insertErr);
         continue;
       }
 
-      // Record in scheduled_markets
-      await adminClient.from("scheduled_markets").insert({
-        source: trend.source,
-        source_topic: trend.topic,
-        topic_hash: trend.hash,
-        market_id: market.id,
-        category: trend.category,
-        status: "created",
-      }).single();
-
-      // Admin log
       await adminClient.from("admin_logs").insert({
-        admin_user_id: SYSTEM_USER_ID,
-        action_type: "auto_create_market",
-        entity_type: "market",
-        entity_id: market.id,
-        description: `Auto-created from ${trend.source}: "${trend.topic}" → "${aiResult.question}"`,
+        admin_user_id: "00000000-0000-0000-0000-000000000001",
+        action_type: "auto_candidate_created",
+        entity_type: "scheduled_market",
+        entity_id: candidate.id,
+        description: `Auto-candidate from ${trend.source}: "${trend.topic}" → "${aiResult.question}"`,
       });
 
-      createdMarkets.push({
-        market_id: market.id,
+      candidates.push({
+        id: candidate.id,
         question: aiResult.question,
         topic: trend.topic,
       });
@@ -439,8 +414,8 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        created: createdMarkets.length,
-        markets: createdMarkets,
+        candidates_created: candidates.length,
+        candidates,
         trends_found: allTrends.length,
         new_trends: newTrends.length,
       }),
