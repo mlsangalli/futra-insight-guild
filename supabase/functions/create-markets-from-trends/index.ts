@@ -887,7 +887,7 @@ Deno.serve(async (req) => {
       }
 
       // Validate and adjust score
-      const validation = validateCandidate(aiResult, trend.categoryScore, trend.source);
+      const validation = await validateCandidate(aiResult, trend.categoryScore, trend.source, lovableApiKey);
       if (!validation.passed) {
         console.log(`Quality gate failed for "${trend.topic}": score=${validation.adjustedScore}, penalties=${validation.penalties.join(", ")}`);
         await adminClient.from("scheduled_markets").insert({
