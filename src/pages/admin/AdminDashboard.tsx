@@ -364,6 +364,9 @@ export default function AdminDashboard() {
         {/* Monitoring Panel */}
         <MonitoringPanel />
 
+        {/* Operations & Antifraud Panel */}
+        <OperationsPanel />
+
         {/* Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-3">
