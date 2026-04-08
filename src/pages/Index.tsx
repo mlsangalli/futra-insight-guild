@@ -7,7 +7,7 @@ import { CountdownTimer } from '@/components/futra/CountdownTimer';
 import { VoteBar } from '@/components/futra/VoteBar';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users } from 'lucide-react';
-import { useMarkets, useLeaderboard } from '@/hooks/useMarkets';
+import { useHomeFeeds, useLeaderboard } from '@/hooks/useMarkets';
 import { CATEGORIES } from '@/types';
 import { MarketGridSkeleton, HeroMarketSkeleton, LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
@@ -28,17 +28,16 @@ function dbToCard(m: any) {
 
 export default function HomePage() {
   useRealtimeMarkets();
-  const { data: allMarkets, isLoading, isError, refetch } = useMarkets();
+  const { data: feeds, isLoading, isError, refetch } = useHomeFeeds();
   const { data: topUsers, isLoading: loadingUsers } = useLeaderboard();
 
-  const markets = allMarkets || [];
-  const featured = markets.filter(m => m.featured);
-  const trending = markets.filter(m => m.trending);
-  const popular = [...markets].sort((a, b) => b.total_participants - a.total_participants).slice(0, 6);
-  const ending = [...markets]
-    .filter(m => m.status === 'open')
-    .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
-    .slice(0, 3);
+  const featured = feeds?.featured || [];
+  const trending = feeds?.trending || [];
+  const popular = feeds?.popular || [];
+  const ending = feeds?.ending_soon || [];
+  const allMarkets = [...featured, ...trending, ...popular, ...ending];
+  // Deduplicate for stats
+  const markets = Array.from(new Map(allMarkets.map(m => [m.id, m])).values());
 
   const heroMarket = featured[0];
   const heroCard = heroMarket ? dbToCard(heroMarket) : null;
