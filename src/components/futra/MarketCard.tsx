@@ -7,7 +7,7 @@ import { CategoryBadge } from './CategoryBadge';
 import { StatusBadge } from './StatusBadge';
 import { CountdownTimer } from './CountdownTimer';
 import { VoteBar } from './VoteBar';
-import { ShareButton } from './ShareButton';
+import { ShareButton, marketShareText } from './ShareButton';
 import { PriceChart } from './PriceChart';
 import { cn } from '@/lib/utils';
 
@@ -36,9 +36,7 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
     });
   };
   const shareUrl = `${window.location.origin}/market/${market.id}`;
-  const shareText = leader
-    ? `"${market.question}" — ${leader.percentage}% say ${leader.label} | @fuabordo`
-    : market.question;
+  const shareText = marketShareText(market.question, leader.label, leader.percentage);
 
   const isYes = leader.label.toLowerCase() === 'yes' || leader.label.toLowerCase() === 'sim';
 
@@ -53,7 +51,6 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
         className
       )}
     >
-      {/* Top row: category + status */}
       <div className="flex items-center gap-1.5 flex-wrap mb-2 sm:mb-3">
         <CategoryBadge category={market.category} />
         <StatusBadge status={market.status} />
@@ -63,7 +60,6 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
         {market.question}
       </h3>
 
-      {/* Leader percentage — prominent */}
       <div className="flex items-end justify-between mb-3">
         <span className={cn(
           'font-display text-3xl font-bold',
@@ -97,7 +93,7 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
           <CountdownTimer endDate={market.endDate} />
         </div>
         <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-          <ShareButton title={market.question} text={shareText} url={shareUrl} />
+          <ShareButton title={market.question} text={shareText} url={shareUrl} shareContext="market" />
         </div>
       </div>
     </Link>
