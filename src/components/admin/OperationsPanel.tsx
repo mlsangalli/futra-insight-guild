@@ -32,7 +32,7 @@ function useJobExecutions() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(30);
-      return (data || []) as Array<{
+      return (data as unknown as Array<{
         id: string;
         job_name: string;
         status: string;
@@ -40,7 +40,7 @@ function useJobExecutions() {
         metrics: Record<string, any>;
         error_message: string | null;
         created_at: string;
-      }>;
+      }>) || [];
     },
     refetchInterval: 30_000,
   });
@@ -56,8 +56,9 @@ function useJobSummary() {
         .select('job_name, status, duration_ms')
         .gte('created_at', twentyFourHoursAgo);
 
+      const rows = (data as unknown as Array<{ job_name: string; status: string; duration_ms: number }>) || [];
       const summary: Record<string, { total: number; success: number; failed: number; avgDuration: number }> = {};
-      for (const row of (data || []) as Array<{ job_name: string; status: string; duration_ms: number }>) {
+      for (const row of rows) {
         if (!summary[row.job_name]) {
           summary[row.job_name] = { total: 0, success: 0, failed: 0, avgDuration: 0 };
         }
@@ -84,7 +85,7 @@ function useSuspiciousEvents() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(15);
-      return (data || []) as Array<{
+      return (data as unknown as Array<{
         id: string;
         user_id: string | null;
         event_type: string;
@@ -93,7 +94,7 @@ function useSuspiciousEvents() {
         metadata: Record<string, any>;
         reviewed: boolean;
         created_at: string;
-      }>;
+      }>) || [];
     },
     refetchInterval: 30_000,
   });
