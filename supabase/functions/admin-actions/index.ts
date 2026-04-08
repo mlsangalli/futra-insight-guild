@@ -6,6 +6,7 @@ const VALID_ACTIONS = [
   "promote_admin", "demote_admin", "delete_market",
   "update_market_status", "toggle_featured", "toggle_trending",
   "schedule_lock", "resolve_market",
+  "approve_candidate", "reject_candidate",
 ] as const;
 
 type ActionType = typeof VALID_ACTIONS[number];
@@ -168,6 +169,98 @@ Deno.serve(async (req) => {
         }
 
         result = rpcResult;
+        break;
+      }
+
+      case "approve_candidate": {
+        const { candidate_id, question, description, category, end_date, options, resolution_source: res_source } = body;
+        if (!validateUUID(candidate_id)) return errResponse("Valid candidate_id (UUID) required", 400);
+
+        // Fetch candidate
+        const { data: candidate, error: candErr } = await adminClient
+          .from("scheduled_markets")
+          .select("*")
+          .eq("id", candidate_id)
+          .single();
+
+        if (candErr || !candidate) return errResponse("Candidate not found", 404);
+        if (candidate.status === "published") return errResponse("Already published", 400);
+
+        const finalQuestion = question || candidate.generated_question;
+        const finalDescription = description || candidate.generated_description || "";
+        const finalCategory = category || candidate.category;
+        const finalEndDate = end_date || candidate.end_date || new Date(Date.now() + 7 * 86400000).toISOString();
+        const finalOptions = options || candidate.generated_options || [];
+        const finalResSource = res_source || candidate.resolution_source || "";
+
+        if (!finalQuestion) return errResponse("Question is required", 400);
+
+        // Check for duplicate market
+        const { data: existing } = await adminClient
+          .from("markets")
+          .select("id")
+          .ilike("question", `%${finalQuestion.substring(0, 50)}%`)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          return errResponse(`Similar market already exists: ${existing[0].id}`, 409);
+        }
+
+        // Insert into markets
+        const optionsPayload = Array.isArray(finalOptions)
+          ? finalOptions.map((o: any) => ({ label: typeof o === "string" ? o : o.label }))
+          : [];
+
+        const { data: market, error: marketErr } = await adminClient
+          .from("markets")
+          .insert({
+            question: finalQuestion,
+            description: finalDescription,
+            category: finalCategory,
+            type: optionsPayload.length === 2 ? "binary" : "multiple",
+            options: optionsPayload,
+            end_date: finalEndDate,
+            status: "open",
+            resolution_source: finalResSource,
+            resolution_rules: finalResSource ? `Fonte: ${finalResSource}` : "",
+            created_by: user.id,
+          })
+          .select("id")
+          .single();
+
+        if (marketErr) throw marketErr;
+
+        // Update candidate status
+        await adminClient
+          .from("scheduled_markets")
+          .update({
+            status: "published",
+            market_id: market.id,
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+            generated_question: finalQuestion,
+          })
+          .eq("id", candidate_id);
+
+        result = { success: true, market_id: market.id };
+        break;
+      }
+
+      case "reject_candidate": {
+        const { candidate_id } = body;
+        if (!validateUUID(candidate_id)) return errResponse("Valid candidate_id (UUID) required", 400);
+
+        const { error: rejErr } = await adminClient
+          .from("scheduled_markets")
+          .update({
+            status: "rejected",
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq("id", candidate_id);
+
+        if (rejErr) throw rejErr;
+        result = { success: true };
         break;
       }
     }

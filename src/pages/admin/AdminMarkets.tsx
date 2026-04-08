@@ -15,12 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['politics', 'economy', 'crypto', 'football', 'culture', 'technology'];
 const STATUSES = ['open', 'closed', 'resolved'];
+const CANDIDATE_STATUSES = ['new', 'approved', 'rejected', 'published', 'skipped'];
 const PAGE_SIZE = 10;
 
 interface MarketOption {
@@ -39,6 +40,8 @@ export default function AdminMarkets() {
   const [formOpen, setFormOpen] = useState(false);
   const [resolvingMarket, setResolvingMarket] = useState<any>(null);
   const [schedulingMarket, setSchedulingMarket] = useState<any>(null);
+  const [approvingCandidate, setApprovingCandidate] = useState<any>(null);
+  const [candidateFilter, setCandidateFilter] = useState('new');
   const { toast } = useToast();
   const { log } = useAdminLog();
   const queryClient = useQueryClient();
@@ -167,6 +170,42 @@ export default function AdminMarkets() {
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: (payload: any) => invokeAdmin({
+      action: 'approve_candidate',
+      candidate_id: payload.candidate_id,
+      question: payload.question,
+      description: payload.description,
+      category: payload.category,
+      end_date: payload.end_date,
+      options: payload.options,
+      resolution_source: payload.resolution_source,
+      entity_type: 'scheduled_market',
+      entity_description: `Approved candidate: ${payload.question}`,
+    }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+      setApprovingCandidate(null);
+      toast({ title: 'Candidato aprovado e publicado!', description: `Market ID: ${data.market_id}` });
+    },
+    onError: (e: Error) => toast({ title: 'Erro ao aprovar', description: e.message, variant: 'destructive' }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (candidateId: string) => invokeAdmin({
+      action: 'reject_candidate',
+      candidate_id: candidateId,
+      entity_type: 'scheduled_market',
+      description: 'Rejected candidate',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-candidates'] });
+      toast({ title: 'Candidato rejeitado' });
+    },
+    onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+  });
+
   const duplicateMarket = async (market: any) => {
     const { id, created_at, updated_at, ...rest } = market;
     const { error } = await supabase.from('markets').insert({ ...rest, question: `${rest.question} (cópia)`, total_credits: 0, total_participants: 0, status: 'open', resolved_option: null });
@@ -179,15 +218,14 @@ export default function AdminMarkets() {
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  // Scheduled markets query
-  const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
-    queryKey: ['admin-scheduled-markets'],
+  // Candidates query
+  const { data: candidatesData, isLoading: candidatesLoading } = useQuery({
+    queryKey: ['admin-candidates', candidateFilter],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('scheduled_markets')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      let query = (supabase.from('scheduled_markets') as any).select('*');
+      if (candidateFilter !== 'all') query = query.eq('status', candidateFilter);
+      query = query.order('created_at', { ascending: false }).limit(50);
+      const { data } = await query;
       return data || [];
     },
   });
@@ -210,9 +248,8 @@ export default function AdminMarkets() {
       return res.json();
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-scheduled-markets'] });
-      toast({ title: 'Geração automática concluída', description: `${data.created || 0} mercado(s) criado(s) de ${data.trends_found || 0} tendências encontradas.` });
+      queryClient.invalidateQueries({ queryKey: ['admin-candidates'] });
+      toast({ title: 'Geração automática concluída', description: `${data.candidates_created || 0} candidato(s) criado(s) de ${data.trends_found || 0} tendências.` });
     },
     onError: (e: Error) => toast({ title: 'Erro na geração automática', description: e.message, variant: 'destructive' }),
   });
@@ -237,13 +274,25 @@ export default function AdminMarkets() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
       if (data.resolved > 0) {
-        toast({ title: 'Mercado resolvido pela IA', description: 'A resolução automática foi concluída com sucesso.' });
+        toast({ title: 'Mercado resolvido pela IA' });
       } else {
-        toast({ title: 'IA não conseguiu resolver', description: 'A confiança ainda é baixa ou o resultado não pôde ser determinado.', variant: 'destructive' });
+        toast({ title: 'IA não conseguiu resolver', variant: 'destructive' });
       }
     },
     onError: (e: Error) => toast({ title: 'Erro na re-tentativa', description: e.message, variant: 'destructive' }),
   });
+
+  const candidateStatusBadge = (status: string) => {
+    const map: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      new: 'default',
+      approved: 'default',
+      published: 'secondary',
+      rejected: 'destructive',
+      skipped: 'outline',
+      failed: 'destructive',
+    };
+    return map[status] || 'secondary';
+  };
 
   return (
     <AdminLayout>
@@ -258,6 +307,105 @@ export default function AdminMarkets() {
           </div>
         </div>
 
+        {/* Candidate Queue */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-display font-semibold flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" /> Fila de Candidatos
+            </h2>
+            <Select value={candidateFilter} onValueChange={setCandidateFilter}>
+              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {CANDIDATE_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Pergunta / Tópico</TableHead>
+                  <TableHead>Fonte</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {candidatesLoading ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
+                ) : !candidatesData || candidatesData.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Nenhum candidato encontrado</TableCell></TableRow>
+                ) : (
+                  (candidatesData as any[]).map((c: any) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="max-w-[280px]">
+                        <div className="text-sm font-medium truncate">{c.generated_question || c.source_topic}</div>
+                        {c.generated_question && c.generated_question !== c.source_topic && (
+                          <div className="text-xs text-muted-foreground truncate">Tópico: {c.source_topic}</div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {c.source === 'google_trends' ? 'Google' : c.source === 'rss' ? 'RSS' : c.source === 'user_suggestion' ? 'Usuário' : c.source}
+                        </Badge>
+                      </TableCell>
+                      <TableCell><Badge variant="secondary" className="text-xs">{c.category}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant={candidateStatusBadge(c.status)} className="text-xs">{c.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {format(new Date(c.created_at), 'dd/MM/yy HH:mm')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {(c.status === 'new' || c.status === 'skipped') && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-green-500 hover:text-green-400"
+                                onClick={() => setApprovingCandidate(c)}
+                                title="Aprovar e publicar"
+                              >
+                                <ThumbsUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive"
+                                onClick={() => rejectMutation.mutate(c.id)}
+                                disabled={rejectMutation.isPending}
+                                title="Rejeitar"
+                              >
+                                <ThumbsDown className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                          {c.market_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => window.open(`/market/${c.market_id}`, '_blank')}
+                              title="Ver mercado"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        {/* Markets Table */}
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -396,53 +544,6 @@ export default function AdminMarkets() {
           </div>
         )}
 
-        {/* Mercados Automáticos */}
-        <div className="mt-8 space-y-3">
-          <h2 className="text-lg font-display font-semibold flex items-center gap-2">
-            <Zap className="h-4 w-4 text-primary" /> Mercados Automáticos
-          </h2>
-          <div className="rounded-lg border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tópico</TableHead>
-                  <TableHead>Fonte</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {scheduledLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
-                ) : !scheduledData || scheduledData.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhum mercado automático ainda</TableCell></TableRow>
-                ) : (
-                  (scheduledData as any[]).map((sm: any) => (
-                    <TableRow key={sm.id}>
-                      <TableCell className="max-w-[250px] truncate text-sm">{sm.source_topic}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {sm.source === 'google_trends' ? 'Google' : 'Twitter'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell><Badge variant="secondary" className="text-xs">{sm.category}</Badge></TableCell>
-                      <TableCell>
-                        <Badge variant={sm.status === 'created' ? 'default' : sm.status === 'skipped' ? 'secondary' : 'destructive'} className="text-xs">
-                          {sm.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(sm.created_at), 'dd/MM/yy HH:mm')}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-
         <MarketFormDialog
           open={formOpen}
           onOpenChange={setFormOpen}
@@ -466,8 +567,106 @@ export default function AdminMarkets() {
           onSchedule={(marketId, lockDate) => scheduleMutation.mutate({ market_id: marketId, lock_date: lockDate })}
           saving={scheduleMutation.isPending}
         />
+
+        <ApproveCandidateDialog
+          candidate={approvingCandidate}
+          open={!!approvingCandidate}
+          onOpenChange={(open) => { if (!open) setApprovingCandidate(null); }}
+          onApprove={(payload) => approveMutation.mutate(payload)}
+          approving={approveMutation.isPending}
+        />
       </div>
     </AdminLayout>
+  );
+}
+
+function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, approving }: {
+  candidate: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onApprove: (payload: any) => void;
+  approving: boolean;
+}) {
+  const [question, setQuestion] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [optionsText, setOptionsText] = useState('');
+  const [resolutionSource, setResolutionSource] = useState('');
+
+  const reset = () => {
+    if (candidate) {
+      setQuestion(candidate.generated_question || candidate.source_topic || '');
+      setDescription(candidate.generated_description || '');
+      setCategory(candidate.category || 'politics');
+      setEndDate(candidate.end_date ? format(new Date(candidate.end_date), "yyyy-MM-dd'T'HH:mm") : format(new Date(Date.now() + 7 * 86400000), "yyyy-MM-dd'T'HH:mm"));
+      const opts = candidate.generated_options || [];
+      setOptionsText(opts.map((o: any) => typeof o === 'string' ? o : o.label).join('\n'));
+      setResolutionSource(candidate.resolution_source || '');
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const options = optionsText.split('\n').map(l => l.trim()).filter(Boolean).map(label => ({ label }));
+    if (options.length < 2) return;
+    onApprove({
+      candidate_id: candidate.id,
+      question,
+      description,
+      category,
+      end_date: endDate,
+      options,
+      resolution_source: resolutionSource,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (o) reset(); onOpenChange(o); }}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Aprovar e Publicar Candidato</DialogTitle>
+          <DialogDescription>Revise e edite antes de publicar como mercado.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label>Pergunta *</Label>
+            <Input value={question} onChange={e => setQuestion(e.target.value)} required />
+          </div>
+          <div>
+            <Label>Descrição</Label>
+            <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Categoria</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data limite</Label>
+              <Input type="datetime-local" value={endDate} onChange={e => setEndDate(e.target.value)} required />
+            </div>
+          </div>
+          <div>
+            <Label>Opções (uma por linha, mínimo 2)</Label>
+            <Textarea value={optionsText} onChange={e => setOptionsText(e.target.value)} rows={3} placeholder="Sim&#10;Não" />
+          </div>
+          <div>
+            <Label>Fonte de resolução</Label>
+            <Input value={resolutionSource} onChange={e => setResolutionSource(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit" disabled={approving} className="bg-green-600 hover:bg-green-700 text-white">
+              {approving ? 'Publicando...' : 'Aprovar e Publicar'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -620,7 +819,6 @@ function ScheduleLockDialog({ market, open, onOpenChange, onSchedule, saving }: 
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [time, setTime] = useState('12:00');
 
-  // Sync state when dialog opens with a different market
   const marketLockDate = market?.lock_date;
   if (open && date === undefined && marketLockDate) {
     setDate(new Date(marketLockDate));
