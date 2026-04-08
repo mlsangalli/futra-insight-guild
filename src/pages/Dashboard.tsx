@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import EditProfileDialog from '@/components/EditProfileDialog';
 import { DailyBonusBanner } from '@/components/futra/DailyBonusBanner';
+import { PushNotificationBanner } from '@/components/futra/PushNotificationBanner';
 import { ReferralCard } from '@/components/futra/ReferralCard';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { AchievementsSection } from '@/components/futra/AchievementsSection';
