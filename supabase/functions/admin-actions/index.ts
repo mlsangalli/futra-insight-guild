@@ -10,13 +10,6 @@ const VALID_ACTIONS = [
 
 type ActionType = typeof VALID_ACTIONS[number];
 
-function getInfluenceLevel(score: number): string {
-  if (score >= 5000) return "elite";
-  if (score >= 2000) return "high";
-  if (score >= 500) return "medium";
-  return "low";
-}
-
 function validateUUID(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
