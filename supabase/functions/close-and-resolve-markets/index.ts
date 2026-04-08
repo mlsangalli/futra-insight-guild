@@ -80,14 +80,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: marketsToResolve, error: resolveErr } = await adminClient
+    let resolveQuery = adminClient
       .from("markets")
       .select("id, question, category, resolution_source, resolution_rules")
-      .eq("status", "closed")
-      .lte("end_date", new Date().toISOString())
-      .limit(MAX_RESOLVE_PER_RUN);
+      .eq("status", "closed");
 
-    if (resolveErr) throw resolveErr;
+    if (singleMarketId) {
+      resolveQuery = resolveQuery.eq("id", singleMarketId);
+    } else {
+      resolveQuery = resolveQuery.lte("end_date", new Date().toISOString());
+    }
+    resolveQuery = resolveQuery.limit(singleMarketId ? 1 : MAX_RESOLVE_PER_RUN);
+
+    const { data: marketsToResolve, error: resolveErr } = await resolveQuery;
 
     if (marketsToResolve && marketsToResolve.length > 0) {
       for (const market of marketsToResolve) {
