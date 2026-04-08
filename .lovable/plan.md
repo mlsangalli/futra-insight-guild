@@ -1,106 +1,129 @@
 
 
-# Consolidação do Fluxo de Resolução de Mercados
+# Pipeline Unificado de Candidatos a Mercado
 
-## Diagnóstico
+## Diagnóstico Atual
 
-Existem **dois caminhos de resolução completamente diferentes** que produzem resultados inconsistentes:
+| Entrada | Onde persiste | Status pipeline |
+|---------|--------------|-----------------|
+| Admin manual (AdminMarkets form) | Insere direto em `markets` | Sem revisão — vai direto para `open` |
+| Auto-geração (create-markets-from-trends) | Insere direto em `markets` + log em `scheduled_markets` | Sem revisão — vai direto para `open` |
+| CreateMarket (moderador) | **Não persiste** — só mostra toast | Formulário sem backend |
 
-### Caminho 1: `close-and-resolve-markets` (automático/IA)
-- Usa a RPC `resolve_market_and_score` (atômica, em PL/pgSQL)
-- Calcula scores corretamente via `calculate_user_scores()`
-- Gera notificações tipadas (`credits_won`, `credits_lost`)
-- Faz refund quando ninguém acerta
-- Rastreia missões (`win` missions)
-- Verifica achievements
-- Recalcula ranking global
+**Problemas**: não há fila de candidatos; `scheduled_markets` é apenas log de deduplicação; CreateMarket não grava nada.
 
-### Caminho 2: `admin-actions` → `resolve_market` (manual)
-- **NÃO usa a RPC** — reimplementa toda a lógica em TypeScript na Edge Function
-- Calcula score com fórmula **diferente** (`resolved * accuracy` vs `accuracy * ln(resolved+1) * 100`)
-- Calcula streak de forma diferente
-- Gera notificações com tipo `result` (vs `credits_won`/`credits_lost`)
-- **NÃO rastreia missões**
-- **NÃO verifica achievements**
-- **NÃO calcula `score_delta`**
-- No refund, marca todos como `lost` ao invés de devolver créditos corretamente
-- Faz UPDATE direto na profiles sem trigger de proteção
+## Decisão de Design
 
-### Problemas concretos
-1. **Score divergente**: fórmula JS ≠ fórmula PL/pgSQL
-2. **Sem idempotência**: `admin-actions` não verifica se predictions já foram pagas
-3. **Notificações inconsistentes**: tipos diferentes dependendo do caminho
-4. **Missões/achievements ignorados** na resolução manual
-5. **Refund quebrado**: admin-actions marca como `lost` ao invés de refundar
+**Ampliar `scheduled_markets`** para ser a fila de candidatos. Motivo:
+- Já tem `source`, `source_topic`, `category`, `topic_hash`, `status`, `market_id`
+- Adicionar colunas faltantes é mais simples que criar tabela nova
+- Mantém deduplicação existente intacta
 
 ## Plano de Implementação
 
-### 1. Unificar `admin-actions` → `resolve_market` para usar a RPC
+### 1. Migration: expandir `scheduled_markets`
 
-Alterar o case `resolve_market` em `admin-actions/index.ts` (linhas 164-257) para:
-- Validar market e winning_option
-- Chamar `resolve_market_and_score` via RPC (mesma chamada do cron)
-- Remover toda a lógica duplicada de distribuição de prêmios, score, notificações
+Adicionar colunas:
+- `generated_question TEXT`
+- `generated_description TEXT`
+- `generated_options JSONB DEFAULT '[]'`
+- `resolution_source TEXT`
+- `confidence_score NUMERIC DEFAULT 0`
+- `reviewed_by UUID` (admin que revisou)
+- `reviewed_at TIMESTAMPTZ`
 
-O bloco passará de ~90 linhas para ~20 linhas.
+Expandir `status` de (`created`, `skipped`, `failed`) para incluir: `new`, `reviewed`, `approved`, `rejected`, `published`.
 
-### 2. Adicionar guarda de idempotência na RPC
+Migrar dados existentes: `created` → `published`, `skipped`/`failed` ficam como estão.
 
-Alterar `resolve_market_and_score` via migration para:
-- Verificar `status != 'resolved'` (já existe)
-- Adicionar check: se predictions já estão em status `won`/`lost`, abortar sem erro (idempotente)
+### 2. Ajustar Edge Function `create-markets-from-trends`
 
-### 3. Separar action types no admin-actions
+Mudança principal: **não inserir direto em `markets`**. Ao invés disso:
+- Inserir candidato em `scheduled_markets` com status `new` e os campos gerados pela IA (`generated_question`, `generated_options`, etc.)
+- Remover o INSERT direto em `markets`
+- Manter deduplicação via `topic_hash`
 
-Renomear internamente para clareza:
-- `update_market_status` → só muda status (open↔closed), **nunca** para `resolved`
-- `resolve_market` → único ponto de resolução via RPC
+### 3. Ajustar `CreateMarket` page
 
-### 4. Melhorar logging no admin-actions
+- Remover gate de admin (qualquer usuário autenticado pode sugerir)
+- No submit, inserir em `scheduled_markets` com `source: 'user_suggestion'`, status `new`
+- Hash gerado a partir da pergunta para deduplicação
+- Toast de confirmação + feedback visual
 
-Após a RPC, inserir log com `action_type: "admin_resolve"` (vs `auto_resolve_ai` do cron) para distinguir origem.
+### 4. Nova action em `admin-actions`: `approve_candidate` e `reject_candidate`
 
-### 5. Bloquear resolução via `update_market_status`
+**`approve_candidate`**:
+- Recebe `candidate_id` + edições opcionais (question, description, options, category, end_date)
+- Insere em `markets` usando os dados do candidato (ou editados)
+- Atualiza `scheduled_markets` com `status: 'published'`, `market_id`, `reviewed_by`, `reviewed_at`
+- Log em `admin_logs`
 
-O case `update_market_status` aceita `status: "resolved"` — isso é um bypass perigoso que ignora toda a lógica de distribuição. Remover `"resolved"` dos status permitidos.
+**`reject_candidate`**:
+- Atualiza status para `rejected` + `reviewed_by` + `reviewed_at`
 
-## Arquivos a modificar
+### 5. Painel de candidatos no AdminMarkets
+
+Substituir a seção "Mercados Automáticos" atual por uma seção "Fila de Candidatos" com:
+- Filtro por status (`new`, `reviewed`, `approved`, `rejected`, `published`)
+- Cada candidato mostra: source, topic, pergunta gerada, categoria, confidence
+- Botões: Aprovar (abre dialog com campos editáveis), Rejeitar, Preview
+- Dialog de aprovação pré-preenche com dados gerados, permite editar antes de publicar
+
+### 6. Deduplicação
+
+- `topic_hash` (já existe) previne duplicatas entre candidatos
+- Na aprovação, verificar se já existe market com pergunta similar (ILIKE simples)
+
+## Arquivos a criar/modificar
 
 ```text
-supabase/functions/admin-actions/index.ts  — refatorar resolve_market para usar RPC
-supabase/migrations/                       — migration para tornar RPC idempotente
+Modificar:
+├── supabase/migrations/           — expandir scheduled_markets
+├── supabase/functions/create-markets-from-trends/index.ts  — inserir como candidato
+├── supabase/functions/admin-actions/index.ts               — add approve/reject
+├── src/pages/CreateMarket.tsx                              — persistir sugestão
+├── src/pages/admin/AdminMarkets.tsx                        — painel de candidatos
+```
+
+## Fluxo Final
+
+```text
+                    ┌─────────────────┐
+  Auto-geração ───→ │                 │
+  Sugestão user ──→ │ scheduled_markets│ status: new
+  Admin manual ───→ │  (candidatos)   │
+                    └────────┬────────┘
+                             │
+                      Admin revisa
+                             │
+                    ┌────────┴────────┐
+                    │   approved?     │
+                    ├── Sim ──────────┤
+                    │  INSERT markets │ status: published
+                    │  market_id set  │
+                    ├── Não ──────────┤
+                    │  status:rejected│
+                    └─────────────────┘
 ```
 
 ## Detalhes Técnicos
 
-### admin-actions `resolve_market` (novo)
-```typescript
-case "resolve_market": {
-  // Validação + chamada à RPC resolve_market_and_score
-  // ~20 linhas ao invés de ~90
-  // Mesma lógica atômica do cron
-}
-```
-
-### Migration: RPC idempotente
+**Migration SQL**:
 ```sql
--- No início da função, após verificar market exists:
-IF EXISTS (SELECT 1 FROM predictions WHERE market_id = p_market_id AND status IN ('won','lost')) THEN
-  RETURN jsonb_build_object('success', true, 'already_resolved', true);
-END IF;
+ALTER TABLE scheduled_markets
+  ADD COLUMN IF NOT EXISTS generated_question TEXT,
+  ADD COLUMN IF NOT EXISTS generated_description TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS generated_options JSONB DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS resolution_source TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS confidence_score NUMERIC DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS reviewed_by UUID,
+  ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+
+-- Update existing 'created' entries to 'published' since they already have market_id
+UPDATE scheduled_markets SET status = 'published' WHERE status = 'created' AND market_id IS NOT NULL;
 ```
 
-### update_market_status: bloquear "resolved"
-```typescript
-if (!status || !["open", "closed"].includes(status))
-  return errResponse("Valid status required (open, closed)", 400);
-```
+**RLS**: scheduled_markets já tem policies para admin SELECT/INSERT/DELETE. Adicionar UPDATE policy para admins + INSERT policy para authenticated users (sugestões).
 
-## Resultado esperado
-
-- **1 caminho canônico** para resolver mercados: a RPC `resolve_market_and_score`
-- Tanto admin manual quanto cron/IA chamam a mesma RPC
-- Score, streak, accuracy, rewards, notificações, missões e achievements sempre consistentes
-- Idempotência garantida — chamar duas vezes não duplica pagamentos
-- `update_market_status` não pode mais bypassar a resolução
+**CreateMarket**: remover `isAdmin` gate, manter validação Zod, INSERT em `scheduled_markets` com `source: 'user_suggestion'`.
 
