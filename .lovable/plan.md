@@ -1,85 +1,106 @@
 
 
-# Rotinas de Manutenção e Monitoramento
+# Consolidação do Fluxo de Resolução de Mercados
 
-## O que já existe
-- Health check page (`/health`) com diagnóstico de DB, Auth, Realtime, Edge Functions, Storage
-- Logger estruturado (`src/lib/logger.ts`) preparado para serviço externo
-- Error handling com `ApiError` e `parseSupabaseError`
-- Tabela `analytics_events` para tracking
-- Admin dashboard com métricas
-- CI pipeline (GitHub Actions) com tsc, eslint, vitest, build
-- Cron job existente para `close-and-resolve-markets` (pg_cron)
+## Diagnóstico
+
+Existem **dois caminhos de resolução completamente diferentes** que produzem resultados inconsistentes:
+
+### Caminho 1: `close-and-resolve-markets` (automático/IA)
+- Usa a RPC `resolve_market_and_score` (atômica, em PL/pgSQL)
+- Calcula scores corretamente via `calculate_user_scores()`
+- Gera notificações tipadas (`credits_won`, `credits_lost`)
+- Faz refund quando ninguém acerta
+- Rastreia missões (`win` missions)
+- Verifica achievements
+- Recalcula ranking global
+
+### Caminho 2: `admin-actions` → `resolve_market` (manual)
+- **NÃO usa a RPC** — reimplementa toda a lógica em TypeScript na Edge Function
+- Calcula score com fórmula **diferente** (`resolved * accuracy` vs `accuracy * ln(resolved+1) * 100`)
+- Calcula streak de forma diferente
+- Gera notificações com tipo `result` (vs `credits_won`/`credits_lost`)
+- **NÃO rastreia missões**
+- **NÃO verifica achievements**
+- **NÃO calcula `score_delta`**
+- No refund, marca todos como `lost` ao invés de devolver créditos corretamente
+- Faz UPDATE direto na profiles sem trigger de proteção
+
+### Problemas concretos
+1. **Score divergente**: fórmula JS ≠ fórmula PL/pgSQL
+2. **Sem idempotência**: `admin-actions` não verifica se predictions já foram pagas
+3. **Notificações inconsistentes**: tipos diferentes dependendo do caminho
+4. **Missões/achievements ignorados** na resolução manual
+5. **Refund quebrado**: admin-actions marca como `lost` ao invés de refundar
 
 ## Plano de Implementação
 
-### 1. Edge Function `maintenance` (limpeza automática)
-Uma única Edge Function que executa 3 rotinas de limpeza, chamada via pg_cron diariamente às 03:00 UTC:
+### 1. Unificar `admin-actions` → `resolve_market` para usar a RPC
 
-- **Arquivar notificações antigas**: DELETE de `notifications` lidas com mais de 90 dias
-- **Limpar admin_logs antigos**: DELETE de `admin_logs` com mais de 180 dias
-- **Podar scheduled_markets**: DELETE de `scheduled_markets` com status `created` e `created_at` > 30 dias
-- **Limpar push_subscriptions órfãs**: DELETE de subscriptions sem update há 90 dias
+Alterar o case `resolve_market` em `admin-actions/index.ts` (linhas 164-257) para:
+- Validar market e winning_option
+- Chamar `resolve_market_and_score` via RPC (mesma chamada do cron)
+- Remover toda a lógica duplicada de distribuição de prêmios, score, notificações
 
-Agendar via `cron.schedule` (INSERT na cron.job via supabase insert tool, não migration).
+O bloco passará de ~90 linhas para ~20 linhas.
 
-### 2. Edge Function `health-monitor` (alertas)
-Edge Function chamada via pg_cron a cada 15 minutos que:
-- Verifica se há mercados "stuck" (closed > 48h sem resolução)
-- Verifica se cron de resolução executou nas últimas 2h (checando `admin_logs`)
-- Conta erros recentes em `admin_logs` (últimas 2h)
-- Se detectar problema, envia alerta via webhook (Slack/Discord/Email configurável via secret `ALERT_WEBHOOK_URL`)
+### 2. Adicionar guarda de idempotência na RPC
 
-### 3. Integração Sentry nas Edge Functions
-- Criar `supabase/functions/_shared/sentry.ts` com helper `captureException` que envia para Sentry via HTTP API (sem SDK pesado)
-- Requer secret `SENTRY_DSN`
-- Integrar nos catch blocks das Edge Functions existentes (`close-and-resolve-markets`, `send-push-notification`)
+Alterar `resolve_market_and_score` via migration para:
+- Verificar `status != 'resolved'` (já existe)
+- Adicionar check: se predictions já estão em status `won`/`lost`, abortar sem erro (idempotente)
 
-### 4. Métricas de operação via analytics_events
-- Na Edge Function `close-and-resolve-markets`, inserir eventos `market_auto_closed` e `market_auto_resolved` na tabela `analytics_events` após cada execução
-- Na Edge Function `maintenance`, inserir evento `maintenance_completed` com contagem de registros limpos
+### 3. Separar action types no admin-actions
 
-### 5. Documento de Procedimentos (RUNBOOK.md)
-- Como reprocessar mercados pendentes (retry via admin panel ou POST direto)
-- Como verificar saúde do sistema (`/health`)
-- Como consultar logs de manutenção
-- Procedimento de recuperação para cada cenário de falha
+Renomear internamente para clareza:
+- `update_market_status` → só muda status (open↔closed), **nunca** para `resolved`
+- `resolve_market` → único ponto de resolução via RPC
 
-### 6. Testes automatizados para Edge Functions
-- Criar `supabase/functions/maintenance/index_test.ts` com testes Deno
-- Criar `supabase/functions/health-monitor/index_test.ts`
-- Adicionar testes frontend para `useAdminMetrics` e `useMissions`
+### 4. Melhorar logging no admin-actions
+
+Após a RPC, inserir log com `action_type: "admin_resolve"` (vs `auto_resolve_ai` do cron) para distinguir origem.
+
+### 5. Bloquear resolução via `update_market_status`
+
+O case `update_market_status` aceita `status: "resolved"` — isso é um bypass perigoso que ignora toda a lógica de distribuição. Remover `"resolved"` dos status permitidos.
+
+## Arquivos a modificar
+
+```text
+supabase/functions/admin-actions/index.ts  — refatorar resolve_market para usar RPC
+supabase/migrations/                       — migration para tornar RPC idempotente
+```
 
 ## Detalhes Técnicos
 
-**Edge Function `maintenance`**: usa `SUPABASE_SERVICE_ROLE_KEY` para deletar registros. Retorna JSON com contagens de registros removidos.
-
-**Edge Function `health-monitor`**: envia POST para `ALERT_WEBHOOK_URL` (formato compatível com Slack webhooks) quando detecta anomalias.
-
-**Sentry helper**: usa a API de envelopes do Sentry (`POST https://sentry.io/api/{project}/envelope/`) com DSN parseado, sem dependência de SDK.
-
-**Cron schedules** (via supabase insert tool):
-- `maintenance`: `0 3 * * *` (03:00 UTC diariamente)
-- `health-monitor`: `*/15 * * * *` (a cada 15 minutos)
-
-**Secrets necessários**:
-- `SENTRY_DSN` — DSN do projeto Sentry
-- `ALERT_WEBHOOK_URL` — URL de webhook para alertas (Slack/Discord)
-
-## Arquivos a criar/modificar
-
-```text
-Criar:
-├── supabase/functions/maintenance/index.ts
-├── supabase/functions/health-monitor/index.ts
-├── supabase/functions/_shared/sentry.ts
-├── RUNBOOK.md
-├── supabase/functions/maintenance/index_test.ts
-├── supabase/functions/health-monitor/index_test.ts
-
-Modificar:
-├── supabase/functions/close-and-resolve-markets/index.ts  (add sentry + analytics)
-├── supabase/functions/send-push-notification/index.ts     (add sentry)
-├── PRODUCTION_CHECKLIST.md                                 (mark monitoring items)
+### admin-actions `resolve_market` (novo)
+```typescript
+case "resolve_market": {
+  // Validação + chamada à RPC resolve_market_and_score
+  // ~20 linhas ao invés de ~90
+  // Mesma lógica atômica do cron
+}
 ```
+
+### Migration: RPC idempotente
+```sql
+-- No início da função, após verificar market exists:
+IF EXISTS (SELECT 1 FROM predictions WHERE market_id = p_market_id AND status IN ('won','lost')) THEN
+  RETURN jsonb_build_object('success', true, 'already_resolved', true);
+END IF;
+```
+
+### update_market_status: bloquear "resolved"
+```typescript
+if (!status || !["open", "closed"].includes(status))
+  return errResponse("Valid status required (open, closed)", 400);
+```
+
+## Resultado esperado
+
+- **1 caminho canônico** para resolver mercados: a RPC `resolve_market_and_score`
+- Tanto admin manual quanto cron/IA chamam a mesma RPC
+- Score, streak, accuracy, rewards, notificações, missões e achievements sempre consistentes
+- Idempotência garantida — chamar duas vezes não duplica pagamentos
+- `update_market_status` não pode mais bypassar a resolução
 
