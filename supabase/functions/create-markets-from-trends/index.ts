@@ -924,8 +924,8 @@ Deno.serve(async (req) => {
 
       const optionsJson = aiResult.options.map((label) => ({ label }));
 
-      const shouldAutoPublish = validation.adjustedScore >= AUTO_PUBLISH_THRESHOLD;
-      const candidateStatus = shouldAutoPublish ? "approved" : "new";
+      // ALL candidates go to review queue — no auto-publishing
+      const candidateStatus = "new";
 
       // Insert candidate into scheduled_markets
       const { data: candidate, error: insertErr } = await adminClient
@@ -951,38 +951,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      let autoPublished = false;
-
-      // Auto-publish if above threshold
-      if (shouldAutoPublish) {
-        const { data: market, error: marketErr } = await adminClient
-          .from("markets")
-          .insert({
-            question: aiResult.question,
-            description: aiResult.description,
-            category: trend.category,
-            type: aiResult.options.length === 2 ? "binary" : "multiple",
-            options: optionsJson,
-            end_date: endDate.toISOString(),
-            status: "open",
-            resolution_source: aiResult.resolution_source,
-            resolution_rules: aiResult.resolution_source ? `Fonte: ${aiResult.resolution_source}` : "",
-          })
-          .select("id")
-          .single();
-
-        if (!marketErr && market) {
-          await adminClient
-            .from("scheduled_markets")
-            .update({
-              status: "published",
-              market_id: market.id,
-              reviewed_at: new Date().toISOString(),
-            })
-            .eq("id", candidate.id);
-          autoPublished = true;
-        }
-      }
+      const autoPublished = false;
 
       // Add to recent keywords to prevent intra-batch duplicates
       recentKeywords.push({
