@@ -10,13 +10,25 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const rl = checkRateLimit(clientIp, 1, 60_000);
-  if (!rl.allowed) {
-    return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-      status: 429,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  // Parse optional body for single-market retry mode
+  let singleMarketId: string | null = null;
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      singleMarketId = body?.market_id || null;
+    } catch { /* no body = cron mode */ }
+  }
+
+  // Rate limit only for cron mode (single-market retry is admin-initiated)
+  if (!singleMarketId) {
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rl = checkRateLimit(clientIp, 1, 60_000);
+    if (!rl.allowed) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   }
 
   try {
