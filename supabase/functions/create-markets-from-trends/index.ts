@@ -1031,6 +1031,8 @@ Deno.serve(async (req) => {
       const semDup = await checkSemanticDuplicate(aiResult.question, recentKeywords);
       if (semDup.isDuplicate) {
         console.log(`Semantic dedup (AI question): "${aiResult.question}" ≈ "${semDup.similarTo}" (${semDup.similarity.toFixed(2)})`);
+        const dupFlags = [...validation.flags];
+        if (!dupFlags.includes("duplicate_candidate")) dupFlags.push("duplicate_candidate");
         await adminClient.from("scheduled_markets").insert({
           source: trend.source,
           source_topic: trend.topic,
@@ -1038,7 +1040,10 @@ Deno.serve(async (req) => {
           category: trend.category,
           status: "skipped",
           generated_question: aiResult.question,
-          confidence_score: validation.adjustedScore,
+          confidence_score: validation.qualityScore / 100,
+          priority_score: 0,
+          flags: dupFlags,
+          ai_notes: `Duplicata semântica de: "${semDup.similarTo}" (sim=${semDup.similarity.toFixed(2)})`,
         });
         continue;
       }
@@ -1051,7 +1056,7 @@ Deno.serve(async (req) => {
       // ALL candidates go to review queue — no auto-publishing
       const candidateStatus = "new";
 
-      // Insert candidate into scheduled_markets
+      // Insert candidate into scheduled_markets with full scoring data
       const { data: candidate, error: insertErr } = await adminClient
         .from("scheduled_markets")
         .insert({
@@ -1064,7 +1069,10 @@ Deno.serve(async (req) => {
           generated_description: aiResult.description,
           generated_options: optionsJson,
           resolution_source: aiResult.resolution_source,
-          confidence_score: validation.adjustedScore,
+          confidence_score: validation.qualityScore / 100,
+          priority_score: validation.priorityScore,
+          flags: validation.flags,
+          ai_notes: validation.aiNotes,
           end_date: endDate.toISOString(),
         })
         .select("id")
@@ -1075,8 +1083,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const autoPublished = false;
-
       // Add to recent keywords to prevent intra-batch duplicates
       recentKeywords.push({
         question: aiResult.question,
@@ -1085,19 +1091,21 @@ Deno.serve(async (req) => {
 
       await adminClient.from("admin_logs").insert({
         admin_user_id: "00000000-0000-0000-0000-000000000001",
-        action_type: autoPublished ? "auto_market_published" : "auto_candidate_created",
+        action_type: "auto_candidate_created",
         entity_type: "scheduled_market",
         entity_id: candidate.id,
-        description: `[Q:${validation.adjustedScore}] ${trend.source}: "${trend.topic}" → "${aiResult.question}"${validation.penalties.length ? ` | penalties: ${validation.penalties.join(", ")}` : ""}`,
+        description: `[Q:${validation.qualityScore} P:${validation.priorityScore} ${validation.classification}] ${trend.source}: "${trend.topic}" → "${aiResult.question}"${validation.flags.length ? ` | flags: ${validation.flags.join(", ")}` : ""}`,
       });
 
       results.push({
         id: candidate.id,
         question: aiResult.question,
         topic: trend.topic,
-        quality_score: validation.adjustedScore,
-        status: autoPublished ? "published" : "new",
-        auto_published: autoPublished,
+        quality_score: validation.qualityScore,
+        priority_score: validation.priorityScore,
+        classification: validation.classification,
+        flags: validation.flags,
+        status: "new",
       });
     }
 
