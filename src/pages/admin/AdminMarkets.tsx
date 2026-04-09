@@ -354,7 +354,17 @@ export default function AdminMarkets() {
                       </TableCell>
                       <TableCell><Badge variant="secondary" className="text-xs">{c.category}</Badge></TableCell>
                       <TableCell>
-                        <Badge variant={candidateStatusBadge(c.status)} className="text-xs">{c.status}</Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant={candidateStatusBadge(c.status)} className="text-xs">{c.status}</Badge>
+                          {c.confidence_score != null && (
+                            <span className={cn('text-[10px] font-mono font-semibold',
+                              c.confidence_score >= 0.7 ? 'text-green-500' :
+                              c.confidence_score >= 0.45 ? 'text-yellow-500' : 'text-destructive'
+                            )}>
+                              {(c.confidence_score * 100).toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {format(new Date(c.created_at), 'dd/MM/yy HH:mm')}
