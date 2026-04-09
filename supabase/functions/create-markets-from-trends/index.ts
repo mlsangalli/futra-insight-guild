@@ -1008,10 +1008,10 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Validate and adjust score
-      const validation = await validateCandidate(aiResult, trend.categoryScore, trend.source, lovableApiKey);
+      // Validate with enhanced scoring
+      const validation = await validateCandidate(aiResult, trend.categoryScore, trend.source, trend.category, lovableApiKey);
       if (!validation.passed) {
-        console.log(`Quality gate failed for "${trend.topic}": score=${validation.adjustedScore}, penalties=${validation.penalties.join(", ")}`);
+        console.log(`Quality gate failed for "${trend.topic}": quality=${validation.qualityScore}, flags=[${validation.flags.join(",")}]`);
         await adminClient.from("scheduled_markets").insert({
           source: trend.source,
           source_topic: trend.topic,
@@ -1019,7 +1019,10 @@ Deno.serve(async (req) => {
           category: trend.category,
           status: "skipped",
           generated_question: aiResult.question,
-          confidence_score: validation.adjustedScore,
+          confidence_score: validation.qualityScore / 100,
+          priority_score: validation.priorityScore,
+          flags: validation.flags,
+          ai_notes: validation.aiNotes,
         });
         continue;
       }
