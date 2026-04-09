@@ -327,88 +327,129 @@ export default function AdminMarkets() {
                 <TableRow>
                   <TableHead>Pergunta / Tópico</TableHead>
                   <TableHead>Fonte</TableHead>
-                  <TableHead>Categoria</TableHead>
+                  <TableHead>Cat.</TableHead>
+                  <TableHead>Qualidade</TableHead>
+                  <TableHead>Prioridade</TableHead>
+                  <TableHead>Flags</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {candidatesLoading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
                 ) : !candidatesData || candidatesData.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Nenhum candidato encontrado</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Nenhum candidato encontrado</TableCell></TableRow>
                 ) : (
-                  (candidatesData as any[]).map((c: any) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="max-w-[280px]">
-                        <div className="text-sm font-medium truncate">{c.generated_question || c.source_topic}</div>
-                        {c.generated_question && c.generated_question !== c.source_topic && (
-                          <div className="text-xs text-muted-foreground truncate">Tópico: {c.source_topic}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {c.source === 'google_trends' ? 'Google' : c.source === 'rss' ? 'RSS' : c.source === 'user_suggestion' ? 'Usuário' : c.source}
-                        </Badge>
-                      </TableCell>
-                      <TableCell><Badge variant="secondary" className="text-xs">{c.category}</Badge></TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
+                  (candidatesData as any[]).map((c: any) => {
+                    const qScore = c.confidence_score != null ? Math.round(c.confidence_score * 100) : null;
+                    const pScore = c.priority_score ?? null;
+                    const flags: string[] = Array.isArray(c.flags) ? c.flags : [];
+                    const classification = qScore !== null
+                      ? (qScore >= 80 ? 'strong_candidate' : qScore >= 60 ? 'needs_review' : 'auto_reject')
+                      : null;
+
+                    return (
+                      <TableRow key={c.id} className={classification === 'strong_candidate' ? 'bg-green-500/5' : classification === 'auto_reject' ? 'bg-destructive/5' : ''}>
+                        <TableCell className="max-w-[240px]">
+                          <div className="text-sm font-medium truncate">{c.generated_question || c.source_topic}</div>
+                          {c.generated_question && c.generated_question !== c.source_topic && (
+                            <div className="text-xs text-muted-foreground truncate">Tópico: {c.source_topic}</div>
+                          )}
+                          {c.ai_notes && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5 truncate" title={c.ai_notes}>
+                              📝 {c.ai_notes.split(' | ').slice(0, 2).join(' · ')}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {c.source === 'google_trends' ? 'Google' : c.source === 'rss' ? 'RSS' : c.source === 'user_suggestion' ? 'Usuário' : c.source}
+                          </Badge>
+                        </TableCell>
+                        <TableCell><Badge variant="secondary" className="text-xs">{c.category}</Badge></TableCell>
+                        <TableCell>
+                          {qScore !== null ? (
+                            <div className="flex items-center gap-1">
+                              <span className={cn('text-xs font-mono font-semibold',
+                                qScore >= 80 ? 'text-green-500' : qScore >= 60 ? 'text-yellow-500' : 'text-destructive'
+                              )}>
+                                {qScore}
+                              </span>
+                              {classification && (
+                                <span className={cn('text-[9px] px-1 py-0.5 rounded',
+                                  classification === 'strong_candidate' ? 'bg-green-500/20 text-green-500' :
+                                  classification === 'needs_review' ? 'bg-yellow-500/20 text-yellow-500' :
+                                  'bg-destructive/20 text-destructive'
+                                )}>
+                                  {classification === 'strong_candidate' ? '★' : classification === 'needs_review' ? '?' : '✗'}
+                                </span>
+                              )}
+                            </div>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          {pScore !== null ? (
+                            <div className="flex items-center gap-1">
+                              <TrendingUp className={cn('h-3 w-3', pScore >= 70 ? 'text-green-500' : pScore >= 50 ? 'text-yellow-500' : 'text-muted-foreground')} />
+                              <span className="text-xs font-mono">{pScore}</span>
+                            </div>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          {flags.length > 0 ? (
+                            <div className="flex items-center gap-1" title={flags.join(', ')}>
+                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                              <span className="text-[10px] text-muted-foreground">{flags.length}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-green-500">✓</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Badge variant={candidateStatusBadge(c.status)} className="text-xs">{c.status}</Badge>
-                          {c.confidence_score != null && (
-                            <span className={cn('text-[10px] font-mono font-semibold',
-                              c.confidence_score >= 0.7 ? 'text-green-500' :
-                              c.confidence_score >= 0.45 ? 'text-yellow-500' : 'text-destructive'
-                            )}>
-                              {(c.confidence_score * 100).toFixed(0)}%
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(c.created_at), 'dd/MM/yy HH:mm')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {(c.status === 'new' || c.status === 'skipped') && (
-                            <>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {(c.status === 'new' || c.status === 'skipped') && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-green-500 hover:text-green-400"
+                                  onClick={() => setApprovingCandidate(c)}
+                                  title="Aprovar e publicar"
+                                >
+                                  <ThumbsUp className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive"
+                                  onClick={() => rejectMutation.mutate(c.id)}
+                                  disabled={rejectMutation.isPending}
+                                  title="Rejeitar"
+                                >
+                                  <ThumbsDown className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                            {c.market_id && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-green-500 hover:text-green-400"
-                                onClick={() => setApprovingCandidate(c)}
-                                title="Aprovar e publicar"
+                                className="h-7 w-7"
+                                onClick={() => window.open(`/market/${c.market_id}`, '_blank')}
+                                title="Ver mercado"
                               >
-                                <ThumbsUp className="h-3.5 w-3.5" />
+                                <Eye className="h-3.5 w-3.5" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive"
-                                onClick={() => rejectMutation.mutate(c.id)}
-                                disabled={rejectMutation.isPending}
-                                title="Rejeitar"
-                              >
-                                <ThumbsDown className="h-3.5 w-3.5" />
-                              </Button>
-                            </>
-                          )}
-                          {c.market_id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => window.open(`/market/${c.market_id}`, '_blank')}
-                              title="Ver mercado"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
