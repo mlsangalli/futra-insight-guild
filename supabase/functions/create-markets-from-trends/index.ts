@@ -620,142 +620,226 @@ async function reviewMarketWithAI(
 
 // ─── Post-generation validation (heuristic + AI review) ──────────────────────
 
-interface ValidationResult {
+// Editorial flag types matching the FUTRA editorial standard
+type EditorialFlag =
+  | "ambiguous_question"
+  | "no_clear_deadline"
+  | "weak_resolution_source"
+  | "duplicate_candidate"
+  | "low_engagement_potential"
+  | "poor_options"
+  | "low_shareability"
+  | "subjective_outcome"
+  | "past_date_reference"
+  | "vague_language"
+  | "question_too_short"
+  | "question_too_long"
+  | "description_too_brief"
+  | "duplicate_options"
+  | "options_too_similar";
+
+interface EnhancedValidationResult {
   passed: boolean;
-  adjustedScore: number;
-  penalties: string[];
+  qualityScore: number;     // 0-100
+  priorityScore: number;    // 0-100
+  flags: EditorialFlag[];
+  aiNotes: string;
   reviewScores?: ReviewScores;
+  classification: "strong_candidate" | "needs_review" | "auto_reject";
 }
 
-function computeHeuristicPenalties(
+// Category priority weights for FUTRA (higher = more valuable)
+const CATEGORY_PRIORITY: Record<string, number> = {
+  politics: 15,
+  economy: 14,
+  football: 15,
+  crypto: 13,
+  culture: 10,
+  technology: 12,
+};
+
+function computeFlagsAndPenalties(
   ai: AIMarketResult,
   categoryScore: number,
   source: "google_trends" | "rss"
-): { penalties: string[]; delta: number } {
-  const penalties: string[] = [];
+): { flags: EditorialFlag[]; delta: number; notes: string[] } {
+  const flags: EditorialFlag[] = [];
+  const notes: string[] = [];
   let delta = 0;
 
-  // ── Hard penalties ──
-
-  // Question length
+  // ── Question length ──
   if (ai.question.length < 20) {
     delta -= 0.20;
-    penalties.push("Question too short (<20 chars)");
+    flags.push("question_too_short");
+    notes.push("Pergunta muito curta (<20 chars)");
   } else if (ai.question.length < 40) {
     delta -= 0.05;
-    penalties.push("Question somewhat short");
+    notes.push("Pergunta um pouco curta");
   }
   if (ai.question.length > 200) {
     delta -= 0.05;
-    penalties.push("Question too long (>200 chars)");
+    flags.push("question_too_long");
+    notes.push("Pergunta longa demais (>200 chars)");
   }
 
-  // Options validation
+  // ── Options validation ──
   if (ai.options.length < 2) {
     delta -= 0.30;
-    penalties.push("Less than 2 options");
+    flags.push("poor_options");
+    notes.push("Menos de 2 opções");
   }
   const uniqueOpts = new Set(ai.options.map((o) => o.toLowerCase().trim()));
   if (uniqueOpts.size < ai.options.length) {
     delta -= 0.20;
-    penalties.push("Duplicate option labels");
+    flags.push("duplicate_options");
+    notes.push("Opções duplicadas");
   }
-  // Options too similar (short edit distance proxy: same first 10 chars)
   const optPrefixes = ai.options.map((o) => o.toLowerCase().trim().slice(0, 10));
   if (new Set(optPrefixes).size < optPrefixes.length) {
     delta -= 0.10;
-    penalties.push("Options too similar");
+    flags.push("options_too_similar");
+    notes.push("Opções muito parecidas");
   }
 
-  // No or weak resolution source
+  // ── Resolution source ──
   if (!ai.resolution_source || ai.resolution_source.length < 5) {
     delta -= 0.15;
-    penalties.push("Missing resolution source");
+    flags.push("weak_resolution_source");
+    notes.push("Fonte de resolução ausente ou vaga");
   } else if (ai.resolution_source.length < 15) {
     delta -= 0.05;
-    penalties.push("Vague resolution source");
+    notes.push("Fonte de resolução pouco específica");
   }
 
-  // Vague question patterns
+  // ── Vague/subjective language ──
   const vaguePatterns = [
-    { p: /será que/i, w: 0.20 },
-    { p: /o que.*acha/i, w: 0.25 },
-    { p: /qual.*sua.*opinião/i, w: 0.25 },
-    { p: /você.*acredita/i, w: 0.20 },
-    { p: /pode.*acontecer/i, w: 0.10 },
-    { p: /é possível que/i, w: 0.10 },
+    { p: /será que/i, w: 0.20, f: "subjective_outcome" as EditorialFlag },
+    { p: /o que.*acha/i, w: 0.25, f: "subjective_outcome" as EditorialFlag },
+    { p: /qual.*sua.*opinião/i, w: 0.25, f: "subjective_outcome" as EditorialFlag },
+    { p: /você.*acredita/i, w: 0.20, f: "subjective_outcome" as EditorialFlag },
+    { p: /pode.*acontecer/i, w: 0.10, f: "vague_language" as EditorialFlag },
+    { p: /é possível que/i, w: 0.10, f: "vague_language" as EditorialFlag },
+    { p: /vai melhorar/i, w: 0.25, f: "ambiguous_question" as EditorialFlag },
+    { p: /vai surpreender/i, w: 0.25, f: "ambiguous_question" as EditorialFlag },
+    { p: /vai bombar/i, w: 0.25, f: "ambiguous_question" as EditorialFlag },
+    { p: /ficar nervoso/i, w: 0.20, f: "ambiguous_question" as EditorialFlag },
   ];
-  for (const { p, w } of vaguePatterns) {
+  for (const { p, w, f } of vaguePatterns) {
     if (p.test(ai.question)) {
       delta -= w;
-      penalties.push(`Vague pattern: ${p.source}`);
+      if (!flags.includes(f)) flags.push(f);
+      notes.push(`Linguagem vaga detectada: "${p.source}"`);
       break;
     }
   }
 
-  // Past-date references in the question
+  // ── Past-date references ──
   const yearMatch = ai.question.match(/\b(20\d{2})\b/);
   if (yearMatch) {
     const year = parseInt(yearMatch[1]);
     const currentYear = new Date().getFullYear();
     if (year < currentYear) {
       delta -= 0.25;
-      penalties.push(`References past year (${year})`);
+      flags.push("past_date_reference");
+      notes.push(`Referencia ano passado (${year})`);
     } else if (year === currentYear) {
-      // Check for past months
       const monthNames = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
         "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
       const currentMonth = new Date().getMonth();
       for (let i = 0; i < currentMonth; i++) {
         if (ai.question.toLowerCase().includes(monthNames[i]) && ai.question.includes(String(year))) {
           delta -= 0.20;
-          penalties.push(`References past month (${monthNames[i]} ${year})`);
+          flags.push("past_date_reference");
+          notes.push(`Referencia mês passado (${monthNames[i]} ${year})`);
           break;
         }
       }
     }
   }
 
-  // Description too short (low effort)
+  // ── No explicit deadline in question ──
+  const hasDeadline = /\b(até|antes de|em \d{4}|até o final de|31\/|30\/|antes do dia)\b/i.test(ai.question);
+  if (!hasDeadline && ai.end_date_days > 0) {
+    // Mild penalty — the end_date exists but isn't in the question text
+    delta -= 0.03;
+    flags.push("no_clear_deadline");
+    notes.push("Prazo não está explícito na pergunta");
+  }
+
+  // ── Description quality ──
   if (!ai.description || ai.description.length < 20) {
     delta -= 0.05;
-    penalties.push("Description too brief");
+    flags.push("description_too_brief");
+    notes.push("Descrição insuficiente");
+  }
+
+  // ── Shareability / engagement ──
+  if (ai.virality_score < 0.3) {
+    flags.push("low_shareability");
+    notes.push("Baixo potencial de compartilhamento");
+  }
+  if (ai.virality_score < 0.4 && categoryScore < 3) {
+    flags.push("low_engagement_potential");
+    notes.push("Baixo potencial de engajamento");
   }
 
   // ── Bonuses ──
-  if (source === "google_trends") {
-    delta += 0.03;
-  }
-  if (categoryScore >= 5) {
-    delta += 0.05;
-  } else if (categoryScore >= 3) {
-    delta += 0.03;
-  }
+  if (source === "google_trends") delta += 0.03;
+  if (categoryScore >= 5) delta += 0.05;
+  else if (categoryScore >= 3) delta += 0.03;
+  if (ai.question.trim().endsWith("?")) delta += 0.02;
 
-  // Question ends with "?" (good form)
-  if (ai.question.trim().endsWith("?")) {
-    delta += 0.02;
-  }
+  return { flags, delta, notes };
+}
 
-  return { penalties, delta };
+function computePriorityScore(
+  qualityScore: number,
+  category: string,
+  viralityScore: number,
+  source: "google_trends" | "rss",
+  flags: EditorialFlag[]
+): number {
+  // Base: quality is 60% of priority
+  let priority = qualityScore * 0.60;
+
+  // Category weight: up to 15 points
+  priority += (CATEGORY_PRIORITY[category] || 5);
+
+  // Virality bonus: up to 15 points
+  priority += viralityScore * 15;
+
+  // Source bonus
+  if (source === "google_trends") priority += 5;
+
+  // Flag penalties: -3 per flag, up to -15
+  priority -= Math.min(flags.length * 3, 15);
+
+  return Math.round(Math.min(100, Math.max(0, priority)));
+}
+
+function classifyCandidate(qualityScore: number): "strong_candidate" | "needs_review" | "auto_reject" {
+  if (qualityScore >= 80) return "strong_candidate";
+  if (qualityScore >= 60) return "needs_review";
+  return "auto_reject";
 }
 
 async function validateCandidate(
   ai: AIMarketResult,
   categoryScore: number,
   source: "google_trends" | "rss",
+  category: string,
   apiKey: string
-): Promise<ValidationResult> {
-  // Step 1: Heuristic penalties (deterministic)
-  const { penalties, delta } = computeHeuristicPenalties(ai, categoryScore, source);
+): Promise<EnhancedValidationResult> {
+  // Step 1: Flag detection + heuristic penalties
+  const { flags, delta, notes } = computeFlagsAndPenalties(ai, categoryScore, source);
 
-  // Step 2: Independent AI review (ignore generator's self-score)
+  // Step 2: Independent AI review
   const review = await reviewMarketWithAI(
     ai.question, ai.options, ai.description,
-    ai.resolution_source, "category", apiKey
+    ai.resolution_source, category, apiKey
   );
 
-  let finalScore: number;
+  let rawScore: number;
 
   if (review) {
     // Use reviewer's score as base, apply heuristic delta
