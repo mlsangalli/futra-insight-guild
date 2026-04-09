@@ -987,8 +987,10 @@ Deno.serve(async (req) => {
       question: string;
       topic: string;
       quality_score: number;
+      priority_score: number;
+      classification: string;
+      flags: string[];
       status: string;
-      auto_published: boolean;
     }[] = [];
 
     // ── 5. Generate + validate + insert candidates ──
