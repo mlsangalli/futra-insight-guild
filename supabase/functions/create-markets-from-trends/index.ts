@@ -1111,8 +1111,9 @@ Deno.serve(async (req) => {
 
     const responseBody = {
       candidates_created: results.length,
-      auto_published: results.filter((r) => r.auto_published).length,
-      pending_review: results.filter((r) => !r.auto_published).length,
+      pending_review: results.length,
+      strong_candidates: results.filter((r) => r.classification === "strong_candidate").length,
+      needs_review: results.filter((r) => r.classification === "needs_review").length,
       results,
       trends_found: allTrends.length,
       new_trends: newTrends.length,
@@ -1128,10 +1129,13 @@ Deno.serve(async (req) => {
         trends_found: allTrends.length,
         new_trends: newTrends.length,
         candidates_created: results.length,
-        auto_published: results.filter((r) => r.auto_published).length,
-        pending_review: results.filter((r) => !r.auto_published).length,
+        strong_candidates: results.filter((r) => r.classification === "strong_candidate").length,
+        needs_review_count: results.filter((r) => r.classification === "needs_review").length,
         avg_quality: results.length > 0
-          ? Math.round((results.reduce((s, r) => s + r.quality_score, 0) / results.length) * 100) / 100
+          ? Math.round(results.reduce((s, r) => s + r.quality_score, 0) / results.length)
+          : 0,
+        avg_priority: results.length > 0
+          ? Math.round(results.reduce((s, r) => s + r.priority_score, 0) / results.length)
           : 0,
       },
     });
