@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
