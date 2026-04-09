@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -327,88 +327,129 @@ export default function AdminMarkets() {
                 <TableRow>
                   <TableHead>Pergunta / Tópico</TableHead>
                   <TableHead>Fonte</TableHead>
-                  <TableHead>Categoria</TableHead>
+                  <TableHead>Cat.</TableHead>
+                  <TableHead>Qualidade</TableHead>
+                  <TableHead>Prioridade</TableHead>
+                  <TableHead>Flags</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {candidatesLoading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
                 ) : !candidatesData || candidatesData.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Nenhum candidato encontrado</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Nenhum candidato encontrado</TableCell></TableRow>
                 ) : (
-                  (candidatesData as any[]).map((c: any) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="max-w-[280px]">
-                        <div className="text-sm font-medium truncate">{c.generated_question || c.source_topic}</div>
-                        {c.generated_question && c.generated_question !== c.source_topic && (
-                          <div className="text-xs text-muted-foreground truncate">Tópico: {c.source_topic}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {c.source === 'google_trends' ? 'Google' : c.source === 'rss' ? 'RSS' : c.source === 'user_suggestion' ? 'Usuário' : c.source}
-                        </Badge>
-                      </TableCell>
-                      <TableCell><Badge variant="secondary" className="text-xs">{c.category}</Badge></TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
+                  (candidatesData as any[]).map((c: any) => {
+                    const qScore = c.confidence_score != null ? Math.round(c.confidence_score * 100) : null;
+                    const pScore = c.priority_score ?? null;
+                    const flags: string[] = Array.isArray(c.flags) ? c.flags : [];
+                    const classification = qScore !== null
+                      ? (qScore >= 80 ? 'strong_candidate' : qScore >= 60 ? 'needs_review' : 'auto_reject')
+                      : null;
+
+                    return (
+                      <TableRow key={c.id} className={classification === 'strong_candidate' ? 'bg-green-500/5' : classification === 'auto_reject' ? 'bg-destructive/5' : ''}>
+                        <TableCell className="max-w-[240px]">
+                          <div className="text-sm font-medium truncate">{c.generated_question || c.source_topic}</div>
+                          {c.generated_question && c.generated_question !== c.source_topic && (
+                            <div className="text-xs text-muted-foreground truncate">Tópico: {c.source_topic}</div>
+                          )}
+                          {c.ai_notes && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5 truncate" title={c.ai_notes}>
+                              📝 {c.ai_notes.split(' | ').slice(0, 2).join(' · ')}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {c.source === 'google_trends' ? 'Google' : c.source === 'rss' ? 'RSS' : c.source === 'user_suggestion' ? 'Usuário' : c.source}
+                          </Badge>
+                        </TableCell>
+                        <TableCell><Badge variant="secondary" className="text-xs">{c.category}</Badge></TableCell>
+                        <TableCell>
+                          {qScore !== null ? (
+                            <div className="flex items-center gap-1">
+                              <span className={cn('text-xs font-mono font-semibold',
+                                qScore >= 80 ? 'text-green-500' : qScore >= 60 ? 'text-yellow-500' : 'text-destructive'
+                              )}>
+                                {qScore}
+                              </span>
+                              {classification && (
+                                <span className={cn('text-[9px] px-1 py-0.5 rounded',
+                                  classification === 'strong_candidate' ? 'bg-green-500/20 text-green-500' :
+                                  classification === 'needs_review' ? 'bg-yellow-500/20 text-yellow-500' :
+                                  'bg-destructive/20 text-destructive'
+                                )}>
+                                  {classification === 'strong_candidate' ? '★' : classification === 'needs_review' ? '?' : '✗'}
+                                </span>
+                              )}
+                            </div>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          {pScore !== null ? (
+                            <div className="flex items-center gap-1">
+                              <TrendingUp className={cn('h-3 w-3', pScore >= 70 ? 'text-green-500' : pScore >= 50 ? 'text-yellow-500' : 'text-muted-foreground')} />
+                              <span className="text-xs font-mono">{pScore}</span>
+                            </div>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          {flags.length > 0 ? (
+                            <div className="flex items-center gap-1" title={flags.join(', ')}>
+                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                              <span className="text-[10px] text-muted-foreground">{flags.length}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-green-500">✓</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Badge variant={candidateStatusBadge(c.status)} className="text-xs">{c.status}</Badge>
-                          {c.confidence_score != null && (
-                            <span className={cn('text-[10px] font-mono font-semibold',
-                              c.confidence_score >= 0.7 ? 'text-green-500' :
-                              c.confidence_score >= 0.45 ? 'text-yellow-500' : 'text-destructive'
-                            )}>
-                              {(c.confidence_score * 100).toFixed(0)}%
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(c.created_at), 'dd/MM/yy HH:mm')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {(c.status === 'new' || c.status === 'skipped') && (
-                            <>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {(c.status === 'new' || c.status === 'skipped') && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-green-500 hover:text-green-400"
+                                  onClick={() => setApprovingCandidate(c)}
+                                  title="Aprovar e publicar"
+                                >
+                                  <ThumbsUp className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive"
+                                  onClick={() => rejectMutation.mutate(c.id)}
+                                  disabled={rejectMutation.isPending}
+                                  title="Rejeitar"
+                                >
+                                  <ThumbsDown className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                            {c.market_id && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-green-500 hover:text-green-400"
-                                onClick={() => setApprovingCandidate(c)}
-                                title="Aprovar e publicar"
+                                className="h-7 w-7"
+                                onClick={() => window.open(`/market/${c.market_id}`, '_blank')}
+                                title="Ver mercado"
                               >
-                                <ThumbsUp className="h-3.5 w-3.5" />
+                                <Eye className="h-3.5 w-3.5" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive"
-                                onClick={() => rejectMutation.mutate(c.id)}
-                                disabled={rejectMutation.isPending}
-                                title="Rejeitar"
-                              >
-                                <ThumbsDown className="h-3.5 w-3.5" />
-                              </Button>
-                            </>
-                          )}
-                          {c.market_id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => window.open(`/market/${c.market_id}`, '_blank')}
-                              title="Ver mercado"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -649,8 +690,31 @@ function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, appr
     });
   };
 
-  const qualityScore = candidate?.confidence_score ?? null;
-  const scoreColor = qualityScore >= 0.7 ? 'text-green-500' : qualityScore >= 0.45 ? 'text-yellow-500' : 'text-destructive';
+  const qualityScore = candidate?.confidence_score != null ? Math.round(candidate.confidence_score * 100) : null;
+  const priorityScore = candidate?.priority_score ?? null;
+  const candidateFlags: string[] = Array.isArray(candidate?.flags) ? candidate.flags : [];
+  const aiNotes = candidate?.ai_notes || '';
+  const classification = qualityScore !== null
+    ? (qualityScore >= 80 ? 'strong_candidate' : qualityScore >= 60 ? 'needs_review' : 'auto_reject')
+    : null;
+
+  const FLAG_LABELS: Record<string, string> = {
+    ambiguous_question: '❓ Pergunta ambígua',
+    no_clear_deadline: '⏰ Sem prazo claro',
+    weak_resolution_source: '📄 Fonte fraca',
+    duplicate_candidate: '🔁 Duplicata',
+    low_engagement_potential: '📉 Baixo engajamento',
+    poor_options: '⚠️ Opções ruins',
+    low_shareability: '📤 Baixo compartilhamento',
+    subjective_outcome: '🤔 Resultado subjetivo',
+    past_date_reference: '📅 Data passada',
+    vague_language: '💬 Linguagem vaga',
+    question_too_short: '📏 Pergunta curta',
+    question_too_long: '📏 Pergunta longa',
+    description_too_brief: '📝 Descrição breve',
+    duplicate_options: '🔄 Opções duplicadas',
+    options_too_similar: '🔄 Opções parecidas',
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (o) reset(); onOpenChange(o); }}>
@@ -660,12 +724,46 @@ function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, appr
           <DialogDescription>
             Revise pelo padrão editorial antes de publicar.
             {qualityScore !== null && (
-              <span className={cn('ml-2 font-semibold', scoreColor)}>
-                Score: {(qualityScore * 100).toFixed(0)}%
+              <span className="ml-2">
+                <span className={cn('font-semibold',
+                  qualityScore >= 80 ? 'text-green-500' : qualityScore >= 60 ? 'text-yellow-500' : 'text-destructive'
+                )}>
+                  Q:{qualityScore}
+                </span>
+                {priorityScore !== null && (
+                  <span className="text-muted-foreground ml-1">P:{priorityScore}</span>
+                )}
+                {classification && (
+                  <Badge variant={classification === 'strong_candidate' ? 'default' : classification === 'needs_review' ? 'secondary' : 'destructive'} className="ml-2 text-[10px]">
+                    {classification === 'strong_candidate' ? '★ Strong' : classification === 'needs_review' ? '? Review' : '✗ Weak'}
+                  </Badge>
+                )}
               </span>
             )}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Flags */}
+        {candidateFlags.length > 0 && (
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-2 space-y-1">
+            <span className="text-[10px] font-semibold text-yellow-500 uppercase tracking-wide">Flags Detectadas</span>
+            <div className="flex flex-wrap gap-1">
+              {candidateFlags.map((f: string) => (
+                <span key={f} className="text-[10px] bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 rounded px-1.5 py-0.5">
+                  {FLAG_LABELS[f] || f}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* AI Notes */}
+        {aiNotes && (
+          <div className="rounded-lg border border-border p-2">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Notas da IA</span>
+            <p className="text-xs text-muted-foreground mt-0.5">{aiNotes}</p>
+          </div>
+        )}
 
         {/* Editorial Checklist */}
         <div className="rounded-lg border border-border p-3 space-y-2">

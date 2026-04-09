@@ -611,15 +611,18 @@ export type Database = {
       }
       scheduled_markets: {
         Row: {
+          ai_notes: string | null
           category: Database["public"]["Enums"]["market_category"]
           confidence_score: number | null
           created_at: string
           end_date: string | null
+          flags: Json | null
           generated_description: string | null
           generated_options: Json | null
           generated_question: string | null
           id: string
           market_id: string | null
+          priority_score: number | null
           resolution_source: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -630,15 +633,18 @@ export type Database = {
           topic_hash: string
         }
         Insert: {
+          ai_notes?: string | null
           category: Database["public"]["Enums"]["market_category"]
           confidence_score?: number | null
           created_at?: string
           end_date?: string | null
+          flags?: Json | null
           generated_description?: string | null
           generated_options?: Json | null
           generated_question?: string | null
           id?: string
           market_id?: string | null
+          priority_score?: number | null
           resolution_source?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -649,15 +655,18 @@ export type Database = {
           topic_hash: string
         }
         Update: {
+          ai_notes?: string | null
           category?: Database["public"]["Enums"]["market_category"]
           confidence_score?: number | null
           created_at?: string
           end_date?: string | null
+          flags?: Json | null
           generated_description?: string | null
           generated_options?: Json | null
           generated_question?: string | null
           id?: string
           market_id?: string | null
+          priority_score?: number | null
           resolution_source?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null

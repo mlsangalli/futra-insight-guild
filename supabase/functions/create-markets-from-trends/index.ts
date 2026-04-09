@@ -620,164 +620,261 @@ async function reviewMarketWithAI(
 
 // ─── Post-generation validation (heuristic + AI review) ──────────────────────
 
-interface ValidationResult {
+// Editorial flag types matching the FUTRA editorial standard
+type EditorialFlag =
+  | "ambiguous_question"
+  | "no_clear_deadline"
+  | "weak_resolution_source"
+  | "duplicate_candidate"
+  | "low_engagement_potential"
+  | "poor_options"
+  | "low_shareability"
+  | "subjective_outcome"
+  | "past_date_reference"
+  | "vague_language"
+  | "question_too_short"
+  | "question_too_long"
+  | "description_too_brief"
+  | "duplicate_options"
+  | "options_too_similar";
+
+interface EnhancedValidationResult {
   passed: boolean;
-  adjustedScore: number;
-  penalties: string[];
+  qualityScore: number;     // 0-100
+  priorityScore: number;    // 0-100
+  flags: EditorialFlag[];
+  aiNotes: string;
   reviewScores?: ReviewScores;
+  classification: "strong_candidate" | "needs_review" | "auto_reject";
 }
 
-function computeHeuristicPenalties(
+// Category priority weights for FUTRA (higher = more valuable)
+const CATEGORY_PRIORITY: Record<string, number> = {
+  politics: 15,
+  economy: 14,
+  football: 15,
+  crypto: 13,
+  culture: 10,
+  technology: 12,
+};
+
+function computeFlagsAndPenalties(
   ai: AIMarketResult,
   categoryScore: number,
   source: "google_trends" | "rss"
-): { penalties: string[]; delta: number } {
-  const penalties: string[] = [];
+): { flags: EditorialFlag[]; delta: number; notes: string[] } {
+  const flags: EditorialFlag[] = [];
+  const notes: string[] = [];
   let delta = 0;
 
-  // ── Hard penalties ──
-
-  // Question length
+  // ── Question length ──
   if (ai.question.length < 20) {
     delta -= 0.20;
-    penalties.push("Question too short (<20 chars)");
+    flags.push("question_too_short");
+    notes.push("Pergunta muito curta (<20 chars)");
   } else if (ai.question.length < 40) {
     delta -= 0.05;
-    penalties.push("Question somewhat short");
+    notes.push("Pergunta um pouco curta");
   }
   if (ai.question.length > 200) {
     delta -= 0.05;
-    penalties.push("Question too long (>200 chars)");
+    flags.push("question_too_long");
+    notes.push("Pergunta longa demais (>200 chars)");
   }
 
-  // Options validation
+  // ── Options validation ──
   if (ai.options.length < 2) {
     delta -= 0.30;
-    penalties.push("Less than 2 options");
+    flags.push("poor_options");
+    notes.push("Menos de 2 opções");
   }
   const uniqueOpts = new Set(ai.options.map((o) => o.toLowerCase().trim()));
   if (uniqueOpts.size < ai.options.length) {
     delta -= 0.20;
-    penalties.push("Duplicate option labels");
+    flags.push("duplicate_options");
+    notes.push("Opções duplicadas");
   }
-  // Options too similar (short edit distance proxy: same first 10 chars)
   const optPrefixes = ai.options.map((o) => o.toLowerCase().trim().slice(0, 10));
   if (new Set(optPrefixes).size < optPrefixes.length) {
     delta -= 0.10;
-    penalties.push("Options too similar");
+    flags.push("options_too_similar");
+    notes.push("Opções muito parecidas");
   }
 
-  // No or weak resolution source
+  // ── Resolution source ──
   if (!ai.resolution_source || ai.resolution_source.length < 5) {
     delta -= 0.15;
-    penalties.push("Missing resolution source");
+    flags.push("weak_resolution_source");
+    notes.push("Fonte de resolução ausente ou vaga");
   } else if (ai.resolution_source.length < 15) {
     delta -= 0.05;
-    penalties.push("Vague resolution source");
+    notes.push("Fonte de resolução pouco específica");
   }
 
-  // Vague question patterns
+  // ── Vague/subjective language ──
   const vaguePatterns = [
-    { p: /será que/i, w: 0.20 },
-    { p: /o que.*acha/i, w: 0.25 },
-    { p: /qual.*sua.*opinião/i, w: 0.25 },
-    { p: /você.*acredita/i, w: 0.20 },
-    { p: /pode.*acontecer/i, w: 0.10 },
-    { p: /é possível que/i, w: 0.10 },
+    { p: /será que/i, w: 0.20, f: "subjective_outcome" as EditorialFlag },
+    { p: /o que.*acha/i, w: 0.25, f: "subjective_outcome" as EditorialFlag },
+    { p: /qual.*sua.*opinião/i, w: 0.25, f: "subjective_outcome" as EditorialFlag },
+    { p: /você.*acredita/i, w: 0.20, f: "subjective_outcome" as EditorialFlag },
+    { p: /pode.*acontecer/i, w: 0.10, f: "vague_language" as EditorialFlag },
+    { p: /é possível que/i, w: 0.10, f: "vague_language" as EditorialFlag },
+    { p: /vai melhorar/i, w: 0.25, f: "ambiguous_question" as EditorialFlag },
+    { p: /vai surpreender/i, w: 0.25, f: "ambiguous_question" as EditorialFlag },
+    { p: /vai bombar/i, w: 0.25, f: "ambiguous_question" as EditorialFlag },
+    { p: /ficar nervoso/i, w: 0.20, f: "ambiguous_question" as EditorialFlag },
   ];
-  for (const { p, w } of vaguePatterns) {
+  for (const { p, w, f } of vaguePatterns) {
     if (p.test(ai.question)) {
       delta -= w;
-      penalties.push(`Vague pattern: ${p.source}`);
+      if (!flags.includes(f)) flags.push(f);
+      notes.push(`Linguagem vaga detectada: "${p.source}"`);
       break;
     }
   }
 
-  // Past-date references in the question
+  // ── Past-date references ──
   const yearMatch = ai.question.match(/\b(20\d{2})\b/);
   if (yearMatch) {
     const year = parseInt(yearMatch[1]);
     const currentYear = new Date().getFullYear();
     if (year < currentYear) {
       delta -= 0.25;
-      penalties.push(`References past year (${year})`);
+      flags.push("past_date_reference");
+      notes.push(`Referencia ano passado (${year})`);
     } else if (year === currentYear) {
-      // Check for past months
       const monthNames = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
         "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
       const currentMonth = new Date().getMonth();
       for (let i = 0; i < currentMonth; i++) {
         if (ai.question.toLowerCase().includes(monthNames[i]) && ai.question.includes(String(year))) {
           delta -= 0.20;
-          penalties.push(`References past month (${monthNames[i]} ${year})`);
+          flags.push("past_date_reference");
+          notes.push(`Referencia mês passado (${monthNames[i]} ${year})`);
           break;
         }
       }
     }
   }
 
-  // Description too short (low effort)
+  // ── No explicit deadline in question ──
+  const hasDeadline = /\b(até|antes de|em \d{4}|até o final de|31\/|30\/|antes do dia)\b/i.test(ai.question);
+  if (!hasDeadline && ai.end_date_days > 0) {
+    // Mild penalty — the end_date exists but isn't in the question text
+    delta -= 0.03;
+    flags.push("no_clear_deadline");
+    notes.push("Prazo não está explícito na pergunta");
+  }
+
+  // ── Description quality ──
   if (!ai.description || ai.description.length < 20) {
     delta -= 0.05;
-    penalties.push("Description too brief");
+    flags.push("description_too_brief");
+    notes.push("Descrição insuficiente");
+  }
+
+  // ── Shareability / engagement ──
+  if (ai.virality_score < 0.3) {
+    flags.push("low_shareability");
+    notes.push("Baixo potencial de compartilhamento");
+  }
+  if (ai.virality_score < 0.4 && categoryScore < 3) {
+    flags.push("low_engagement_potential");
+    notes.push("Baixo potencial de engajamento");
   }
 
   // ── Bonuses ──
-  if (source === "google_trends") {
-    delta += 0.03;
-  }
-  if (categoryScore >= 5) {
-    delta += 0.05;
-  } else if (categoryScore >= 3) {
-    delta += 0.03;
-  }
+  if (source === "google_trends") delta += 0.03;
+  if (categoryScore >= 5) delta += 0.05;
+  else if (categoryScore >= 3) delta += 0.03;
+  if (ai.question.trim().endsWith("?")) delta += 0.02;
 
-  // Question ends with "?" (good form)
-  if (ai.question.trim().endsWith("?")) {
-    delta += 0.02;
-  }
+  return { flags, delta, notes };
+}
 
-  return { penalties, delta };
+function computePriorityScore(
+  qualityScore: number,
+  category: string,
+  viralityScore: number,
+  source: "google_trends" | "rss",
+  flags: EditorialFlag[]
+): number {
+  // Base: quality is 60% of priority
+  let priority = qualityScore * 0.60;
+
+  // Category weight: up to 15 points
+  priority += (CATEGORY_PRIORITY[category] || 5);
+
+  // Virality bonus: up to 15 points
+  priority += viralityScore * 15;
+
+  // Source bonus
+  if (source === "google_trends") priority += 5;
+
+  // Flag penalties: -3 per flag, up to -15
+  priority -= Math.min(flags.length * 3, 15);
+
+  return Math.round(Math.min(100, Math.max(0, priority)));
+}
+
+function classifyCandidate(qualityScore: number): "strong_candidate" | "needs_review" | "auto_reject" {
+  if (qualityScore >= 80) return "strong_candidate";
+  if (qualityScore >= 60) return "needs_review";
+  return "auto_reject";
 }
 
 async function validateCandidate(
   ai: AIMarketResult,
   categoryScore: number,
   source: "google_trends" | "rss",
+  category: string,
   apiKey: string
-): Promise<ValidationResult> {
-  // Step 1: Heuristic penalties (deterministic)
-  const { penalties, delta } = computeHeuristicPenalties(ai, categoryScore, source);
+): Promise<EnhancedValidationResult> {
+  // Step 1: Flag detection + heuristic penalties
+  const { flags, delta, notes } = computeFlagsAndPenalties(ai, categoryScore, source);
 
-  // Step 2: Independent AI review (ignore generator's self-score)
+  // Step 2: Independent AI review
   const review = await reviewMarketWithAI(
     ai.question, ai.options, ai.description,
-    ai.resolution_source, "category", apiKey
+    ai.resolution_source, category, apiKey
   );
 
-  let finalScore: number;
+  let rawScore: number;
 
   if (review) {
-    // Use reviewer's score as base, apply heuristic delta
-    finalScore = review.overall + delta;
-    console.log(`Review scores: obj=${review.objectivity} tim=${review.timing} res=${review.resolvability} eng=${review.engagement} cla=${review.clarity} → overall=${review.overall} | heuristic delta=${delta.toFixed(2)} | final=${(review.overall + delta).toFixed(2)}`);
-    console.log(`Review reasoning: ${review.reasoning}`);
+    rawScore = review.overall + delta;
+    notes.push(`IA Review: ${review.reasoning}`);
+    console.log(`Review scores: obj=${review.objectivity} tim=${review.timing} res=${review.resolvability} eng=${review.engagement} cla=${review.clarity} → overall=${review.overall} | delta=${delta.toFixed(2)} | raw=${(review.overall + delta).toFixed(2)}`);
+
+    // Add flags from review scores
+    if (review.objectivity < 0.4) flags.push("subjective_outcome");
+    if (review.clarity < 0.4 && !flags.includes("ambiguous_question")) flags.push("ambiguous_question");
+    if (review.engagement < 0.3 && !flags.includes("low_engagement_potential")) flags.push("low_engagement_potential");
+    if (review.resolvability < 0.3 && !flags.includes("weak_resolution_source")) flags.push("weak_resolution_source");
   } else {
-    // Fallback: use deflated base score + delta
-    // Start from 0.55 (neutral) instead of AI's inflated self-score
-    finalScore = 0.55 + delta;
-    penalties.push("AI review unavailable, using fallback base");
-    console.log(`Fallback score: 0.55 + delta(${delta.toFixed(2)}) = ${finalScore.toFixed(2)}`);
+    rawScore = 0.55 + delta;
+    notes.push("IA Review indisponível, usando score base");
+    console.log(`Fallback score: 0.55 + delta(${delta.toFixed(2)}) = ${rawScore.toFixed(2)}`);
   }
 
-  finalScore = Math.min(1, Math.max(0, finalScore));
-  finalScore = Math.round(finalScore * 100) / 100;
+  rawScore = Math.min(1, Math.max(0, rawScore));
+
+  // Convert to 0-100 scale
+  const qualityScore = Math.round(rawScore * 100);
+  const priorityScore = computePriorityScore(qualityScore, category, ai.virality_score, source, flags);
+  const classification = classifyCandidate(qualityScore);
+  const aiNotes = notes.join(" | ");
+
+  console.log(`Final: quality=${qualityScore} priority=${priorityScore} class=${classification} flags=[${flags.join(",")}]`);
 
   return {
-    passed: finalScore >= MIN_QUALITY_THRESHOLD,
-    adjustedScore: finalScore,
-    penalties,
+    passed: qualityScore >= Math.round(MIN_QUALITY_THRESHOLD * 100),
+    qualityScore,
+    priorityScore,
+    flags,
+    aiNotes,
     reviewScores: review || undefined,
+    classification,
   };
 }
 
@@ -890,8 +987,10 @@ Deno.serve(async (req) => {
       question: string;
       topic: string;
       quality_score: number;
+      priority_score: number;
+      classification: string;
+      flags: string[];
       status: string;
-      auto_published: boolean;
     }[] = [];
 
     // ── 5. Generate + validate + insert candidates ──
@@ -909,10 +1008,10 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Validate and adjust score
-      const validation = await validateCandidate(aiResult, trend.categoryScore, trend.source, lovableApiKey);
+      // Validate with enhanced scoring
+      const validation = await validateCandidate(aiResult, trend.categoryScore, trend.source, trend.category, lovableApiKey);
       if (!validation.passed) {
-        console.log(`Quality gate failed for "${trend.topic}": score=${validation.adjustedScore}, penalties=${validation.penalties.join(", ")}`);
+        console.log(`Quality gate failed for "${trend.topic}": quality=${validation.qualityScore}, flags=[${validation.flags.join(",")}]`);
         await adminClient.from("scheduled_markets").insert({
           source: trend.source,
           source_topic: trend.topic,
@@ -920,7 +1019,10 @@ Deno.serve(async (req) => {
           category: trend.category,
           status: "skipped",
           generated_question: aiResult.question,
-          confidence_score: validation.adjustedScore,
+          confidence_score: validation.qualityScore / 100,
+          priority_score: validation.priorityScore,
+          flags: validation.flags,
+          ai_notes: validation.aiNotes,
         });
         continue;
       }
@@ -929,6 +1031,8 @@ Deno.serve(async (req) => {
       const semDup = await checkSemanticDuplicate(aiResult.question, recentKeywords);
       if (semDup.isDuplicate) {
         console.log(`Semantic dedup (AI question): "${aiResult.question}" ≈ "${semDup.similarTo}" (${semDup.similarity.toFixed(2)})`);
+        const dupFlags = [...validation.flags];
+        if (!dupFlags.includes("duplicate_candidate")) dupFlags.push("duplicate_candidate");
         await adminClient.from("scheduled_markets").insert({
           source: trend.source,
           source_topic: trend.topic,
@@ -936,7 +1040,10 @@ Deno.serve(async (req) => {
           category: trend.category,
           status: "skipped",
           generated_question: aiResult.question,
-          confidence_score: validation.adjustedScore,
+          confidence_score: validation.qualityScore / 100,
+          priority_score: 0,
+          flags: dupFlags,
+          ai_notes: `Duplicata semântica de: "${semDup.similarTo}" (sim=${semDup.similarity.toFixed(2)})`,
         });
         continue;
       }
@@ -949,7 +1056,7 @@ Deno.serve(async (req) => {
       // ALL candidates go to review queue — no auto-publishing
       const candidateStatus = "new";
 
-      // Insert candidate into scheduled_markets
+      // Insert candidate into scheduled_markets with full scoring data
       const { data: candidate, error: insertErr } = await adminClient
         .from("scheduled_markets")
         .insert({
@@ -962,7 +1069,10 @@ Deno.serve(async (req) => {
           generated_description: aiResult.description,
           generated_options: optionsJson,
           resolution_source: aiResult.resolution_source,
-          confidence_score: validation.adjustedScore,
+          confidence_score: validation.qualityScore / 100,
+          priority_score: validation.priorityScore,
+          flags: validation.flags,
+          ai_notes: validation.aiNotes,
           end_date: endDate.toISOString(),
         })
         .select("id")
@@ -973,8 +1083,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const autoPublished = false;
-
       // Add to recent keywords to prevent intra-batch duplicates
       recentKeywords.push({
         question: aiResult.question,
@@ -983,26 +1091,29 @@ Deno.serve(async (req) => {
 
       await adminClient.from("admin_logs").insert({
         admin_user_id: "00000000-0000-0000-0000-000000000001",
-        action_type: autoPublished ? "auto_market_published" : "auto_candidate_created",
+        action_type: "auto_candidate_created",
         entity_type: "scheduled_market",
         entity_id: candidate.id,
-        description: `[Q:${validation.adjustedScore}] ${trend.source}: "${trend.topic}" → "${aiResult.question}"${validation.penalties.length ? ` | penalties: ${validation.penalties.join(", ")}` : ""}`,
+        description: `[Q:${validation.qualityScore} P:${validation.priorityScore} ${validation.classification}] ${trend.source}: "${trend.topic}" → "${aiResult.question}"${validation.flags.length ? ` | flags: ${validation.flags.join(", ")}` : ""}`,
       });
 
       results.push({
         id: candidate.id,
         question: aiResult.question,
         topic: trend.topic,
-        quality_score: validation.adjustedScore,
-        status: autoPublished ? "published" : "new",
-        auto_published: autoPublished,
+        quality_score: validation.qualityScore,
+        priority_score: validation.priorityScore,
+        classification: validation.classification,
+        flags: validation.flags,
+        status: "new",
       });
     }
 
     const responseBody = {
       candidates_created: results.length,
-      auto_published: results.filter((r) => r.auto_published).length,
-      pending_review: results.filter((r) => !r.auto_published).length,
+      pending_review: results.length,
+      strong_candidates: results.filter((r) => r.classification === "strong_candidate").length,
+      needs_review: results.filter((r) => r.classification === "needs_review").length,
       results,
       trends_found: allTrends.length,
       new_trends: newTrends.length,
@@ -1018,10 +1129,13 @@ Deno.serve(async (req) => {
         trends_found: allTrends.length,
         new_trends: newTrends.length,
         candidates_created: results.length,
-        auto_published: results.filter((r) => r.auto_published).length,
-        pending_review: results.filter((r) => !r.auto_published).length,
+        strong_candidates: results.filter((r) => r.classification === "strong_candidate").length,
+        needs_review_count: results.filter((r) => r.classification === "needs_review").length,
         avg_quality: results.length > 0
-          ? Math.round((results.reduce((s, r) => s + r.quality_score, 0) / results.length) * 100) / 100
+          ? Math.round(results.reduce((s, r) => s + r.quality_score, 0) / results.length)
+          : 0,
+        avg_priority: results.length > 0
+          ? Math.round(results.reduce((s, r) => s + r.priority_score, 0) / results.length)
           : 0,
       },
     });
