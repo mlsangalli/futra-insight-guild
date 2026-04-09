@@ -690,8 +690,31 @@ function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, appr
     });
   };
 
-  const qualityScore = candidate?.confidence_score ?? null;
-  const scoreColor = qualityScore >= 0.7 ? 'text-green-500' : qualityScore >= 0.45 ? 'text-yellow-500' : 'text-destructive';
+  const qualityScore = candidate?.confidence_score != null ? Math.round(candidate.confidence_score * 100) : null;
+  const priorityScore = candidate?.priority_score ?? null;
+  const candidateFlags: string[] = Array.isArray(candidate?.flags) ? candidate.flags : [];
+  const aiNotes = candidate?.ai_notes || '';
+  const classification = qualityScore !== null
+    ? (qualityScore >= 80 ? 'strong_candidate' : qualityScore >= 60 ? 'needs_review' : 'auto_reject')
+    : null;
+
+  const FLAG_LABELS: Record<string, string> = {
+    ambiguous_question: '❓ Pergunta ambígua',
+    no_clear_deadline: '⏰ Sem prazo claro',
+    weak_resolution_source: '📄 Fonte fraca',
+    duplicate_candidate: '🔁 Duplicata',
+    low_engagement_potential: '📉 Baixo engajamento',
+    poor_options: '⚠️ Opções ruins',
+    low_shareability: '📤 Baixo compartilhamento',
+    subjective_outcome: '🤔 Resultado subjetivo',
+    past_date_reference: '📅 Data passada',
+    vague_language: '💬 Linguagem vaga',
+    question_too_short: '📏 Pergunta curta',
+    question_too_long: '📏 Pergunta longa',
+    description_too_brief: '📝 Descrição breve',
+    duplicate_options: '🔄 Opções duplicadas',
+    options_too_similar: '🔄 Opções parecidas',
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (o) reset(); onOpenChange(o); }}>
@@ -701,12 +724,46 @@ function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, appr
           <DialogDescription>
             Revise pelo padrão editorial antes de publicar.
             {qualityScore !== null && (
-              <span className={cn('ml-2 font-semibold', scoreColor)}>
-                Score: {(qualityScore * 100).toFixed(0)}%
+              <span className="ml-2">
+                <span className={cn('font-semibold',
+                  qualityScore >= 80 ? 'text-green-500' : qualityScore >= 60 ? 'text-yellow-500' : 'text-destructive'
+                )}>
+                  Q:{qualityScore}
+                </span>
+                {priorityScore !== null && (
+                  <span className="text-muted-foreground ml-1">P:{priorityScore}</span>
+                )}
+                {classification && (
+                  <Badge variant={classification === 'strong_candidate' ? 'default' : classification === 'needs_review' ? 'secondary' : 'destructive'} className="ml-2 text-[10px]">
+                    {classification === 'strong_candidate' ? '★ Strong' : classification === 'needs_review' ? '? Review' : '✗ Weak'}
+                  </Badge>
+                )}
               </span>
             )}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Flags */}
+        {candidateFlags.length > 0 && (
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-2 space-y-1">
+            <span className="text-[10px] font-semibold text-yellow-500 uppercase tracking-wide">Flags Detectadas</span>
+            <div className="flex flex-wrap gap-1">
+              {candidateFlags.map((f: string) => (
+                <span key={f} className="text-[10px] bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 rounded px-1.5 py-0.5">
+                  {FLAG_LABELS[f] || f}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* AI Notes */}
+        {aiNotes && (
+          <div className="rounded-lg border border-border p-2">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Notas da IA</span>
+            <p className="text-xs text-muted-foreground mt-0.5">{aiNotes}</p>
+          </div>
+        )}
 
         {/* Editorial Checklist */}
         <div className="rounded-lg border border-border p-3 space-y-2">
