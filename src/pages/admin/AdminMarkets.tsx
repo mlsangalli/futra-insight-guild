@@ -593,6 +593,20 @@ function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, appr
   const [endDate, setEndDate] = useState('');
   const [optionsText, setOptionsText] = useState('');
   const [resolutionSource, setResolutionSource] = useState('');
+  const [checklist, setChecklist] = useState<boolean[]>(new Array(10).fill(false));
+
+  const CHECKLIST_ITEMS = [
+    'Entendida em < 2 segundos?',
+    'Resultado verificável?',
+    'Prazo explícito?',
+    'Opções coerentes e excludentes?',
+    'Fonte de resolução clara?',
+    'Tema com interesse real?',
+    'Potencial de compartilhamento?',
+    'Não é duplicada?',
+    'Não é ambígua?',
+    'Alinhada à proposta FUTRA?',
+  ];
 
   const reset = () => {
     if (candidate) {
@@ -603,8 +617,12 @@ function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, appr
       const opts = candidate.generated_options || [];
       setOptionsText(opts.map((o: any) => typeof o === 'string' ? o : o.label).join('\n'));
       setResolutionSource(candidate.resolution_source || '');
+      setChecklist(new Array(10).fill(false));
     }
   };
+
+  const allChecked = checklist.every(Boolean);
+  const checkedCount = checklist.filter(Boolean).length;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -621,13 +639,51 @@ function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, appr
     });
   };
 
+  const qualityScore = candidate?.confidence_score ?? null;
+  const scoreColor = qualityScore >= 0.7 ? 'text-green-500' : qualityScore >= 0.45 ? 'text-yellow-500' : 'text-destructive';
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (o) reset(); onOpenChange(o); }}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Aprovar e Publicar Candidato</DialogTitle>
-          <DialogDescription>Revise e edite antes de publicar como mercado.</DialogDescription>
+          <DialogDescription>
+            Revise pelo padrão editorial antes de publicar.
+            {qualityScore !== null && (
+              <span className={cn('ml-2 font-semibold', scoreColor)}>
+                Score: {(qualityScore * 100).toFixed(0)}%
+              </span>
+            )}
+          </DialogDescription>
         </DialogHeader>
+
+        {/* Editorial Checklist */}
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Checklist Editorial</span>
+            <span className={cn('text-xs font-medium', allChecked ? 'text-green-500' : 'text-muted-foreground')}>
+              {checkedCount}/10
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-1">
+            {CHECKLIST_ITEMS.map((item, i) => (
+              <label key={i} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={checklist[i]}
+                  onChange={() => {
+                    const next = [...checklist];
+                    next[i] = !next[i];
+                    setChecklist(next);
+                  }}
+                  className="rounded border-border"
+                />
+                <span className={checklist[i] ? 'text-foreground' : 'text-muted-foreground'}>{item}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label>Pergunta *</Label>
@@ -658,9 +714,16 @@ function ApproveCandidateDialog({ candidate, open, onOpenChange, onApprove, appr
             <Label>Fonte de resolução</Label>
             <Input value={resolutionSource} onChange={e => setResolutionSource(e.target.value)} />
           </div>
+          {!allChecked && (
+            <p className="text-xs text-yellow-500">⚠ Complete o checklist editorial antes de aprovar.</p>
+          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={approving} className="bg-green-600 hover:bg-green-700 text-white">
+            <Button
+              type="submit"
+              disabled={approving || !allChecked}
+              className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+            >
               {approving ? 'Publicando...' : 'Aprovar e Publicar'}
             </Button>
           </div>
