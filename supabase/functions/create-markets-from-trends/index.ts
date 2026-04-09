@@ -842,26 +842,39 @@ async function validateCandidate(
   let rawScore: number;
 
   if (review) {
-    // Use reviewer's score as base, apply heuristic delta
-    finalScore = review.overall + delta;
-    console.log(`Review scores: obj=${review.objectivity} tim=${review.timing} res=${review.resolvability} eng=${review.engagement} cla=${review.clarity} → overall=${review.overall} | heuristic delta=${delta.toFixed(2)} | final=${(review.overall + delta).toFixed(2)}`);
-    console.log(`Review reasoning: ${review.reasoning}`);
+    rawScore = review.overall + delta;
+    notes.push(`IA Review: ${review.reasoning}`);
+    console.log(`Review scores: obj=${review.objectivity} tim=${review.timing} res=${review.resolvability} eng=${review.engagement} cla=${review.clarity} → overall=${review.overall} | delta=${delta.toFixed(2)} | raw=${(review.overall + delta).toFixed(2)}`);
+
+    // Add flags from review scores
+    if (review.objectivity < 0.4) flags.push("subjective_outcome");
+    if (review.clarity < 0.4 && !flags.includes("ambiguous_question")) flags.push("ambiguous_question");
+    if (review.engagement < 0.3 && !flags.includes("low_engagement_potential")) flags.push("low_engagement_potential");
+    if (review.resolvability < 0.3 && !flags.includes("weak_resolution_source")) flags.push("weak_resolution_source");
   } else {
-    // Fallback: use deflated base score + delta
-    // Start from 0.55 (neutral) instead of AI's inflated self-score
-    finalScore = 0.55 + delta;
-    penalties.push("AI review unavailable, using fallback base");
-    console.log(`Fallback score: 0.55 + delta(${delta.toFixed(2)}) = ${finalScore.toFixed(2)}`);
+    rawScore = 0.55 + delta;
+    notes.push("IA Review indisponível, usando score base");
+    console.log(`Fallback score: 0.55 + delta(${delta.toFixed(2)}) = ${rawScore.toFixed(2)}`);
   }
 
-  finalScore = Math.min(1, Math.max(0, finalScore));
-  finalScore = Math.round(finalScore * 100) / 100;
+  rawScore = Math.min(1, Math.max(0, rawScore));
+
+  // Convert to 0-100 scale
+  const qualityScore = Math.round(rawScore * 100);
+  const priorityScore = computePriorityScore(qualityScore, category, ai.virality_score, source, flags);
+  const classification = classifyCandidate(qualityScore);
+  const aiNotes = notes.join(" | ");
+
+  console.log(`Final: quality=${qualityScore} priority=${priorityScore} class=${classification} flags=[${flags.join(",")}]`);
 
   return {
-    passed: finalScore >= MIN_QUALITY_THRESHOLD,
-    adjustedScore: finalScore,
-    penalties,
+    passed: qualityScore >= Math.round(MIN_QUALITY_THRESHOLD * 100),
+    qualityScore,
+    priorityScore,
+    flags,
+    aiNotes,
     reviewScores: review || undefined,
+    classification,
   };
 }
 
