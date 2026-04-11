@@ -15,8 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle } from 'lucide-react';
-import { parseMarketText } from '@/lib/market-text-parser';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle, Layers } from 'lucide-react';
+import { parseMarketText, parseMultipleMarkets, type BulkParseResult } from '@/lib/market-text-parser';
+import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -310,10 +311,11 @@ export default function AdminMarkets() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h1 className="text-2xl font-display font-bold">Mercados</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => triggerAutoCreate.mutate()} disabled={triggerAutoCreate.isPending}>
               <Zap className="h-4 w-4 mr-1" /> {triggerAutoCreate.isPending ? 'Gerando...' : 'Auto-Gerar'}
             </Button>
+            <BulkCreateButton supabase={supabase} queryClient={queryClient} toast={toast} log={log} />
             <Button onClick={() => { setEditingMarket(null); setFormOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Novo Mercado</Button>
           </div>
         </div>
