@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -515,7 +515,9 @@ export default function AdminMarkets() {
               ) : (
                 markets.map((m: any) => (
                   <TableRow key={m.id}>
-                    <TableCell className="max-w-[250px] truncate text-sm font-medium">{m.question}</TableCell>
+                    <TableCell className="max-w-[250px] text-sm font-medium" title={m.question}>
+                      <span className="block truncate">{m.question}</span>
+                    </TableCell>
                     <TableCell><Badge variant="secondary" className="text-xs">{m.category}</Badge></TableCell>
                     <TableCell>
                       <Select defaultValue={m.status} onValueChange={(s) => statusMutation.mutate({ id: m.id, status: s })}>
@@ -1035,8 +1037,13 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
     });
   };
 
+  useEffect(() => {
+    if (open) reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, market]);
+
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (o) reset(); onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{market ? 'Editar Mercado' : 'Novo Mercado'}</DialogTitle>
