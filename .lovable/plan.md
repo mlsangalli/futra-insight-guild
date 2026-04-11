@@ -1,40 +1,58 @@
 
 
-# Fix: Parser muito rígido
+# Criação de Mercados em Massa via Texto
 
-## Problemas identificados
+## Resumo
+Adicionar suporte para colar múltiplos mercados em um único bloco de texto, separados por `---`. O sistema interpreta todos, mostra um resumo/preview, e cria todos de uma vez.
 
-1. **Categorias sem tolerância a typos** — "footbal", "politcs", "economya" etc. são rejeitados
-2. **Campos não reconhecidos viram continuação** — "Imagem do mercado:", "Texto alternativo (alt):", "Fonte da imagem:" não estão nos patterns, então suas linhas são anexadas ao campo anterior (neste caso, "Data limite"), corrompendo o valor
-3. **Campos de valor único (data, categoria) aceitam múltiplas linhas** — deveriam usar apenas a primeira linha
+## Alterações
 
-## Correções
+### 1. Parser: nova função `parseMultipleMarkets`
+**Arquivo:** `src/lib/market-text-parser.ts`
 
-### 1. Fuzzy category matching
-Adicionar Levenshtein distance simples (threshold <= 2) para aceitar typos como "footbal", "ecnomy", "tecnolgia", "cripoto", etc. Se a distância for pequena o suficiente, aceitar e mapear.
+- Adicionar função que divide o texto por separadores (`---`, `===`, ou `***`)
+- Cada bloco é passado ao `parseMarketText` existente
+- Retorna array de `ParseResult` com índice do mercado para identificação de erros
 
-### 2. Adicionar field patterns faltantes
-```
-"Imagem do mercado" → thumbnail
-"Texto alternativo" / "Alt" → thumbnail_alt
-"Fonte da imagem" → thumbnail_source  
-```
-Mesmo que esses campos não sejam usados no draft, reconhecê-los evita que contaminem outros campos.
+```typescript
+export interface BulkParseResult {
+  results: { index: number; draft: MarketDraft; errors: string[]; warnings: string[] }[];
+  totalValid: number;
+  totalInvalid: number;
+}
 
-### 3. Campos single-value: usar apenas primeira linha
-Para `end_date`, `category`, `slug` — ao salvar o campo, usar apenas a primeira linha não-vazia ao invés de concatenar tudo.
-
-### 4. Linhas não-reconhecidas com ":" devem parar a continuação
-Se uma linha tem formato "Algo:" mas não é reconhecida, ela deve encerrar o campo atual (não ser anexada como continuação). O valor é descartado silenciosamente ou adicionado como warning.
-
-## Arquivo modificado
-
-```
-src/lib/market-text-parser.ts
+export function parseMultipleMarkets(text: string): BulkParseResult
 ```
 
-## Resultado
-- "footbal" → football (aceito)
-- "Data limite: 11/06/2026 00:00" → parseia apenas a data, ignora linhas seguintes que são campos não mapeados
-- Campos extras como "Imagem do mercado" são reconhecidos ou pelo menos não corrompem outros campos
+### 2. UI: Novo botão "Criar em massa" no AdminMarkets
+**Arquivo:** `src/pages/admin/AdminMarkets.tsx`
+
+- Adicionar botão "Criar em massa" ao lado do "Novo Mercado" na toolbar principal
+- Abre um `Dialog` dedicado (não o form individual) com:
+  - Textarea grande para colar múltiplos mercados
+  - Botão "Interpretar todos"
+  - Lista de preview mostrando cada mercado com status (válido/inválido)
+  - Erros específicos por mercado (ex: "Mercado #3: Categoria inválida")
+  - Botão "Criar X mercados" que submete apenas os válidos
+  - Progress indicator durante criação
+- Cada mercado é criado sequencialmente usando o mesmo fluxo do `saveMutation` (insert na tabela `markets`)
+- Ao final, mostra resumo: "5 criados, 1 com erro"
+
+### 3. Fluxo do usuário
+1. Clica "Criar em massa"
+2. Cola texto com múltiplos mercados separados por `---`
+3. Clica "Interpretar todos"
+4. Vê lista com preview de cada mercado (verde = válido, vermelho = erro)
+5. Pode remover mercados individuais da lista antes de criar
+6. Clica "Criar N mercados"
+7. Mercados são criados sequencialmente
+8. Feedback final com contagem de sucesso/erro
+
+## Arquivos
+
+```text
+Editar:
+├── src/lib/market-text-parser.ts   — nova função parseMultipleMarkets
+└── src/pages/admin/AdminMarkets.tsx — novo dialog de criação em massa
+```
 
