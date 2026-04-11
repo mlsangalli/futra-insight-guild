@@ -353,9 +353,9 @@ Deno.serve(async (req) => {
   }
 });
 
-function errResponse(msg: string, status: number, headers: Record<string, string>) {
+function errResponse(msg: string, status: number) {
   return new Response(JSON.stringify({ error: msg }), {
     status,
-    headers: { ...headers, "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
