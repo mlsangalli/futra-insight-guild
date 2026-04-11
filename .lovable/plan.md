@@ -1,45 +1,32 @@
 
 
-# Limpeza de Mercados Incoerentes
+# Edição de Perguntas e Opções de Mercados pelo Admin
 
-## Diagnóstico
-
-| Grupo | Quantidade | Ação |
-|-------|-----------|------|
-| Mercados seed com engajamento | 17 | Manter |
-| Mercados auto-gerados sem participantes | 107 | Fechar |
-
-Os 107 mercados auto-gerados são todos incoerentes: crimes locais, acidentes, obituários, clima, e notícias irrelevantes — a maioria categorizada incorretamente como "technology". Nenhum tem participantes.
+## Problema
+O `MarketFormDialog` atual permite editar pergunta, descrição, categoria, data e regras — mas **não permite editar as opções (respostas)** dos mercados. Além disso, a edição usa chamada direta ao Supabase, que é bloqueada pelo trigger `protect_market_fields` para o campo `options`.
 
 ## Plano
 
-### 1. Migration: fechar todos os 107 mercados incoerentes
+### 1. Nova action `edit_market` na Edge Function `admin-actions`
+Adicionar uma action que usa `service_role` para atualizar:
+- `question`, `description`, `category`, `end_date`, `resolution_rules`, `resolution_source`
+- Labels das opções na tabela `market_options` (que automaticamente sincroniza o JSONB via trigger `sync_options_jsonb`)
 
-Uma única migration SQL que:
-- Desabilita temporariamente o trigger `protect_market_fields_trigger` (necessário porque migrations rodam sem `auth.uid()`)
-- Atualiza para `status = 'closed'` todos os mercados `open` com `total_participants = 0`
-- Reabilita o trigger
+### 2. Atualizar `MarketFormDialog` para incluir edição de opções
+- Quando editando um mercado existente, carregar as opções atuais do `market.options`
+- Exibir campos editáveis para cada label de opção
+- Adicionar campo de `resolution_source`
+- Enviar tudo via a nova action `edit_market`
 
-Isso preserva intactos os 17 mercados seed que têm engajamento real.
+### 3. Atualizar `saveMutation` 
+- Para mercados existentes: usar `invokeAdmin({ action: 'edit_market', ... })` ao invés de chamada direta
+- Para novos mercados: manter o fluxo atual
 
-### Critério de fechamento
-```sql
-WHERE status = 'open' 
-  AND total_participants = 0
-```
-
-Simples e seguro: qualquer mercado aberto sem nenhum participante é fechado. Os 17 mercados bons todos têm participantes > 0.
-
-## Arquivos
+## Arquivos modificados
 
 ```text
-Criar:
-└── supabase/migrations/  — migration para fechar 107 mercados
+Editar:
+├── supabase/functions/admin-actions/index.ts  — nova action edit_market
+└── src/pages/admin/AdminMarkets.tsx           — opções editáveis no form
 ```
-
-## Resultado esperado
-
-- 17 mercados abertos mantidos (todos com engajamento)
-- 107 mercados incoerentes fechados
-- Nenhum dado perdido — apenas status alterado para `closed`
 
