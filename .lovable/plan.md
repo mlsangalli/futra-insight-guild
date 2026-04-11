@@ -1,32 +1,40 @@
 
 
-# Edição de Perguntas e Opções de Mercados pelo Admin
+# Fix: Parser muito rígido
 
-## Problema
-O `MarketFormDialog` atual permite editar pergunta, descrição, categoria, data e regras — mas **não permite editar as opções (respostas)** dos mercados. Além disso, a edição usa chamada direta ao Supabase, que é bloqueada pelo trigger `protect_market_fields` para o campo `options`.
+## Problemas identificados
 
-## Plano
+1. **Categorias sem tolerância a typos** — "footbal", "politcs", "economya" etc. são rejeitados
+2. **Campos não reconhecidos viram continuação** — "Imagem do mercado:", "Texto alternativo (alt):", "Fonte da imagem:" não estão nos patterns, então suas linhas são anexadas ao campo anterior (neste caso, "Data limite"), corrompendo o valor
+3. **Campos de valor único (data, categoria) aceitam múltiplas linhas** — deveriam usar apenas a primeira linha
 
-### 1. Nova action `edit_market` na Edge Function `admin-actions`
-Adicionar uma action que usa `service_role` para atualizar:
-- `question`, `description`, `category`, `end_date`, `resolution_rules`, `resolution_source`
-- Labels das opções na tabela `market_options` (que automaticamente sincroniza o JSONB via trigger `sync_options_jsonb`)
+## Correções
 
-### 2. Atualizar `MarketFormDialog` para incluir edição de opções
-- Quando editando um mercado existente, carregar as opções atuais do `market.options`
-- Exibir campos editáveis para cada label de opção
-- Adicionar campo de `resolution_source`
-- Enviar tudo via a nova action `edit_market`
+### 1. Fuzzy category matching
+Adicionar Levenshtein distance simples (threshold <= 2) para aceitar typos como "footbal", "ecnomy", "tecnolgia", "cripoto", etc. Se a distância for pequena o suficiente, aceitar e mapear.
 
-### 3. Atualizar `saveMutation` 
-- Para mercados existentes: usar `invokeAdmin({ action: 'edit_market', ... })` ao invés de chamada direta
-- Para novos mercados: manter o fluxo atual
-
-## Arquivos modificados
-
-```text
-Editar:
-├── supabase/functions/admin-actions/index.ts  — nova action edit_market
-└── src/pages/admin/AdminMarkets.tsx           — opções editáveis no form
+### 2. Adicionar field patterns faltantes
 ```
+"Imagem do mercado" → thumbnail
+"Texto alternativo" / "Alt" → thumbnail_alt
+"Fonte da imagem" → thumbnail_source  
+```
+Mesmo que esses campos não sejam usados no draft, reconhecê-los evita que contaminem outros campos.
+
+### 3. Campos single-value: usar apenas primeira linha
+Para `end_date`, `category`, `slug` — ao salvar o campo, usar apenas a primeira linha não-vazia ao invés de concatenar tudo.
+
+### 4. Linhas não-reconhecidas com ":" devem parar a continuação
+Se uma linha tem formato "Algo:" mas não é reconhecida, ela deve encerrar o campo atual (não ser anexada como continuação). O valor é descartado silenciosamente ou adicionado como warning.
+
+## Arquivo modificado
+
+```
+src/lib/market-text-parser.ts
+```
+
+## Resultado
+- "footbal" → football (aceito)
+- "Data limite: 11/06/2026 00:00" → parseia apenas a data, ignora linhas seguintes que são campos não mapeados
+- Campos extras como "Imagem do mercado" são reconhecidos ou pelo menos não corrompem outros campos
 
