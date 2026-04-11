@@ -1,58 +1,24 @@
 
+# Fix: Tooltip na pergunta + Form pré-preenchido ao editar
 
-# Criação de Mercados em Massa via Texto
+## Problemas
+1. **Pergunta truncada** — a coluna mostra `max-w-[250px] truncate` sem tooltip, impossível ler a pergunta inteira
+2. **Form não pré-preenche ao editar** — `reset()` é chamado no `onOpenChange` do Dialog, mas nesse momento a closure do `market` prop pode estar desatualizada (race condition entre state updates)
 
-## Resumo
-Adicionar suporte para colar múltiplos mercados em um único bloco de texto, separados por `---`. O sistema interpreta todos, mostra um resumo/preview, e cria todos de uma vez.
+## Correções
 
-## Alterações
+### 1. Tooltip na pergunta da tabela
+Na linha da tabela de mercados, envolver o texto da pergunta com o componente `Tooltip` (já existe em `@/components/ui/tooltip`), mostrando a pergunta completa ao passar o mouse.
 
-### 1. Parser: nova função `parseMultipleMarkets`
-**Arquivo:** `src/lib/market-text-parser.ts`
+### 2. useEffect para pré-preencher o form
+No `MarketFormDialog`, substituir a chamada `reset()` no `onOpenChange` por um `useEffect` que dispara quando `open` ou `market` mudam. Isso garante que quando o dialog abre com um mercado selecionado, os campos são preenchidos corretamente.
 
-- Adicionar função que divide o texto por separadores (`---`, `===`, ou `***`)
-- Cada bloco é passado ao `parseMarketText` existente
-- Retorna array de `ParseResult` com índice do mercado para identificação de erros
+## Arquivo modificado
 
-```typescript
-export interface BulkParseResult {
-  results: { index: number; draft: MarketDraft; errors: string[]; warnings: string[] }[];
-  totalValid: number;
-  totalInvalid: number;
-}
-
-export function parseMultipleMarkets(text: string): BulkParseResult
+```
+src/pages/admin/AdminMarkets.tsx
 ```
 
-### 2. UI: Novo botão "Criar em massa" no AdminMarkets
-**Arquivo:** `src/pages/admin/AdminMarkets.tsx`
-
-- Adicionar botão "Criar em massa" ao lado do "Novo Mercado" na toolbar principal
-- Abre um `Dialog` dedicado (não o form individual) com:
-  - Textarea grande para colar múltiplos mercados
-  - Botão "Interpretar todos"
-  - Lista de preview mostrando cada mercado com status (válido/inválido)
-  - Erros específicos por mercado (ex: "Mercado #3: Categoria inválida")
-  - Botão "Criar X mercados" que submete apenas os válidos
-  - Progress indicator durante criação
-- Cada mercado é criado sequencialmente usando o mesmo fluxo do `saveMutation` (insert na tabela `markets`)
-- Ao final, mostra resumo: "5 criados, 1 com erro"
-
-### 3. Fluxo do usuário
-1. Clica "Criar em massa"
-2. Cola texto com múltiplos mercados separados por `---`
-3. Clica "Interpretar todos"
-4. Vê lista com preview de cada mercado (verde = válido, vermelho = erro)
-5. Pode remover mercados individuais da lista antes de criar
-6. Clica "Criar N mercados"
-7. Mercados são criados sequencialmente
-8. Feedback final com contagem de sucesso/erro
-
-## Arquivos
-
-```text
-Editar:
-├── src/lib/market-text-parser.ts   — nova função parseMultipleMarkets
-└── src/pages/admin/AdminMarkets.tsx — novo dialog de criação em massa
-```
-
+### Mudanças específicas:
+- **Linha 518**: Adicionar `Tooltip` com `title` mostrando `m.question` completa
+- **Linha 1039**: Remover `reset()` do `onOpenChange`, adicionar `useEffect(() => { if (open) reset(); }, [open, market])` dentro do componente
