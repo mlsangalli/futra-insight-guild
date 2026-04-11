@@ -356,14 +356,17 @@ export default function AdminMarkets() {
 
                     return (
                       <TableRow key={c.id} className={classification === 'strong_candidate' ? 'bg-green-500/5' : classification === 'auto_reject' ? 'bg-destructive/5' : ''}>
-                        <TableCell className="max-w-[240px]">
-                          <div className="text-sm font-medium truncate">{c.generated_question || c.source_topic}</div>
+                        <TableCell className="max-w-[400px]">
+                          <div className="text-sm font-medium whitespace-normal break-words">{c.generated_question || c.source_topic}</div>
                           {c.generated_question && c.generated_question !== c.source_topic && (
-                            <div className="text-xs text-muted-foreground truncate">Tópico: {c.source_topic}</div>
+                            <div className="text-xs text-muted-foreground whitespace-normal break-words mt-0.5">Tópico: {c.source_topic}</div>
+                          )}
+                          {c.resolution_source && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal break-words">📎 Referencia {c.end_date ? `ano passado (${new Date(c.end_date).getFullYear()})` : ''} · {c.resolution_source}</div>
                           )}
                           {c.ai_notes && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5 truncate" title={c.ai_notes}>
-                              📝 {c.ai_notes.split(' | ').slice(0, 2).join(' · ')}
+                            <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal break-words">
+                              📝 IA Review: {c.ai_notes}
                             </div>
                           )}
                         </TableCell>
