@@ -370,3 +370,33 @@ export function parseMarketText(text: string): ParseResult {
     warnings,
   };
 }
+
+/* ─── Bulk parsing ─── */
+
+export interface BulkParseResult {
+  results: { index: number; result: ParseResult }[];
+  totalValid: number;
+  totalInvalid: number;
+}
+
+/**
+ * Splits text by common separators (---, ===, ***) and parses each block independently.
+ * Returns per-market results with index for error identification.
+ */
+export function parseMultipleMarkets(text: string): BulkParseResult {
+  // Split by separator lines (3+ dashes, equals, or asterisks, possibly with surrounding whitespace)
+  const blocks = text
+    .split(/\n\s*(?:-{3,}|={3,}|\*{3,})\s*\n/)
+    .map(b => b.trim())
+    .filter(b => b.length > 0);
+
+  const results = blocks.map((block, index) => ({
+    index: index + 1,
+    result: parseMarketText(block),
+  }));
+
+  const totalValid = results.filter(r => r.result.errors.length === 0).length;
+  const totalInvalid = results.length - totalValid;
+
+  return { results, totalValid, totalInvalid };
+}

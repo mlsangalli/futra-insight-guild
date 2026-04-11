@@ -15,8 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle } from 'lucide-react';
-import { parseMarketText } from '@/lib/market-text-parser';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle, Layers } from 'lucide-react';
+import { parseMarketText, parseMultipleMarkets, type BulkParseResult } from '@/lib/market-text-parser';
+import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -310,10 +311,11 @@ export default function AdminMarkets() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h1 className="text-2xl font-display font-bold">Mercados</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => triggerAutoCreate.mutate()} disabled={triggerAutoCreate.isPending}>
               <Zap className="h-4 w-4 mr-1" /> {triggerAutoCreate.isPending ? 'Gerando...' : 'Auto-Gerar'}
             </Button>
+            <BulkCreateButton supabase={supabase} queryClient={queryClient} toast={toast} log={log} />
             <Button onClick={() => { setEditingMarket(null); setFormOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Novo Mercado</Button>
           </div>
         </div>
@@ -1285,5 +1287,220 @@ function ScheduleLockDialog({ market, open, onOpenChange, onSchedule, saving }: 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ─── Bulk Create Dialog ─── */
+
+function BulkCreateButton({ supabase: sb, queryClient: qc, toast: t, log: logFn }: {
+  supabase: typeof supabase; queryClient: any; toast: any; log: any;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [parsed, setParsed] = useState<BulkParseResult | null>(null);
+  const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const [creating, setCreating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [summary, setSummary] = useState<{ created: number; failed: number } | null>(null);
+
+  const reset = () => {
+    setText('');
+    setParsed(null);
+    setExcluded(new Set());
+    setCreating(false);
+    setProgress(0);
+    setSummary(null);
+  };
+
+  const handleParse = () => {
+    const result = parseMultipleMarkets(text);
+    setParsed(result);
+    setExcluded(new Set());
+    setSummary(null);
+  };
+
+  const validResults = parsed?.results.filter(
+    r => r.result.errors.length === 0 && !excluded.has(r.index)
+  ) || [];
+
+  const handleCreate = async () => {
+    if (validResults.length === 0) return;
+    setCreating(true);
+    setProgress(0);
+    let created = 0;
+    let failed = 0;
+
+    for (let i = 0; i < validResults.length; i++) {
+      const { draft } = validResults[i].result;
+      try {
+        const optionsPayload = draft.options.map(label => ({
+          label, votes: 0, creditsAllocated: 0, percentage: 0,
+        }));
+        const { error } = await sb.from('markets').insert({
+          question: draft.question,
+          description: draft.description,
+          category: draft.category as any,
+          end_date: draft.end_date,
+          resolution_rules: draft.resolution_rules,
+          resolution_source: draft.resolution_source,
+          options: optionsPayload,
+        });
+        if (error) throw error;
+        await logFn('CREATE', 'market', undefined, `Bulk created: ${draft.question}`);
+        created++;
+      } catch {
+        failed++;
+      }
+      setProgress(Math.round(((i + 1) / validResults.length) * 100));
+    }
+
+    setSummary({ created, failed });
+    setCreating(false);
+    qc.invalidateQueries({ queryKey: ['admin-markets'] });
+  };
+
+  return (
+    <>
+      <Button variant="outline" onClick={() => { reset(); setOpen(true); }}>
+        <Layers className="h-4 w-4 mr-1" /> Criar em massa
+      </Button>
+
+      <Dialog open={open} onOpenChange={(v) => { if (!creating) { setOpen(v); } }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Criar mercados em massa</DialogTitle>
+            <DialogDescription>
+              Cole múltiplos mercados separados por <code className="bg-muted px-1 rounded text-xs">---</code>
+            </DialogDescription>
+          </DialogHeader>
+
+          {summary ? (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted">
+                <CheckCheck className="h-6 w-6 text-primary" />
+                <div>
+                  <p className="font-semibold text-lg">{summary.created} mercado(s) criado(s)</p>
+                  {summary.failed > 0 && (
+                    <p className="text-sm text-destructive">{summary.failed} falha(s)</p>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => { reset(); setOpen(false); }}>Fechar</Button>
+              </DialogFooter>
+            </div>
+          ) : !parsed ? (
+            <div className="space-y-4">
+              <Textarea
+                value={text}
+                onChange={e => setText(e.target.value)}
+                placeholder={`Pergunta: ...\nCategoria: ...\nData limite: ...\n...\n\n---\n\nPergunta: ...\nCategoria: ...\n...`}
+                className="min-h-[250px] font-mono text-xs"
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                <Button onClick={handleParse} disabled={!text.trim()}>
+                  <FileText className="h-4 w-4 mr-1" /> Interpretar todos
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="secondary">{parsed.results.length} mercado(s) detectado(s)</Badge>
+                <Badge variant="default">{validResults.length} válido(s)</Badge>
+                {parsed.totalInvalid > 0 && (
+                  <Badge variant="destructive">{parsed.totalInvalid} com erro(s)</Badge>
+                )}
+              </div>
+
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {parsed.results.map(({ index, result }) => {
+                  const hasErrors = result.errors.length > 0;
+                  const isExcluded = excluded.has(index);
+
+                  return (
+                    <div
+                      key={index}
+                      className={cn(
+                        'border rounded-lg p-3 space-y-1 text-sm',
+                        hasErrors ? 'border-destructive/50 bg-destructive/5' :
+                        isExcluded ? 'border-muted opacity-50' :
+                        'border-primary/30 bg-primary/5'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {hasErrors ? (
+                            <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                          )}
+                          <span className="font-medium truncate">
+                            #{index} — {result.draft.question || '(sem pergunta)'}
+                          </span>
+                        </div>
+                        {!hasErrors && !creating && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs shrink-0"
+                            onClick={() => {
+                              const next = new Set(excluded);
+                              isExcluded ? next.delete(index) : next.add(index);
+                              setExcluded(next);
+                            }}
+                          >
+                            {isExcluded ? 'Incluir' : 'Excluir'}
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-1 text-xs">
+                        {result.draft.category && <Badge variant="outline" className="text-xs">{result.draft.category}</Badge>}
+                        {result.draft.end_date && <Badge variant="outline" className="text-xs">{result.draft.end_date}</Badge>}
+                        {result.draft.options.length > 0 && (
+                          <Badge variant="outline" className="text-xs">{result.draft.options.length} opções</Badge>
+                        )}
+                      </div>
+
+                      {hasErrors && (
+                        <ul className="text-xs text-destructive space-y-0.5 mt-1">
+                          {result.errors.map((e, i) => <li key={i}>• {e}</li>)}
+                        </ul>
+                      )}
+                      {result.warnings.length > 0 && (
+                        <ul className="text-xs text-muted-foreground space-y-0.5">
+                          {result.warnings.map((w, i) => <li key={i}>⚠ {w}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {creating && (
+                <div className="space-y-1">
+                  <Progress value={progress} className="h-2" />
+                  <p className="text-xs text-muted-foreground text-center">Criando mercados... {progress}%</p>
+                </div>
+              )}
+
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setParsed(null)} disabled={creating}>
+                  Voltar
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={creating || validResults.length === 0}
+                >
+                  {creating ? 'Criando...' : `Criar ${validResults.length} mercado(s)`}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
