@@ -931,6 +931,10 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
   const [rules, setRules] = useState('');
   const [resolutionSource, setResolutionSource] = useState('');
   const [optionLabels, setOptionLabels] = useState<{ id: string; label: string }[]>([]);
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageAlt, setImageAlt] = useState('');
+  const [imageSource, setImageSource] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const reset = () => {
     if (market) {
@@ -940,12 +944,15 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
       setEndDate(market.end_date ? format(new Date(market.end_date), "yyyy-MM-dd'T'HH:mm") : '');
       setRules(market.resolution_rules || '');
       setResolutionSource(market.resolution_source || '');
-      // Parse options from JSONB
       const opts = Array.isArray(market.options) ? market.options : [];
       setOptionLabels(opts.map((o: any) => ({ id: o.id || '', label: o.label || '' })));
+      setImageUrl(market.image_url || '');
+      setImageAlt(market.image_alt || '');
+      setImageSource(market.image_source || '');
     } else {
       setQuestion(''); setDescription(''); setCategory('politics'); setEndDate(''); setRules('');
       setResolutionSource(''); setOptionLabels([]);
+      setImageUrl(''); setImageAlt(''); setImageSource('');
     }
   };
 
@@ -969,6 +976,28 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
     return !found || (found.votes === 0 && (found.creditsAllocated === 0 || found.creditsAllocated == null));
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase.storage
+        .from('market-images')
+        .upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = (await import('@/integrations/supabase/client')).supabase.storage
+        .from('market-images')
+        .getPublicUrl(data.path);
+      setImageUrl(urlData.publicUrl);
+    } catch (err: any) {
+      console.error('Upload error:', err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -980,6 +1009,9 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
       resolution_rules: rules,
       resolution_source: resolutionSource,
       options: market?.id ? optionLabels : undefined,
+      image_url: imageUrl,
+      image_alt: imageAlt,
+      image_source: imageSource,
     });
   };
 
