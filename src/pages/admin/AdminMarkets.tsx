@@ -139,15 +139,20 @@ export default function AdminMarkets() {
   const saveMutation = useMutation({
     mutationFn: async (market: any) => {
       if (market.id) {
-        const { error } = await supabase.from('markets').update({
+        // Use edge function to bypass protect_market_fields trigger
+        await invokeAdmin({
+          action: 'edit_market',
+          market_id: market.id,
           question: market.question,
           description: market.description,
           category: market.category,
           end_date: market.end_date,
           resolution_rules: market.resolution_rules,
-        }).eq('id', market.id);
-        if (error) throw error;
-        await log('UPDATE', 'market', market.id, `Edited: ${market.question}`);
+          resolution_source: market.resolution_source,
+          options: market.options,
+          entity_type: 'market',
+          description_log: `Edited: ${market.question}`,
+        });
       } else {
         const { error } = await supabase.from('markets').insert({
           question: market.question,
@@ -924,6 +929,8 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
   const [category, setCategory] = useState('politics');
   const [endDate, setEndDate] = useState('');
   const [rules, setRules] = useState('');
+  const [resolutionSource, setResolutionSource] = useState('');
+  const [optionLabels, setOptionLabels] = useState<{ id: string; label: string }[]>([]);
 
   const reset = () => {
     if (market) {
@@ -932,9 +939,32 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
       setCategory(market.category || 'politics');
       setEndDate(market.end_date ? format(new Date(market.end_date), "yyyy-MM-dd'T'HH:mm") : '');
       setRules(market.resolution_rules || '');
+      setResolutionSource(market.resolution_source || '');
+      // Parse options from JSONB
+      const opts = Array.isArray(market.options) ? market.options : [];
+      setOptionLabels(opts.map((o: any) => ({ id: o.id || '', label: o.label || '' })));
     } else {
       setQuestion(''); setDescription(''); setCategory('politics'); setEndDate(''); setRules('');
+      setResolutionSource(''); setOptionLabels([]);
     }
+  };
+
+  const updateOptionLabel = (index: number, newLabel: string) => {
+    setOptionLabels(prev => prev.map((o, i) => i === index ? { ...o, label: newLabel } : o));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      id: market?.id,
+      question,
+      description,
+      category,
+      end_date: endDate,
+      resolution_rules: rules,
+      resolution_source: resolutionSource,
+      options: market?.id ? optionLabels : undefined,
+    });
   };
 
   return (
@@ -944,7 +974,7 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
           <DialogTitle>{market ? 'Editar Mercado' : 'Novo Mercado'}</DialogTitle>
           <DialogDescription>Preencha os dados do mercado</DialogDescription>
         </DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); onSave({ id: market?.id, question, description, category, end_date: endDate, resolution_rules: rules }); }} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label>Pergunta *</Label>
             <Input value={question} onChange={e => setQuestion(e.target.value)} required />
@@ -965,6 +995,24 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
               <Label>Data limite</Label>
               <Input type="datetime-local" value={endDate} onChange={e => setEndDate(e.target.value)} required />
             </div>
+          </div>
+          {/* Option labels editing (only when editing existing market) */}
+          {market?.id && optionLabels.length > 0 && (
+            <div className="space-y-2">
+              <Label>Opções (respostas)</Label>
+              {optionLabels.map((opt, i) => (
+                <Input
+                  key={opt.id || i}
+                  value={opt.label}
+                  onChange={e => updateOptionLabel(i, e.target.value)}
+                  placeholder={`Opção ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
+          <div>
+            <Label>Fonte de resolução</Label>
+            <Input value={resolutionSource} onChange={e => setResolutionSource(e.target.value)} placeholder="Ex: ge.globo.com, reuters.com" />
           </div>
           <div>
             <Label>Regras de resolução</Label>
