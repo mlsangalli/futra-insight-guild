@@ -15,7 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle } from 'lucide-react';
+import { parseMarketText } from '@/lib/market-text-parser';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -154,13 +155,18 @@ export default function AdminMarkets() {
           description_log: `Edited: ${market.question}`,
         });
       } else {
+        // Build options array from labels for new markets
+        const optionsPayload = Array.isArray(market.options)
+          ? market.options.map((o: any) => ({ label: o.label || o, votes: 0, creditsAllocated: 0, percentage: 0 }))
+          : [];
         const { error } = await supabase.from('markets').insert({
           question: market.question,
           description: market.description,
           category: market.category,
           end_date: market.end_date,
           resolution_rules: market.resolution_rules,
-          options: market.options || [],
+          resolution_source: market.resolution_source,
+          options: optionsPayload,
         });
         if (error) throw error;
         await log('CREATE', 'market', undefined, `Created: ${market.question}`);
@@ -934,8 +940,18 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
   const [rules, setRules] = useState('');
   const [resolutionSource, setResolutionSource] = useState('');
   const [optionLabels, setOptionLabels] = useState<{ id: string; label: string }[]>([]);
+  const [showTextImport, setShowTextImport] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
+  const [importSuccess, setImportSuccess] = useState(false);
 
   const reset = () => {
+    setShowTextImport(false);
+    setImportText('');
+    setImportErrors([]);
+    setImportWarnings([]);
+    setImportSuccess(false);
     if (market) {
       setQuestion(market.question || '');
       setDescription(market.description || '');
@@ -943,7 +959,6 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
       setEndDate(market.end_date ? format(new Date(market.end_date), "yyyy-MM-dd'T'HH:mm") : '');
       setRules(market.resolution_rules || '');
       setResolutionSource(market.resolution_source || '');
-      // Parse options from JSONB
       const opts = Array.isArray(market.options) ? market.options : [];
       setOptionLabels(opts.map((o: any) => ({ id: o.id || '', label: o.label || '' })));
     } else {
@@ -965,15 +980,47 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
   };
 
   const canRemoveOption = (opt: { id: string; label: string }) => {
-    // Can always remove new (unsaved) options; for existing ones, only if no votes
     if (!opt.id) return true;
     const original = Array.isArray(market?.options) ? market.options : [];
     const found = original.find((o: any) => o.id === opt.id);
     return !found || (found.votes === 0 && (found.creditsAllocated === 0 || found.creditsAllocated == null));
   };
 
+  const handleInterpret = () => {
+    setImportErrors([]);
+    setImportWarnings([]);
+    setImportSuccess(false);
+
+    const result = parseMarketText(importText);
+
+    if (result.errors.length > 0) {
+      setImportErrors(result.errors);
+      setImportWarnings(result.warnings);
+      return;
+    }
+
+    // Fill the form
+    const { draft } = result;
+    setQuestion(draft.question);
+    setDescription(draft.description);
+    if (draft.category) setCategory(draft.category);
+    if (draft.end_date) setEndDate(draft.end_date);
+    setResolutionSource(draft.resolution_source);
+    setRules(draft.resolution_rules);
+    setOptionLabels(draft.options.map(label => ({ id: '', label })));
+
+    setImportWarnings(result.warnings);
+    setImportSuccess(true);
+
+    // Auto-close after short delay
+    setTimeout(() => {
+      setShowTextImport(false);
+    }, 800);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const opts = optionLabels.length > 0 ? optionLabels : undefined;
     onSave({
       id: market?.id,
       question,
@@ -982,7 +1029,7 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
       end_date: endDate,
       resolution_rules: rules,
       resolution_source: resolutionSource,
-      options: market?.id ? optionLabels : undefined,
+      options: market?.id ? opts : (optionLabels.length >= 2 ? optionLabels.map(o => ({ label: o.label })) : undefined),
     });
   };
 
@@ -993,6 +1040,83 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
           <DialogTitle>{market ? 'Editar Mercado' : 'Novo Mercado'}</DialogTitle>
           <DialogDescription>Preencha os dados do mercado</DialogDescription>
         </DialogHeader>
+
+        {/* Text Import Toggle */}
+        {!market && (
+          <div className="flex justify-end -mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={() => { setShowTextImport(!showTextImport); setImportSuccess(false); setImportErrors([]); }}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Preencher por texto
+            </Button>
+          </div>
+        )}
+
+        {/* Text Import Panel */}
+        {showTextImport && (
+          <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+            <div>
+              <Label className="text-xs font-semibold">Cole o bloco de texto estruturado</Label>
+              <Textarea
+                value={importText}
+                onChange={e => { setImportText(e.target.value); setImportSuccess(false); }}
+                rows={10}
+                className="mt-1.5 text-xs font-mono"
+                placeholder={`Pergunta:\nQuem vencerá...?\n\nDescrição:\nMercado sobre...\n\nCategoria:\npolitics\n\nData limite:\n04/10/2026 08:00\n\nFonte de resolução:\ntse.jus.br\n\nRegras de resolução:\nO mercado será resolvido...\n\nOpções de resposta:\nOpção A\nOpção B\nOpção C`}
+              />
+            </div>
+
+            {importErrors.length > 0 && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 space-y-1">
+                {importErrors.map((err, i) => (
+                  <div key={i} className="flex items-start gap-1.5 text-xs text-destructive">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>{err}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {importWarnings.length > 0 && (
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-2 space-y-1">
+                {importWarnings.map((w, i) => (
+                  <div key={i} className="flex items-start gap-1.5 text-xs text-yellow-600 dark:text-yellow-400">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>{w}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {importSuccess && (
+              <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                <CheckCheck className="h-4 w-4" />
+                <span>Campos preenchidos com sucesso!</span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" className="text-xs" onClick={() => setShowTextImport(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="text-xs"
+                disabled={!importText.trim()}
+                onClick={handleInterpret}
+              >
+                Interpretar
+              </Button>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label>Pergunta *</Label>
@@ -1015,34 +1139,35 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
               <Input type="datetime-local" value={endDate} onChange={e => setEndDate(e.target.value)} required />
             </div>
           </div>
-          {market?.id && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Opções (respostas)</Label>
-                <Button type="button" variant="ghost" size="sm" onClick={addOption} className="h-7 text-xs">
-                  <Plus className="h-3 w-3 mr-1" /> Adicionar
-                </Button>
-              </div>
-              {optionLabels.map((opt, i) => (
-                <div key={opt.id || `new-${i}`} className="flex items-center gap-2">
-                  <Input
-                    value={opt.label}
-                    onChange={e => updateOptionLabel(i, e.target.value)}
-                    placeholder={`Opção ${i + 1}`}
-                    className="flex-1"
-                  />
-                  {canRemoveOption(opt) && optionLabels.length > 2 && (
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeOption(i)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {optionLabels.length < 2 && (
-                <p className="text-xs text-destructive">Mínimo de 2 opções obrigatórias</p>
-              )}
+
+          {/* Options section - show for both new and edit */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Opções (respostas)</Label>
+              <Button type="button" variant="ghost" size="sm" onClick={addOption} className="h-7 text-xs">
+                <Plus className="h-3 w-3 mr-1" /> Adicionar
+              </Button>
             </div>
-          )}
+            {optionLabels.map((opt, i) => (
+              <div key={opt.id || `new-${i}`} className="flex items-center gap-2">
+                <Input
+                  value={opt.label}
+                  onChange={e => updateOptionLabel(i, e.target.value)}
+                  placeholder={`Opção ${i + 1}`}
+                  className="flex-1"
+                />
+                {canRemoveOption(opt) && optionLabels.length > 2 && (
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeOption(i)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            {optionLabels.length > 0 && optionLabels.length < 2 && (
+              <p className="text-xs text-destructive">Mínimo de 2 opções obrigatórias</p>
+            )}
+          </div>
+
           <div>
             <Label>Fonte de resolução</Label>
             <Input value={resolutionSource} onChange={e => setResolutionSource(e.target.value)} placeholder="Ex: ge.globo.com, reuters.com" />
