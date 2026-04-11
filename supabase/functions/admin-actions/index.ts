@@ -6,7 +6,7 @@ const VALID_ACTIONS = [
   "promote_admin", "demote_admin", "delete_market",
   "update_market_status", "toggle_featured", "toggle_trending",
   "schedule_lock", "resolve_market",
-  "approve_candidate", "reject_candidate",
+  "approve_candidate", "reject_candidate", "edit_market",
 ] as const;
 
 type ActionType = typeof VALID_ACTIONS[number];
@@ -260,6 +260,42 @@ Deno.serve(async (req) => {
           .eq("id", candidate_id);
 
         if (rejErr) throw rejErr;
+        result = { success: true };
+        break;
+      }
+
+      case "edit_market": {
+        const { market_id, question, description, category, end_date, resolution_rules, resolution_source, options } = body;
+        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
+
+        // Build update payload with only provided fields
+        const updatePayload: Record<string, unknown> = {};
+        if (question !== undefined) updatePayload.question = question;
+        if (description !== undefined) updatePayload.description = description;
+        if (category !== undefined) updatePayload.category = category;
+        if (end_date !== undefined) updatePayload.end_date = end_date;
+        if (resolution_rules !== undefined) updatePayload.resolution_rules = resolution_rules;
+        if (resolution_source !== undefined) updatePayload.resolution_source = resolution_source;
+
+        if (Object.keys(updatePayload).length > 0) {
+          const { error: updateErr } = await adminClient.from("markets").update(updatePayload).eq("id", market_id);
+          if (updateErr) throw updateErr;
+        }
+
+        // Update option labels in market_options (triggers sync_options_jsonb automatically)
+        if (Array.isArray(options) && options.length > 0) {
+          for (const opt of options) {
+            if (opt.id && opt.label) {
+              const { error: optErr } = await adminClient
+                .from("market_options")
+                .update({ label: opt.label })
+                .eq("id", opt.id)
+                .eq("market_id", market_id);
+              if (optErr) throw optErr;
+            }
+          }
+        }
+
         result = { success: true };
         break;
       }
