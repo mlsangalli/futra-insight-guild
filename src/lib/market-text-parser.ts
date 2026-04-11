@@ -5,6 +5,9 @@
 
 const CATEGORIES = ['politics', 'economy', 'crypto', 'football', 'culture', 'technology'];
 
+// Single-value fields: only first non-empty line is used
+const SINGLE_VALUE_FIELDS = new Set(['end_date', 'category', 'slug']);
+
 // Ordered by specificity (longest first) to avoid partial matches
 const FIELD_PATTERNS: { pattern: RegExp; field: string }[] = [
   // Options (must come before "opções" alone)
@@ -66,11 +69,16 @@ const FIELD_PATTERNS: { pattern: RegExp; field: string }[] = [
   { pattern: /^palavras[- ]?chave$/i, field: 'tags' },
   { pattern: /^keywords$/i, field: 'tags' },
   
-  // Thumbnail
+  // Thumbnail & image fields — recognized to prevent contamination
   { pattern: /^thumbnail$/i, field: 'thumbnail' },
-  { pattern: /^imagem$/i, field: 'thumbnail' },
-  { pattern: /^image$/i, field: 'thumbnail' },
+  { pattern: /^imagem(\s+do\s+mercado)?$/i, field: 'thumbnail' },
+  { pattern: /^image[mn]?$/i, field: 'thumbnail' },
   { pattern: /^capa$/i, field: 'thumbnail' },
+  { pattern: /^texto\s+alternativo/i, field: '_thumbnail_alt' },
+  { pattern: /^alt(\s+text)?$/i, field: '_thumbnail_alt' },
+  { pattern: /^fonte\s+da\s+imagem$/i, field: '_thumbnail_source' },
+  { pattern: /^image\s*source$/i, field: '_thumbnail_source' },
+  { pattern: /^cr[eé]ditos?\s+(da\s+)?imagem$/i, field: '_thumbnail_source' },
 ];
 
 export interface MarketDraft {
@@ -98,6 +106,18 @@ function matchFieldName(raw: string): string | null {
     if (pattern.test(cleaned)) return field;
   }
   return null;
+}
+
+/**
+ * Checks if a line looks like a field header (i.e. "SomeLabel:" pattern).
+ * Returns true if the text before the colon looks like a label (letters/spaces only, < 50 chars).
+ */
+function looksLikeFieldHeader(line: string): boolean {
+  const colonIdx = line.indexOf(':');
+  if (colonIdx <= 0 || colonIdx > 50) return false;
+  const candidateKey = line.slice(0, colonIdx).trim();
+  // Must be letters, accents, spaces, hyphens — no digits, URLs, etc.
+  return /^[\p{L}\p{M}\s()-]+$/u.test(candidateKey) && candidateKey.length >= 2;
 }
 
 function parseDate(raw: string): string | null {
@@ -169,6 +189,24 @@ function generateSlug(question: string): string {
     .replace(/-$/, '');
 }
 
+/** Simple Levenshtein distance */
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
 function matchCategory(raw: string): string | null {
   const cleaned = raw.trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -183,7 +221,24 @@ function matchCategory(raw: string): string | null {
     'cultura': 'culture', 'entretenimento': 'culture', 'entertainment': 'culture',
     'cripto': 'crypto', 'criptomoeda': 'crypto', 'criptomoedas': 'crypto', 'bitcoin': 'crypto', 'blockchain': 'crypto',
   };
-  return map[cleaned] || null;
+  if (map[cleaned]) return map[cleaned];
+
+  // Fuzzy match: try Levenshtein against all known keys and category names
+  const allTargets = [...CATEGORIES, ...Object.keys(map)];
+  let bestMatch: string | null = null;
+  let bestDist = Infinity;
+  for (const target of allTargets) {
+    const dist = levenshtein(cleaned, target);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestMatch = target;
+    }
+  }
+  if (bestMatch && bestDist <= 2) {
+    return CATEGORIES.includes(bestMatch) ? bestMatch : map[bestMatch] || null;
+  }
+
+  return null;
 }
 
 export function parseMarketText(text: string): ParseResult {
@@ -195,38 +250,59 @@ export function parseMarketText(text: string): ParseResult {
   let currentField: string | null = null;
   let currentValue: string[] = [];
 
+  const saveCurrentField = () => {
+    if (!currentField) return;
+    let value: string;
+    if (SINGLE_VALUE_FIELDS.has(currentField)) {
+      // Only use the first non-empty line
+      value = currentValue.find(l => l.trim() !== '')?.trim() || '';
+    } else {
+      value = currentValue.join('\n').trim();
+    }
+    fields[currentField] = value;
+    currentField = null;
+    currentValue = [];
+  };
+
   for (const line of lines) {
-    // Try to detect "Field: value" — only match colon that comes before position ~50
-    // to avoid catching URLs or sentences with colons
+    // Try to detect "Field: value"
     const colonIdx = line.indexOf(':');
     if (colonIdx > 0 && colonIdx <= 50) {
       const candidateKey = line.slice(0, colonIdx);
       const candidateValue = line.slice(colonIdx + 1);
       
-      // Only treat as field header if the key part has no special chars (except spaces/accents)
-      if (/^[\p{L}\p{M}\s-]+$/u.test(candidateKey.trim())) {
+      if (/^[\p{L}\p{M}\s()-]+$/u.test(candidateKey.trim()) && candidateKey.trim().length >= 2) {
         const fieldName = matchFieldName(candidateKey);
         if (fieldName) {
           // Save previous field
-          if (currentField) {
-            fields[currentField] = currentValue.join('\n').trim();
-          }
+          saveCurrentField();
           currentField = fieldName;
+          currentValue = candidateValue.trim() ? [candidateValue.trim()] : [];
+          continue;
+        }
+        
+        // Unrecognized but looks like a header → stop current field, discard this line
+        if (looksLikeFieldHeader(line)) {
+          saveCurrentField();
+          // Store in a throwaway key so it doesn't contaminate anything
+          currentField = `_unknown_${candidateKey.trim().toLowerCase()}`;
           currentValue = candidateValue.trim() ? [candidateValue.trim()] : [];
           continue;
         }
       }
     }
     
-    // Continuation of current field
-    if (currentField) {
-      currentValue.push(line);
+    // Also catch lines that look like headers even without matching the colon heuristic above
+    if (!currentField || !SINGLE_VALUE_FIELDS.has(currentField)) {
+      // Continuation of current field
+      if (currentField) {
+        currentValue.push(line);
+      }
     }
+    // If currentField is single-value, skip extra lines silently
   }
   // Save last field
-  if (currentField) {
-    fields[currentField] = currentValue.join('\n').trim();
-  }
+  saveCurrentField();
 
   // Build draft
   const question = fields.question?.trim() || '';
