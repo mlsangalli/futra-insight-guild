@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
       action_type: action,
       entity_type: body.entity_type || action.split("_").slice(1).join("_"),
       entity_id: body.market_id || body.user_id || null,
-      description: body.description || `Admin action: ${action}`,
+      description: body.description_log || body.description || `Admin action: ${action}`,
     });
 
     return new Response(JSON.stringify(result), {
