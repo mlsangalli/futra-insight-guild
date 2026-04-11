@@ -858,10 +858,28 @@ function ResolveMarketDialog({ market, open, onOpenChange, onResolve, resolving 
 }) {
   const [selectedOption, setSelectedOption] = useState<string>('');
 
-  const options: MarketOption[] = market?.options
-    ? (Array.isArray(market.options) ? market.options : [])
-    : [];
+  // Fetch real options from market_options table (not the JSONB cache which may have stale IDs)
+  const { data: dbOptions } = useQuery({
+    queryKey: ['market-options-resolve', market?.id],
+    queryFn: async () => {
+      if (!market?.id) return [];
+      const { data, error } = await supabase
+        .from('market_options')
+        .select('id, label, total_votes, total_credits, percentage')
+        .eq('market_id', market.id)
+        .order('created_at');
+      if (error) throw error;
+      return (data || []).map(o => ({
+        id: o.id,
+        label: o.label,
+        votes: o.total_votes || 0,
+        creditsAllocated: o.total_credits || 0,
+      }));
+    },
+    enabled: open && !!market?.id,
+  });
 
+  const options: MarketOption[] = dbOptions || [];
   const totalCredits = options.reduce((sum, o) => sum + (o.creditsAllocated || 0), 0);
 
   return (
