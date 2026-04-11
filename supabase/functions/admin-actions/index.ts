@@ -282,16 +282,45 @@ Deno.serve(async (req) => {
           if (updateErr) throw updateErr;
         }
 
-        // Update option labels in market_options (triggers sync_options_jsonb automatically)
-        if (Array.isArray(options) && options.length > 0) {
+        // Handle options: update existing, insert new, delete removed
+        if (Array.isArray(options)) {
+          // Get current options
+          const { data: currentOpts } = await adminClient
+            .from("market_options")
+            .select("id")
+            .eq("market_id", market_id);
+          const currentIds = new Set((currentOpts || []).map((o: any) => o.id));
+          const incomingIds = new Set(options.filter((o: any) => o.id).map((o: any) => o.id));
+
+          // Delete removed options (only those with no votes)
+          for (const existingId of currentIds) {
+            if (!incomingIds.has(existingId)) {
+              const { error: delErr } = await adminClient
+                .from("market_options")
+                .delete()
+                .eq("id", existingId)
+                .eq("market_id", market_id)
+                .eq("total_votes", 0);
+              if (delErr) throw delErr;
+            }
+          }
+
+          // Update existing and insert new
           for (const opt of options) {
-            if (opt.id && opt.label) {
+            if (opt.id && currentIds.has(opt.id)) {
+              // Update label
               const { error: optErr } = await adminClient
                 .from("market_options")
                 .update({ label: opt.label })
                 .eq("id", opt.id)
                 .eq("market_id", market_id);
               if (optErr) throw optErr;
+            } else if (opt.label) {
+              // Insert new option
+              const { error: insErr } = await adminClient
+                .from("market_options")
+                .insert({ market_id, label: opt.label, total_votes: 0, total_credits: 0, percentage: 0 });
+              if (insErr) throw insErr;
             }
           }
         }

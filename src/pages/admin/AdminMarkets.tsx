@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -953,6 +953,22 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
     setOptionLabels(prev => prev.map((o, i) => i === index ? { ...o, label: newLabel } : o));
   };
 
+  const addOption = () => {
+    setOptionLabels(prev => [...prev, { id: '', label: '' }]);
+  };
+
+  const removeOption = (index: number) => {
+    setOptionLabels(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const canRemoveOption = (opt: { id: string; label: string }) => {
+    // Can always remove new (unsaved) options; for existing ones, only if no votes
+    if (!opt.id) return true;
+    const original = Array.isArray(market?.options) ? market.options : [];
+    const found = original.find((o: any) => o.id === opt.id);
+    return !found || (found.votes === 0 && (found.creditsAllocated === 0 || found.creditsAllocated == null));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -996,18 +1012,32 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
               <Input type="datetime-local" value={endDate} onChange={e => setEndDate(e.target.value)} required />
             </div>
           </div>
-          {/* Option labels editing (only when editing existing market) */}
-          {market?.id && optionLabels.length > 0 && (
+          {market?.id && (
             <div className="space-y-2">
-              <Label>Opções (respostas)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Opções (respostas)</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={addOption} className="h-7 text-xs">
+                  <Plus className="h-3 w-3 mr-1" /> Adicionar
+                </Button>
+              </div>
               {optionLabels.map((opt, i) => (
-                <Input
-                  key={opt.id || i}
-                  value={opt.label}
-                  onChange={e => updateOptionLabel(i, e.target.value)}
-                  placeholder={`Opção ${i + 1}`}
-                />
+                <div key={opt.id || `new-${i}`} className="flex items-center gap-2">
+                  <Input
+                    value={opt.label}
+                    onChange={e => updateOptionLabel(i, e.target.value)}
+                    placeholder={`Opção ${i + 1}`}
+                    className="flex-1"
+                  />
+                  {canRemoveOption(opt) && optionLabels.length > 2 && (
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeOption(i)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               ))}
+              {optionLabels.length < 2 && (
+                <p className="text-xs text-destructive">Mínimo de 2 opções obrigatórias</p>
+              )}
             </div>
           )}
           <div>
