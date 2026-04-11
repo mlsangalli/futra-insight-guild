@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
   if (!rl.allowed) {
     return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
       status: 429,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Not authenticated" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     if (!roleData) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     if (!action || !VALID_ACTIONS.includes(action as ActionType)) {
       return new Response(JSON.stringify({ error: `Invalid action. Valid actions: ${VALID_ACTIONS.join(", ")}` }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -346,12 +346,12 @@ Deno.serve(async (req) => {
     });
 
     return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });
@@ -359,6 +359,6 @@ Deno.serve(async (req) => {
 function errResponse(msg: string, status: number) {
   return new Response(JSON.stringify({ error: msg }), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...cors, "Content-Type": "application/json" },
   });
 }
