@@ -155,13 +155,18 @@ export default function AdminMarkets() {
           description_log: `Edited: ${market.question}`,
         });
       } else {
+        // Build options array from labels for new markets
+        const optionsPayload = Array.isArray(market.options)
+          ? market.options.map((o: any) => ({ label: o.label || o, votes: 0, creditsAllocated: 0, percentage: 0 }))
+          : [];
         const { error } = await supabase.from('markets').insert({
           question: market.question,
           description: market.description,
           category: market.category,
           end_date: market.end_date,
           resolution_rules: market.resolution_rules,
-          options: market.options || [],
+          resolution_source: market.resolution_source,
+          options: optionsPayload,
         });
         if (error) throw error;
         await log('CREATE', 'market', undefined, `Created: ${market.question}`);
