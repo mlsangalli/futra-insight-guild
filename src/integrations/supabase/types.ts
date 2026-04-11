@@ -334,6 +334,9 @@ export type Database = {
           end_date: string
           featured: boolean
           id: string
+          image_alt: string | null
+          image_source: string | null
+          image_url: string | null
           lock_date: string | null
           options: Json
           question: string
@@ -356,6 +359,9 @@ export type Database = {
           end_date: string
           featured?: boolean
           id?: string
+          image_alt?: string | null
+          image_source?: string | null
+          image_url?: string | null
           lock_date?: string | null
           options?: Json
           question: string
@@ -378,6 +384,9 @@ export type Database = {
           end_date?: string
           featured?: boolean
           id?: string
+          image_alt?: string | null
+          image_source?: string | null
+          image_url?: string | null
           lock_date?: string | null
           options?: Json
           question?: string

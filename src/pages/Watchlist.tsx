@@ -14,7 +14,7 @@ function dbToCard(m: any) {
     type: m.type, status: m.status, options: m.options, totalParticipants: m.total_participants,
     totalCredits: m.total_credits, endDate: m.end_date, createdAt: m.created_at,
     resolutionSource: m.resolution_source || '', resolutionRules: m.resolution_rules || '',
-    featured: m.featured, trending: m.trending,
+    featured: m.featured, trending: m.trending, imageUrl: m.image_url || '',
   };
 }
 

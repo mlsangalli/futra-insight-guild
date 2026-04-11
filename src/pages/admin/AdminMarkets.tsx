@@ -150,6 +150,9 @@ export default function AdminMarkets() {
           resolution_rules: market.resolution_rules,
           resolution_source: market.resolution_source,
           options: market.options,
+          image_url: market.image_url,
+          image_alt: market.image_alt,
+          image_source: market.image_source,
           entity_type: 'market',
           description_log: `Edited: ${market.question}`,
         });
@@ -931,6 +934,10 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
   const [rules, setRules] = useState('');
   const [resolutionSource, setResolutionSource] = useState('');
   const [optionLabels, setOptionLabels] = useState<{ id: string; label: string }[]>([]);
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageAlt, setImageAlt] = useState('');
+  const [imageSource, setImageSource] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const reset = () => {
     if (market) {
@@ -940,12 +947,15 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
       setEndDate(market.end_date ? format(new Date(market.end_date), "yyyy-MM-dd'T'HH:mm") : '');
       setRules(market.resolution_rules || '');
       setResolutionSource(market.resolution_source || '');
-      // Parse options from JSONB
       const opts = Array.isArray(market.options) ? market.options : [];
       setOptionLabels(opts.map((o: any) => ({ id: o.id || '', label: o.label || '' })));
+      setImageUrl(market.image_url || '');
+      setImageAlt(market.image_alt || '');
+      setImageSource(market.image_source || '');
     } else {
       setQuestion(''); setDescription(''); setCategory('politics'); setEndDate(''); setRules('');
       setResolutionSource(''); setOptionLabels([]);
+      setImageUrl(''); setImageAlt(''); setImageSource('');
     }
   };
 
@@ -969,6 +979,28 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
     return !found || (found.votes === 0 && (found.creditsAllocated === 0 || found.creditsAllocated == null));
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase.storage
+        .from('market-images')
+        .upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = (await import('@/integrations/supabase/client')).supabase.storage
+        .from('market-images')
+        .getPublicUrl(data.path);
+      setImageUrl(urlData.publicUrl);
+    } catch (err: any) {
+      console.error('Upload error:', err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -980,6 +1012,9 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
       resolution_rules: rules,
       resolution_source: resolutionSource,
       options: market?.id ? optionLabels : undefined,
+      image_url: imageUrl,
+      image_alt: imageAlt,
+      image_source: imageSource,
     });
   };
 
@@ -1040,6 +1075,29 @@ function MarketFormDialog({ open, onOpenChange, market, onSave, saving }: any) {
               )}
             </div>
           )}
+          {/* Image Section */}
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Imagem do mercado</Label>
+            {imageUrl && (
+              <div className="relative rounded-lg overflow-hidden aspect-[16/9] bg-surface-800">
+                <img src={imageUrl} alt={imageAlt || 'Preview'} className="w-full h-full object-cover" />
+                <button type="button" onClick={() => setImageUrl('')} className="absolute top-1 right-1 rounded-full bg-background/80 p-1 hover:bg-background">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="URL da imagem" className="flex-1" />
+              <label className="shrink-0">
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
+                  <span>{uploading ? 'Enviando...' : 'Upload'}</span>
+                </Button>
+              </label>
+            </div>
+            <Input value={imageAlt} onChange={e => setImageAlt(e.target.value)} placeholder="Texto alternativo (alt)" />
+            <Input value={imageSource} onChange={e => setImageSource(e.target.value)} placeholder="Fonte da imagem (ex: Reuters)" />
+          </div>
           <div>
             <Label>Fonte de resolução</Label>
             <Input value={resolutionSource} onChange={e => setResolutionSource(e.target.value)} placeholder="Ex: ge.globo.com, reuters.com" />

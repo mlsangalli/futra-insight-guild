@@ -276,6 +276,9 @@ Deno.serve(async (req) => {
         if (end_date !== undefined) updatePayload.end_date = end_date;
         if (resolution_rules !== undefined) updatePayload.resolution_rules = resolution_rules;
         if (resolution_source !== undefined) updatePayload.resolution_source = resolution_source;
+        if (body.image_url !== undefined) updatePayload.image_url = body.image_url;
+        if (body.image_alt !== undefined) updatePayload.image_alt = body.image_alt;
+        if (body.image_source !== undefined) updatePayload.image_source = body.image_source;
 
         if (Object.keys(updatePayload).length > 0) {
           const { error: updateErr } = await adminClient.from("markets").update(updatePayload).eq("id", market_id);

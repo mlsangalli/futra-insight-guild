@@ -8,6 +8,7 @@ import { CountdownTimer } from '@/components/futra/CountdownTimer';
 import { ShareButton, marketShareText, winShareText } from '@/components/futra/ShareButton';
 import { WatchlistButton } from '@/components/futra/WatchlistButton';
 import { CommentSection } from '@/components/futra/CommentSection';
+import { MarketThumbnail } from '@/components/futra/MarketThumbnail';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy } from 'lucide-react';
@@ -136,6 +137,16 @@ export default function MarketDetailPage() {
               Este mercado foi resolvido. <span className="font-bold text-emerald-400">{winningOption.label}</span> foi o resultado correto.
             </p>
           </div>
+        )}
+
+        {(market as any).image_url && (
+          <MarketThumbnail
+            imageUrl={(market as any).image_url}
+            category={market.category as any}
+            alt={(market as any).image_alt || market.question}
+            size="detail"
+            className="mb-4"
+          />
         )}
 
         <div className="mb-6">
