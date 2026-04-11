@@ -9,7 +9,6 @@ import { CountdownTimer } from './CountdownTimer';
 import { VoteBar } from './VoteBar';
 import { ShareButton, marketShareText } from './ShareButton';
 import { PriceChart } from './PriceChart';
-import { MarketThumbnail } from './MarketThumbnail';
 import { cn } from '@/lib/utils';
 
 interface MarketCardProps {
@@ -46,15 +45,12 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
       to={`/market/${market.id}`}
       onMouseEnter={handleMouseEnter}
       className={cn(
-        'group block rounded-xl glass-card overflow-hidden transition-all duration-300 active:scale-[0.98]',
+        'group block rounded-xl glass-card p-4 sm:p-5 transition-all duration-300 active:scale-[0.98]',
         'hover:scale-[1.01]',
         featured && 'gradient-border-top',
         className
       )}
     >
-      <MarketThumbnail imageUrl={market.imageUrl} category={market.category} alt={market.question} />
-
-      <div className="p-4 sm:p-5">
       <div className="flex items-center gap-1.5 flex-wrap mb-2 sm:mb-3">
         <CategoryBadge category={market.category} />
         <StatusBadge status={market.status} />
@@ -99,7 +95,6 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
         <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
           <ShareButton title={market.question} text={shareText} url={shareUrl} shareContext="market" />
         </div>
-      </div>
       </div>
     </Link>
   );
