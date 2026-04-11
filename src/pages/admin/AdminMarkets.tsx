@@ -150,6 +150,9 @@ export default function AdminMarkets() {
           resolution_rules: market.resolution_rules,
           resolution_source: market.resolution_source,
           options: market.options,
+          image_url: market.image_url,
+          image_alt: market.image_alt,
+          image_source: market.image_source,
           entity_type: 'market',
           description_log: `Edited: ${market.question}`,
         });
