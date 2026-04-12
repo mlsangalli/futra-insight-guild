@@ -1,4 +1,4 @@
-import { LayoutDashboard, Store, FolderOpen, FileText, Users, ScrollText, LogOut, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, Store, FolderOpen, FileText, Users, ScrollText, LogOut, ChevronLeft, Trophy } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +22,7 @@ const ADMIN_NAV = [
   { title: 'Categorias', url: '/admin/categories', icon: FolderOpen },
   { title: 'Conteúdo', url: '/admin/content', icon: FileText },
   { title: 'Usuários', url: '/admin/users', icon: Users },
+  { title: 'Torneios', url: '/admin/tournaments', icon: Trophy },
   { title: 'Logs', url: '/admin/logs', icon: ScrollText },
 ];
 
