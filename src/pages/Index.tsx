@@ -8,6 +8,7 @@ import { VoteBar } from '@/components/futra/VoteBar';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users } from 'lucide-react';
 import { useHomeFeeds, useLeaderboard } from '@/hooks/useMarkets';
+import { useSyntheticOverlay } from '@/hooks/useSyntheticOverlay';
 import { CATEGORIES } from '@/types';
 import { MarketGridSkeleton, HeroMarketSkeleton, LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
