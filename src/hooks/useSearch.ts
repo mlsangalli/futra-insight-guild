@@ -23,6 +23,7 @@ export function useSearchMarkets(query: string) {
       const { data, error } = await supabase
         .from('markets')
         .select('*, market_options(*)')
+        .neq('status', 'closed' as any)
         .textSearch('search_vector', query.trim(), { type: 'plain', config: 'portuguese' })
         .order('created_at', { ascending: false })
         .limit(20);
@@ -32,6 +33,7 @@ export function useSearchMarkets(query: string) {
         const { data: fallback, error: err2 } = await supabase
           .from('markets')
           .select('*, market_options(*)')
+          .neq('status', 'closed' as any)
           .or(`question.ilike.%${query}%,description.ilike.%${query}%`)
           .order('created_at', { ascending: false })
           .limit(20);

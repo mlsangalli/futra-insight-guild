@@ -140,6 +140,7 @@ export async function fetchMarkets(
   if (filters.featured) query = query.eq('featured', true);
   if (filters.trending) query = query.eq('trending', true);
   if (filters.status) query = query.eq('status', filters.status as any);
+  else query = query.neq('status', 'closed' as any);
   if (filters.cursor) query = query.lt('created_at', filters.cursor);
 
   const { data, error } = await query;
@@ -168,6 +169,7 @@ export async function fetchAllMarkets(filters?: {
   if (filters?.featured) query = query.eq('featured', true);
   if (filters?.trending) query = query.eq('trending', true);
   if (filters?.status) query = query.eq('status', filters.status as any);
+  else query = query.neq('status', 'closed' as any);
   const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
   return ((data ?? []) as unknown as MarketRow[]).map(parseMarketRow);
