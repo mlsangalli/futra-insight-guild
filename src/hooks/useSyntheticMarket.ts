@@ -30,11 +30,11 @@ export function useSyntheticMarkets() {
     queryFn: async () => {
       const { data, error } = await (supabase.from('synthetic_market_data') as any)
         .select('*')
+        .eq('enabled', true)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []) as SyntheticMarketRow[];
     },
-    enabled: isAdmin,
     staleTime: 30_000,
   });
 
