@@ -12,7 +12,7 @@ import { PriceChart } from './PriceChart';
 import { cn } from '@/lib/utils';
 
 interface MarketCardProps {
-  market: MarketCardData;
+  market: MarketCardData & { _chartPoints?: number[] };
   className?: string;
   featured?: boolean;
   showChart?: boolean;
@@ -72,9 +72,9 @@ export function MarketCard({ market, className, featured, showChart }: MarketCar
         </span>
       </div>
 
-      {showChart && (
+      {(showChart || market._chartPoints) && (
         <div className="mb-3">
-          <PriceChart className="w-full h-12" />
+          <PriceChart className="w-full h-12" points={market._chartPoints} />
         </div>
       )}
 
