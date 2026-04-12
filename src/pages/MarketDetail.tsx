@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useSingleSyntheticOverlay } from '@/hooks/useSyntheticOverlay';
 import { Layout } from '@/components/layout/Layout';
 import { VoteBar } from '@/components/futra/VoteBar';
 import { CategoryBadge } from '@/components/futra/CategoryBadge';
