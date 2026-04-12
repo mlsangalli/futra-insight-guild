@@ -108,6 +108,8 @@ Deno.serve(async (req) => {
       case "delete_market": {
         const { market_id } = body;
         if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400, cors);
+        // Remove references in scheduled_markets first to avoid FK constraint
+        await adminClient.from("scheduled_markets").delete().eq("market_id", market_id);
         const { error } = await adminClient.from("markets").delete().eq("id", market_id);
         if (error) throw error;
         result = { success: true };
