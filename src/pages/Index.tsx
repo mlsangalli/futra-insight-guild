@@ -23,6 +23,7 @@ function dbToCard(m: any) {
     totalCredits: m.total_credits, endDate: m.end_date, createdAt: m.created_at,
     resolutionSource: m.resolution_source || '', resolutionRules: m.resolution_rules || '',
     featured: m.featured, trending: m.trending,
+    _chartPoints: m._chartPoints,
   };
 }
 

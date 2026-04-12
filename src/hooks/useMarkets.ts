@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { fetchMarkets, fetchAllMarkets, fetchMarketById, fetchLeaderboard, fetchProfile, fetchUserPredictions, fetchHomeFeeds, fetchBrowseSorted } from '@/lib/market-queries';
 import type { Market, MarketOption } from '@/types';
+import { useSyntheticOverlay, useSingleSyntheticOverlay } from './useSyntheticOverlay';
 
 // Re-export types for backward compat
 export type { Market as DbMarket, MarketOption };

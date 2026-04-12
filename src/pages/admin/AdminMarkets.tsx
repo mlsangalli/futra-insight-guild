@@ -15,9 +15,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle, Layers, FlaskConical } from 'lucide-react';
 import { parseMarketText, parseMultipleMarkets, type BulkParseResult } from '@/lib/market-text-parser';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SyntheticPanel } from '@/components/admin/SyntheticPanel';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -309,309 +311,280 @@ export default function AdminMarkets() {
   return (
     <AdminLayout>
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <h1 className="text-2xl font-display font-bold">Mercados</h1>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => triggerAutoCreate.mutate()} disabled={triggerAutoCreate.isPending}>
-              <Zap className="h-4 w-4 mr-1" /> {triggerAutoCreate.isPending ? 'Gerando...' : 'Auto-Gerar'}
-            </Button>
-            <BulkCreateButton supabase={supabase} queryClient={queryClient} toast={toast} log={log} />
-            <Button onClick={() => { setEditingMarket(null); setFormOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Novo Mercado</Button>
-          </div>
-        </div>
+        <h1 className="text-2xl font-display font-bold">Mercados</h1>
 
-        {/* Candidate Queue */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-display font-semibold flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" /> Fila de Candidatos
-            </h2>
-            <Select value={candidateFilter} onValueChange={setCandidateFilter}>
-              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {CANDIDATE_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="rounded-lg border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Pergunta / Tópico</TableHead>
-                  <TableHead>Fonte</TableHead>
-                  <TableHead>Cat.</TableHead>
-                  <TableHead>Qualidade</TableHead>
-                  <TableHead>Prioridade</TableHead>
-                  <TableHead>Flags</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {candidatesLoading ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
-                ) : !candidatesData || candidatesData.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Nenhum candidato encontrado</TableCell></TableRow>
-                ) : (
-                  (candidatesData as any[]).map((c: any) => {
-                    const qScore = c.confidence_score != null ? Math.round(c.confidence_score * 100) : null;
-                    const pScore = c.priority_score ?? null;
-                    const flags: string[] = Array.isArray(c.flags) ? c.flags : [];
-                    const classification = qScore !== null
-                      ? (qScore >= 80 ? 'strong_candidate' : qScore >= 60 ? 'needs_review' : 'auto_reject')
-                      : null;
+        <Tabs defaultValue="markets" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="markets">Mercados</TabsTrigger>
+            <TabsTrigger value="candidates">Candidatos</TabsTrigger>
+            <TabsTrigger value="simulation" className="flex items-center gap-1">
+              <FlaskConical className="h-3.5 w-3.5" /> Simulação
+            </TabsTrigger>
+          </TabsList>
 
-                    return (
-                      <TableRow key={c.id} className={classification === 'strong_candidate' ? 'bg-green-500/5' : classification === 'auto_reject' ? 'bg-destructive/5' : ''}>
-                        <TableCell className="max-w-[400px]">
-                          <div className="text-sm font-medium whitespace-normal break-words">{c.generated_question || c.source_topic}</div>
-                          {c.generated_question && c.generated_question !== c.source_topic && (
-                            <div className="text-xs text-muted-foreground whitespace-normal break-words mt-0.5">Tópico: {c.source_topic}</div>
-                          )}
-                          {c.resolution_source && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal break-words">📎 Referencia {c.end_date ? `ano passado (${new Date(c.end_date).getFullYear()})` : ''} · {c.resolution_source}</div>
-                          )}
-                          {c.ai_notes && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal break-words">
-                              📝 IA Review: {c.ai_notes}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {c.source === 'google_trends' ? 'Google' : c.source === 'rss' ? 'RSS' : c.source === 'user_suggestion' ? 'Usuário' : c.source}
-                          </Badge>
-                        </TableCell>
-                        <TableCell><Badge variant="secondary" className="text-xs">{c.category}</Badge></TableCell>
-                        <TableCell>
-                          {qScore !== null ? (
-                            <div className="flex items-center gap-1">
-                              <span className={cn('text-xs font-mono font-semibold',
-                                qScore >= 80 ? 'text-green-500' : qScore >= 60 ? 'text-yellow-500' : 'text-destructive'
-                              )}>
-                                {qScore}
-                              </span>
-                              {classification && (
-                                <span className={cn('text-[9px] px-1 py-0.5 rounded',
-                                  classification === 'strong_candidate' ? 'bg-green-500/20 text-green-500' :
-                                  classification === 'needs_review' ? 'bg-yellow-500/20 text-yellow-500' :
-                                  'bg-destructive/20 text-destructive'
-                                )}>
-                                  {classification === 'strong_candidate' ? '★' : classification === 'needs_review' ? '?' : '✗'}
-                                </span>
+          {/* Simulation Tab */}
+          <TabsContent value="simulation">
+            <SyntheticPanel />
+          </TabsContent>
+
+          {/* Candidates Tab */}
+          <TabsContent value="candidates">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-display font-semibold flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-primary" /> Fila de Candidatos
+                </h2>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => triggerAutoCreate.mutate()} disabled={triggerAutoCreate.isPending}>
+                    <Zap className="h-3.5 w-3.5 mr-1" /> {triggerAutoCreate.isPending ? 'Gerando...' : 'Auto-Gerar'}
+                  </Button>
+                  <Select value={candidateFilter} onValueChange={setCandidateFilter}>
+                    <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {CANDIDATE_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pergunta / Tópico</TableHead>
+                      <TableHead>Fonte</TableHead>
+                      <TableHead>Cat.</TableHead>
+                      <TableHead>Qualidade</TableHead>
+                      <TableHead>Prioridade</TableHead>
+                      <TableHead>Flags</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {candidatesLoading ? (
+                      <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
+                    ) : !candidatesData || candidatesData.length === 0 ? (
+                      <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Nenhum candidato encontrado</TableCell></TableRow>
+                    ) : (
+                      (candidatesData as any[]).map((c: any) => {
+                        const qScore = c.confidence_score != null ? Math.round(c.confidence_score * 100) : null;
+                        const pScore = c.priority_score ?? null;
+                        const flags: string[] = Array.isArray(c.flags) ? c.flags : [];
+                        const classification = qScore !== null
+                          ? (qScore >= 80 ? 'strong_candidate' : qScore >= 60 ? 'needs_review' : 'auto_reject')
+                          : null;
+
+                        return (
+                          <TableRow key={c.id} className={classification === 'strong_candidate' ? 'bg-green-500/5' : classification === 'auto_reject' ? 'bg-destructive/5' : ''}>
+                            <TableCell className="max-w-[400px]">
+                              <div className="text-sm font-medium whitespace-normal break-words">{c.generated_question || c.source_topic}</div>
+                              {c.generated_question && c.generated_question !== c.source_topic && (
+                                <div className="text-xs text-muted-foreground whitespace-normal break-words mt-0.5">Tópico: {c.source_topic}</div>
                               )}
-                            </div>
-                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                              {c.resolution_source && (
+                                <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal break-words">📎 {c.resolution_source}</div>
+                              )}
+                              {c.ai_notes && (
+                                <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal break-words">📝 {c.ai_notes}</div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {c.source === 'google_trends' ? 'Google' : c.source === 'rss' ? 'RSS' : c.source === 'user_suggestion' ? 'Usuário' : c.source}
+                              </Badge>
+                            </TableCell>
+                            <TableCell><Badge variant="secondary" className="text-xs">{c.category}</Badge></TableCell>
+                            <TableCell>
+                              {qScore !== null ? (
+                                <div className="flex items-center gap-1">
+                                  <span className={cn('text-xs font-mono font-semibold',
+                                    qScore >= 80 ? 'text-green-500' : qScore >= 60 ? 'text-yellow-500' : 'text-destructive'
+                                  )}>{qScore}</span>
+                                </div>
+                              ) : <span className="text-xs text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell>
+                              {pScore !== null ? (
+                                <div className="flex items-center gap-1">
+                                  <TrendingUp className={cn('h-3 w-3', pScore >= 70 ? 'text-green-500' : pScore >= 50 ? 'text-yellow-500' : 'text-muted-foreground')} />
+                                  <span className="text-xs font-mono">{pScore}</span>
+                                </div>
+                              ) : <span className="text-xs text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell>
+                              {flags.length > 0 ? (
+                                <div className="flex items-center gap-1" title={flags.join(', ')}>
+                                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                  <span className="text-[10px] text-muted-foreground">{flags.length}</span>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-green-500">✓</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={candidateStatusBadge(c.status)} className="text-xs">{c.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {(c.status === 'new' || c.status === 'skipped') && (
+                                  <>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500 hover:text-green-400" onClick={() => setApprovingCandidate(c)} title="Aprovar">
+                                      <ThumbsUp className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => rejectMutation.mutate(c.id)} disabled={rejectMutation.isPending} title="Rejeitar">
+                                      <ThumbsDown className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </>
+                                )}
+                                {c.market_id && (
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(`/market/${c.market_id}`, '_blank')} title="Ver mercado">
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Markets Tab */}
+          <TabsContent value="markets">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+              <div className="flex gap-2 flex-wrap">
+                <BulkCreateButton supabase={supabase} queryClient={queryClient} toast={toast} log={log} />
+                <Button onClick={() => { setEditingMarket(null); setFormOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Novo Mercado</Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Buscar mercados..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className="pl-9" />
+              </div>
+              <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); setPage(0); }}>
+                <SelectTrigger className="w-[150px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(0); }}>
+                <SelectTrigger className="w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-lg border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pergunta</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Participantes</TableHead>
+                    <TableHead>Travamento</TableHead>
+                    <TableHead>Destaque</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                  ) : markets.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum mercado encontrado</TableCell></TableRow>
+                  ) : (
+                    markets.map((m: any) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="max-w-[250px] text-sm font-medium" title={m.question}>
+                          <span className="block truncate">{m.question}</span>
                         </TableCell>
+                        <TableCell><Badge variant="secondary" className="text-xs">{m.category}</Badge></TableCell>
                         <TableCell>
-                          {pScore !== null ? (
-                            <div className="flex items-center gap-1">
-                              <TrendingUp className={cn('h-3 w-3', pScore >= 70 ? 'text-green-500' : pScore >= 50 ? 'text-yellow-500' : 'text-muted-foreground')} />
-                              <span className="text-xs font-mono">{pScore}</span>
-                            </div>
-                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                          <Select defaultValue={m.status} onValueChange={(s) => statusMutation.mutate({ id: m.id, status: s })}>
+                            <SelectTrigger className="h-7 w-[100px] text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                         </TableCell>
-                        <TableCell>
-                          {flags.length > 0 ? (
-                            <div className="flex items-center gap-1" title={flags.join(', ')}>
-                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                              <span className="text-[10px] text-muted-foreground">{flags.length}</span>
-                            </div>
+                        <TableCell className="text-sm">{m.total_participants}</TableCell>
+                        <TableCell className="text-xs">
+                          {m.lock_date ? (
+                            <span className={m.lock_date && new Date(m.lock_date) <= new Date() ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
+                              {format(new Date(m.lock_date), 'dd/MM/yy HH:mm')}
+                              {new Date(m.lock_date) <= new Date() && <Badge variant="outline" className="ml-1 text-[10px] border-destructive text-destructive">Travado</Badge>}
+                            </span>
                           ) : (
-                            <span className="text-[10px] text-green-500">✓</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={candidateStatusBadge(c.status)} className="text-xs">{c.status}</Badge>
+                          <button onClick={() => toggleFeatured.mutate({ id: m.id, featured: !m.featured })} className="hover:text-primary transition-colors">
+                            <Star className={`h-4 w-4 ${m.featured ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
+                          </button>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {(c.status === 'new' || c.status === 'skipped') && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-green-500 hover:text-green-400"
-                                  onClick={() => setApprovingCandidate(c)}
-                                  title="Aprovar e publicar"
-                                >
-                                  <ThumbsUp className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive"
-                                  onClick={() => rejectMutation.mutate(c.id)}
-                                  disabled={rejectMutation.isPending}
-                                  title="Rejeitar"
-                                >
-                                  <ThumbsDown className="h-3.5 w-3.5" />
-                                </Button>
-                              </>
-                            )}
-                            {c.market_id && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => window.open(`/market/${c.market_id}`, '_blank')}
-                                title="Ver mercado"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
+                            {m.status === 'open' && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSchedulingMarket(m)} title="Agendar travamento">
+                                <Clock className={cn("h-3.5 w-3.5", m.lock_date ? 'text-primary' : 'text-muted-foreground')} />
                               </Button>
                             )}
+                            {m.status !== 'resolved' && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500 hover:text-green-400" onClick={() => setResolvingMarket(m)} title="Resolver mercado">
+                                <CheckCircle className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            {m.status === 'closed' && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-accent-foreground hover:text-primary" onClick={() => retryAiResolve.mutate(m.id)} disabled={retryAiResolve.isPending} title="Re-tentar resolução via IA">
+                                <RotateCw className={cn("h-3.5 w-3.5", retryAiResolve.isPending && "animate-spin")} />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingMarket(m); setFormOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateMarket(m)}><Copy className="h-3.5 w-3.5" /></Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir mercado?</AlertDialogTitle>
+                                  <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteMutation.mutate(m.id)}>Excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
-        {/* Markets Table */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar mercados..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className="pl-9" />
-          </div>
-          <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); setPage(0); }}>
-            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(0); }}>
-            <SelectTrigger className="w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="rounded-lg border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pergunta</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Participantes</TableHead>
-                <TableHead>Travamento</TableHead>
-                <TableHead>Destaque</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-               ) : markets.length === 0 ? (
-                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum mercado encontrado</TableCell></TableRow>
-              ) : (
-                markets.map((m: any) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="max-w-[250px] text-sm font-medium" title={m.question}>
-                      <span className="block truncate">{m.question}</span>
-                    </TableCell>
-                    <TableCell><Badge variant="secondary" className="text-xs">{m.category}</Badge></TableCell>
-                    <TableCell>
-                      <Select defaultValue={m.status} onValueChange={(s) => statusMutation.mutate({ id: m.id, status: s })}>
-                        <SelectTrigger className="h-7 w-[100px] text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="text-sm">{m.total_participants}</TableCell>
-                    <TableCell className="text-xs">
-                      {m.lock_date ? (
-                        <span className={m.lock_date && new Date(m.lock_date) <= new Date() ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
-                          {format(new Date(m.lock_date), 'dd/MM/yy HH:mm')}
-                          {new Date(m.lock_date) <= new Date() && <Badge variant="outline" className="ml-1 text-[10px] border-destructive text-destructive">Travado</Badge>}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <button onClick={() => toggleFeatured.mutate({ id: m.id, featured: !m.featured })} className="hover:text-primary transition-colors">
-                        <Star className={`h-4 w-4 ${m.featured ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
-                      </button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {m.status === 'open' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => setSchedulingMarket(m)}
-                            title="Agendar travamento"
-                          >
-                            <Clock className={cn("h-3.5 w-3.5", m.lock_date ? 'text-primary' : 'text-muted-foreground')} />
-                          </Button>
-                        )}
-                        {m.status !== 'resolved' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-green-500 hover:text-green-400"
-                            onClick={() => setResolvingMarket(m)}
-                            title="Resolver mercado"
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {m.status === 'closed' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-accent-foreground hover:text-primary"
-                            onClick={() => retryAiResolve.mutate(m.id)}
-                            disabled={retryAiResolve.isPending}
-                            title="Re-tentar resolução via IA"
-                          >
-                            <RotateCw className={cn("h-3.5 w-3.5", retryAiResolve.isPending && "animate-spin")} />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingMarket(m); setFormOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateMarket(m)}><Copy className="h-3.5 w-3.5" /></Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir mercado?</AlertDialogTitle>
-                              <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteMutation.mutate(m.id)}>Excluir</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2">
-            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-            <span className="text-sm text-muted-foreground">{page + 1} / {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
-          </div>
-        )}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button>
+                <span className="text-sm text-muted-foreground">{page + 1} / {totalPages}</span>
+                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Próximo</Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         <MarketFormDialog
           open={formOpen}
