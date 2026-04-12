@@ -40,7 +40,8 @@ export function useSyntheticOverlay(markets: Market[]): {
   const viewMode = getViewMode();
 
   const result = useMemo(() => {
-    if (!isAdmin || enabledMap.size === 0 || viewMode === 'real') {
+    // For admins: respect viewMode. For everyone else: always apply synthetic data.
+    if (enabledMap.size === 0 || (isAdmin && viewMode === 'real')) {
       return { markets, syntheticIds: new Set<string>() };
     }
 
@@ -87,7 +88,7 @@ export function useSingleSyntheticOverlay(market: Market | null | undefined): {
   const viewMode = getViewMode();
 
   return useMemo(() => {
-    if (!market || !isAdmin || viewMode === 'real') {
+    if (!market || (isAdmin && viewMode === 'real')) {
       return { market, isSynthetic: false };
     }
 
