@@ -8,6 +8,7 @@ import { VoteBar } from '@/components/futra/VoteBar';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users } from 'lucide-react';
 import { useHomeFeeds, useLeaderboard } from '@/hooks/useMarkets';
+import { useSyntheticOverlay } from '@/hooks/useSyntheticOverlay';
 import { CATEGORIES } from '@/types';
 import { MarketGridSkeleton, HeroMarketSkeleton, LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
@@ -32,13 +33,24 @@ export default function HomePage() {
   const { data: feeds, isLoading, isError, refetch } = useHomeFeeds();
   const { data: topUsers, isLoading: loadingUsers } = useLeaderboard();
 
-  const featured = feeds?.featured || [];
-  const trending = feeds?.trending || [];
-  const popular = feeds?.popular || [];
-  const ending = feeds?.ending_soon || [];
-  const allMarkets = [...featured, ...trending, ...popular, ...ending];
-  // Deduplicate for stats
-  const markets = Array.from(new Map(allMarkets.map(m => [m.id, m])).values());
+  // Collect all unique markets for synthetic overlay
+  const rawFeatured = feeds?.featured || [];
+  const rawTrending = feeds?.trending || [];
+  const rawPopular = feeds?.popular || [];
+  const rawEnding = feeds?.ending_soon || [];
+  const allRawMarkets = [...rawFeatured, ...rawTrending, ...rawPopular, ...rawEnding];
+  const uniqueRaw = Array.from(new Map(allRawMarkets.map(m => [m.id, m])).values());
+
+  // Apply synthetic overlay (only affects admin view)
+  const { markets: overlayedMarkets } = useSyntheticOverlay(uniqueRaw);
+  const overlayMap = new Map(overlayedMarkets.map(m => [m.id, m]));
+  const applyOverlay = (list: any[]) => list.map(m => overlayMap.get(m.id) || m);
+
+  const featured = applyOverlay(rawFeatured);
+  const trending = applyOverlay(rawTrending);
+  const popular = applyOverlay(rawPopular);
+  const ending = applyOverlay(rawEnding);
+  const markets = overlayedMarkets;
 
   const heroMarket = featured[0];
   const heroCard = heroMarket ? dbToCard(heroMarket) : null;
