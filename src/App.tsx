@@ -46,6 +46,8 @@ const AdminUsers = React.lazy(() => import("./pages/admin/AdminUsers"));
 const AdminLogs = React.lazy(() => import("./pages/admin/AdminLogs"));
 const Forbidden = React.lazy(() => import("./pages/admin/Forbidden"));
 const HealthCheck = React.lazy(() => import("./pages/HealthCheck"));
+const BracketIndex = React.lazy(() => import("./pages/bracket/BracketIndex"));
+const BracketPage = React.lazy(() => import("./pages/bracket/BracketPage"));
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -124,6 +126,8 @@ const App = () => {
                       <Route path="/terms" element={<Terms />} />
                       <Route path="/privacy" element={<Privacy />} />
                       <Route path="/contact" element={<Contact />} />
+                      <Route path="/bracket" element={<BracketIndex />} />
+                      <Route path="/bracket/:slug" element={<BracketPage />} />
                       <Route path="/forbidden" element={<Forbidden />} />
                       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                       <Route path="/admin/markets" element={<AdminRoute><AdminMarkets /></AdminRoute>} />
