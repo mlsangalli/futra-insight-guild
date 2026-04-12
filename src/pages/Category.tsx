@@ -31,7 +31,7 @@ export default function CategoryPage() {
   const rawMarkets = markets || [];
   const { markets: overlayedMarkets } = useSyntheticOverlay(rawMarkets as any);
   const paginatedMarkets = overlayedMarkets.slice(0, (page + 1) * PAGE_SIZE);
-  const hasMore = paginatedMarkets.length < allMarkets.length;
+  const hasMore = paginatedMarkets.length < overlayedMarkets.length;
 
   return (
     <Layout>
