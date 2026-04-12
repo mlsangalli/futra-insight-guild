@@ -47,7 +47,8 @@ function MarketDetailSkeleton() {
 export default function MarketDetailPage() {
   const { id } = useParams<{ id: string }>();
   useRealtimeMarket(id || '');
-  const { data: market, isLoading, isError, refetch } = useMarket(id || '');
+  const { data: rawMarket, isLoading, isError, refetch } = useMarket(id || '');
+  const { market } = useSingleSyntheticOverlay(rawMarket);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [credits, setCredits] = useState(100);
   const [confirmed, setConfirmed] = useState(false);
