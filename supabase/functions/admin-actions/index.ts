@@ -16,8 +16,11 @@ function validateUUID(value: unknown): value is string {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const cors = corsHeaders(origin);
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: cors });
   }
 
   // Rate limit: 10 req/min per IP
