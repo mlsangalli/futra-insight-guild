@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     switch (action as ActionType) {
       case "promote_admin": {
         const { user_id } = body;
-        if (!validateUUID(user_id)) return errResponse("Valid user_id (UUID) required", 400);
+        if (!validateUUID(user_id)) return errResponse("Valid user_id (UUID) required", 400, cors);
         const { error } = await adminClient.from("user_roles").insert({ user_id, role: "admin" });
         if (error) throw error;
         result = { success: true };
@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
 
       case "demote_admin": {
         const { user_id } = body;
-        if (!validateUUID(user_id)) return errResponse("Valid user_id (UUID) required", 400);
-        if (user_id === user.id) return errResponse("Cannot remove own admin role", 400);
+        if (!validateUUID(user_id)) return errResponse("Valid user_id (UUID) required", 400, cors);
+        if (user_id === user.id) return errResponse("Cannot remove own admin role", 400, cors);
         const { error } = await adminClient.from("user_roles").delete().eq("user_id", user_id).eq("role", "admin");
         if (error) throw error;
         result = { success: true };
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
 
       case "delete_market": {
         const { market_id } = body;
-        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
+        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400, cors);
         const { error } = await adminClient.from("markets").delete().eq("id", market_id);
         if (error) throw error;
         result = { success: true };
@@ -116,8 +116,8 @@ Deno.serve(async (req) => {
 
       case "update_market_status": {
         const { market_id, status } = body;
-        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
-        if (!status || !["open", "closed"].includes(status)) return errResponse("Valid status required (open, closed). Use resolve_market action to resolve.", 400);
+        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400, cors);
+        if (!status || !["open", "closed"].includes(status)) return errResponse("Valid status required (open, closed). Use resolve_market action to resolve.", 400, cors);
         const { error } = await adminClient.from("markets").update({ status }).eq("id", market_id);
         if (error) throw error;
         result = { success: true };
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
 
       case "toggle_featured": {
         const { market_id, featured } = body;
-        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
+        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400, cors);
         const { error } = await adminClient.from("markets").update({ featured: !!featured }).eq("id", market_id);
         if (error) throw error;
         result = { success: true };
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
 
       case "toggle_trending": {
         const { market_id, trending } = body;
-        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
+        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400, cors);
         const { error } = await adminClient.from("markets").update({ trending: !!trending }).eq("id", market_id);
         if (error) throw error;
         result = { success: true };
@@ -144,11 +144,11 @@ Deno.serve(async (req) => {
 
       case "schedule_lock": {
         const { market_id, lock_date } = body;
-        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
+        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400, cors);
         if (lock_date) {
           const d = new Date(lock_date);
-          if (isNaN(d.getTime())) return errResponse("Invalid lock_date", 400);
-          if (d <= new Date()) return errResponse("lock_date must be in the future", 400);
+          if (isNaN(d.getTime())) return errResponse("Invalid lock_date", 400, cors);
+          if (d <= new Date()) return errResponse("lock_date must be in the future", 400, cors);
         }
         const { error } = await adminClient.from("markets").update({ lock_date: lock_date || null }).eq("id", market_id);
         if (error) throw error;
@@ -158,8 +158,8 @@ Deno.serve(async (req) => {
 
       case "resolve_market": {
         const { market_id, winning_option } = body;
-        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
-        if (!winning_option) return errResponse("winning_option required", 400);
+        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400, cors);
+        if (!winning_option) return errResponse("winning_option required", 400, cors);
 
         // Use the canonical RPC — same path as automatic resolution
         const { data: rpcResult, error: rpcError } = await adminClient.rpc("resolve_market_and_score", {
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
         });
 
         if (rpcError) {
-          return errResponse(rpcError.message, 400);
+          return errResponse(rpcError.message, 400, cors);
         }
 
         result = rpcResult;
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
 
       case "approve_candidate": {
         const { candidate_id, question, description, category, end_date, options, resolution_source: res_source } = body;
-        if (!validateUUID(candidate_id)) return errResponse("Valid candidate_id (UUID) required", 400);
+        if (!validateUUID(candidate_id)) return errResponse("Valid candidate_id (UUID) required", 400, cors);
 
         // Fetch candidate
         const { data: candidate, error: candErr } = await adminClient
@@ -186,8 +186,8 @@ Deno.serve(async (req) => {
           .eq("id", candidate_id)
           .single();
 
-        if (candErr || !candidate) return errResponse("Candidate not found", 404);
-        if (candidate.status === "published") return errResponse("Already published", 400);
+        if (candErr || !candidate) return errResponse("Candidate not found", 404, cors);
+        if (candidate.status === "published") return errResponse("Already published", 400, cors);
 
         const finalQuestion = question || candidate.generated_question;
         const finalDescription = description || candidate.generated_description || "";
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
         const finalOptions = options || candidate.generated_options || [];
         const finalResSource = res_source || candidate.resolution_source || "";
 
-        if (!finalQuestion) return errResponse("Question is required", 400);
+        if (!finalQuestion) return errResponse("Question is required", 400, cors);
 
         // Check for duplicate market
         const { data: existing } = await adminClient
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
           .limit(1);
 
         if (existing && existing.length > 0) {
-          return errResponse(`Similar market already exists: ${existing[0].id}`, 409);
+          return errResponse(`Similar market already exists: ${existing[0].id}`, 409, cors);
         }
 
         // Insert into markets
@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
 
       case "reject_candidate": {
         const { candidate_id } = body;
-        if (!validateUUID(candidate_id)) return errResponse("Valid candidate_id (UUID) required", 400);
+        if (!validateUUID(candidate_id)) return errResponse("Valid candidate_id (UUID) required", 400, cors);
 
         const { error: rejErr } = await adminClient
           .from("scheduled_markets")
@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
 
       case "edit_market": {
         const { market_id, question, description, category, end_date, resolution_rules, resolution_source, options } = body;
-        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400);
+        if (!validateUUID(market_id)) return errResponse("Valid market_id (UUID) required", 400, cors);
 
         // Build update payload with only provided fields
         const updatePayload: Record<string, unknown> = {};
