@@ -767,6 +767,47 @@ export type Database = {
         }
         Relationships: []
       }
+      synthetic_market_data: {
+        Row: {
+          config: Json
+          created_at: string
+          enabled: boolean
+          id: string
+          market_id: string
+          seed: number
+          snapshot: Json
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          market_id: string
+          seed?: number
+          snapshot?: Json
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          market_id?: string
+          seed?: number
+          snapshot?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "synthetic_market_data_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: true
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_id: string
