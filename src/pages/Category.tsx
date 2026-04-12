@@ -5,6 +5,7 @@ import { useMarkets } from '@/hooks/useMarkets';
 import { CATEGORIES } from '@/types';
 import { FolderOpen } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
+import { useSyntheticOverlay } from '@/hooks/useSyntheticOverlay';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { SEO } from '@/components/SEO';
@@ -27,9 +28,10 @@ export default function CategoryPage() {
   const { data: markets, isLoading, isError, refetch } = useMarkets({ category });
   const [page, setPage] = useState(0);
 
-  const allMarkets = markets || [];
-  const paginatedMarkets = allMarkets.slice(0, (page + 1) * PAGE_SIZE);
-  const hasMore = paginatedMarkets.length < allMarkets.length;
+  const rawMarkets = markets || [];
+  const { markets: overlayedMarkets } = useSyntheticOverlay(rawMarkets as any);
+  const paginatedMarkets = overlayedMarkets.slice(0, (page + 1) * PAGE_SIZE);
+  const hasMore = paginatedMarkets.length < overlayedMarkets.length;
 
   return (
     <Layout>

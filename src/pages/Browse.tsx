@@ -9,6 +9,7 @@ import { Search, X } from 'lucide-react';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
 import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';
+import { useSyntheticOverlay } from '@/hooks/useSyntheticOverlay';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -53,7 +54,8 @@ export default function BrowsePage() {
     page,
   });
 
-  const markets = data?.data ?? [];
+  const rawMarkets = data?.data ?? [];
+  const { markets: markets } = useSyntheticOverlay(rawMarkets as any);
   const totalCount = data?.totalCount ?? 0;
   const pageSize = 20;
   const hasMore = (page + 1) * pageSize < totalCount;
