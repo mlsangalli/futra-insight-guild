@@ -15,9 +15,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminLog } from '@/hooks/useAdminLog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Copy, Search, CheckCircle, Clock, Zap, RotateCw, ThumbsUp, ThumbsDown, Eye, AlertTriangle, TrendingUp, X, FileText, CheckCheck, AlertCircle, Layers, FlaskConical } from 'lucide-react';
 import { parseMarketText, parseMultipleMarkets, type BulkParseResult } from '@/lib/market-text-parser';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SyntheticPanel } from '@/components/admin/SyntheticPanel';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -311,6 +313,23 @@ export default function AdminMarkets() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h1 className="text-2xl font-display font-bold">Mercados</h1>
+        </div>
+
+        <Tabs defaultValue="markets" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="markets">Mercados</TabsTrigger>
+            <TabsTrigger value="candidates">Candidatos</TabsTrigger>
+            <TabsTrigger value="simulation" className="flex items-center gap-1">
+              <FlaskConical className="h-3.5 w-3.5" /> Simulação
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="simulation">
+            <SyntheticPanel />
+          </TabsContent>
+
+          <TabsContent value="markets">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3">
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => triggerAutoCreate.mutate()} disabled={triggerAutoCreate.isPending}>
               <Zap className="h-4 w-4 mr-1" /> {triggerAutoCreate.isPending ? 'Gerando...' : 'Auto-Gerar'}
