@@ -99,7 +99,7 @@ export function useBracketEntry(tournamentId: string | undefined) {
     }).filter(Boolean) as (import('@/types/bracket').GroupTeam & { groupLetter: string })[];
   }, [groups, localState.groupPicks]);
 
-  // Resolve a source like "1A", "2B", "3rd_1", "W_R32_1" to a team name
+  // Resolve a source like "1A", "2B", "3A_B_F" (third place from groups A/B/F), "W_R32_1" to a team name
   const resolveSource = useCallback((source: string): string | null => {
     if (!groups || !matches) return null;
 
@@ -118,11 +118,14 @@ export function useBracketEntry(tournamentId: string | undefined) {
       return team?.team_name ?? null;
     }
 
-    // Third place source: "3rd_N"
-    const thirdMatch = source.match(/^3rd_(\d+)$/);
-    if (thirdMatch) {
-      const idx = parseInt(thirdMatch[1]) - 1;
-      return localState.thirdPlaceQualifiers[idx] ?? null;
+    // Third place pool source: "3A_B_F" means the 3rd-place qualifier from groups A, B, or F
+    if (source.startsWith('3') && source.includes('_')) {
+      const letters = source.substring(1).split('_');
+      // Find which of the user's selected third-place qualifiers comes from one of these groups
+      const qualifying = thirdPlaceTeams.filter(
+        t => letters.includes(t.groupLetter) && localState.thirdPlaceQualifiers.includes(t.team_name)
+      );
+      return qualifying.length === 1 ? qualifying[0].team_name : null;
     }
 
     // Knockout winner source: "W_R32_1", "W_R16_2", etc.
@@ -136,7 +139,7 @@ export function useBracketEntry(tournamentId: string | undefined) {
     }
 
     return null;
-  }, [groups, matches, localState]);
+  }, [groups, matches, localState, thirdPlaceTeams]);
 
   // Set group picks for a group
   const setGroupOrder = useCallback((groupId: string, orderedTeamIds: string[]) => {
@@ -189,7 +192,8 @@ export function useBracketEntry(tournamentId: string | undefined) {
       const newKnockout = { ...prev.knockoutPicks };
       if (matches) {
         const invalidateMatch = (m: BracketMatch) => {
-          if (m.home_source.startsWith('3rd_') || m.away_source.startsWith('3rd_')) {
+          const isThirdSource = (s: string) => s.startsWith('3') && s.includes('_') && !s.startsWith('W_');
+          if (isThirdSource(m.home_source) || isThirdSource(m.away_source)) {
             delete newKnockout[m.id];
             const downstreamSrc = `W_${m.round}_${m.match_order}`;
             matches.filter(dm => dm.home_source === downstreamSrc || dm.away_source === downstreamSrc)
