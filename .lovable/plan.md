@@ -1,152 +1,58 @@
 
 
-# FUTRA Bracket — Copa do Mundo 2026
+# Corrigir Dados do Bracket — Copa do Mundo 2026 (Grupos Oficiais)
 
-## Visão geral
+## Problema
 
-Produto independente dentro da FUTRA: uma página interativa onde o usuário prevê o caminho completo da Copa do Mundo 2026 — da fase de grupos até o campeão — em um bracket visual premium com persistência no banco de dados.
+Os dados seed atuais usam grupos fictícios (A: EUA/Holanda/Senegal/Costa Rica, etc.). O prompt do usuário fornece a composição oficial dos 12 grupos conforme sorteio da FIFA. Precisamos substituir completamente os dados de grupos e times, e corrigir a estrutura do R32 para refletir o chaveamento oficial.
 
-## Fase 1 — Fundação (esta implementação)
+## O que muda
 
-### 1. Migração SQL — 7 tabelas novas
+### 1. Migração SQL — Limpar e re-inserir seed data
 
-```text
-tournaments
-├── id, name, slug, status, deadline, scoring_rules (jsonb), created_at
-
-tournament_groups
-├── id, tournament_id, group_letter
-
-tournament_group_teams
-├── id, group_id, team_name, team_code (ISO), flag_emoji, seed_position
-
-bracket_matches
-├── id, tournament_id, round (R32/R16/QF/SF/F), match_order, bracket_side (L/R)
-├── home_source, away_source (ex: "1A", "2B", "3rd_X")
-├── official_winner (preenchido pelo admin após resultado real)
-
-bracket_entries
-├── id, user_id, tournament_id, status (draft/submitted/scored)
-├── progress_percent, champion_pick, total_score, created_at, updated_at
-
-bracket_entry_group_picks
-├── id, entry_id, group_id, team_id, predicted_position (1-4)
-├── UNIQUE(entry_id, group_id, predicted_position)
-
-bracket_entry_knockout_picks
-├── id, entry_id, match_id, chosen_team_name
-```
-
-RLS: leitura pública para tournaments/groups/teams/matches. Entries e picks restritos ao próprio user_id.
-
-### 2. Seed Data — Copa do Mundo 2026
-
-Inserir via migração:
-- 1 tournament (Copa do Mundo 2026, 48 times)
-- 12 grupos (A-L) com 4 times cada
-- 32 bracket_matches (R32→R16→QF→SF→Final) com source_dependency configurado
-
-A Copa 2026 tem 48 times em 12 grupos. Os 2 primeiros de cada grupo (24) + 8 melhores terceiros = 32 classificados → Round of 32.
-
-### 3. Páginas e componentes
+Uma nova migração que:
+- Deleta todos os `bracket_entry_knockout_picks`, `bracket_entry_group_picks`, `bracket_entries` existentes (apenas 1 entry de teste)
+- Deleta todos os `bracket_matches`, `tournament_group_teams`, `tournament_groups` do torneio `copa-2026`
+- Re-insere os 12 grupos com as seleções oficiais:
 
 ```text
-src/pages/bracket/
-├── BracketPage.tsx          — página principal com stepper
-├── GroupStage.tsx            — drag-to-reorder dos times por grupo
-├── ThirdPlacePicker.tsx      — selecionar 8 melhores terceiros
-├── KnockoutBracket.tsx       — bracket visual com conectores SVG
-├── BracketSummary.tsx        — resumo + submit
-
-src/components/bracket/
-├── GroupCard.tsx              — card de um grupo com 4 times ordenáveis
-├── TeamBadge.tsx             — flag + nome do time
-├── MatchNode.tsx             — nó de um confronto no bracket
-├── BracketConnectors.tsx     — linhas SVG conectando fases
-├── BracketProgress.tsx       — barra de progresso global
+A: México, África do Sul, Coreia do Sul, República Tcheca
+B: Canadá, Bósnia, Catar, Suíça
+C: Brasil, Marrocos, Haiti, Escócia
+D: Estados Unidos, Paraguai, Austrália, Turquia
+E: Alemanha, Curaçao, Costa do Marfim, Equador
+F: Holanda, Japão, Suécia, Tunísia
+G: Bélgica, Egito, Irã, Nova Zelândia
+H: Espanha, Cabo Verde, Arábia Saudita, Uruguai
+I: França, Senegal, Iraque, Noruega
+J: Argentina, Argélia, Áustria, Jordânia
+K: Portugal, RD Congo, Uzbequistão, Colômbia
+L: Inglaterra, Croácia, Gana, Panamá
 ```
 
-### 4. Hook principal — `useBracketEntry`
+- Re-insere os 16 matches de R32 com chaveamento correto baseado na estrutura oficial (1º de cada grupo vs 2º de outro ou 3º melhor colocado)
+- Mantém R16, QF, SF, F com a mesma estrutura de dependência (`W_R32_N`)
 
-- Carrega entry do usuário (ou cria draft)
-- Gerencia state local dos picks (grupos + knockout)
-- Auto-save via debounce (1.5s)
-- Recálculo cascata: alterar pick de grupo → limpa knockout picks dependentes
-- Calcula progress_percent
-- Submit final quando 100%
+### 2. Chaveamento R32 oficial
 
-### 5. Lógica de cascata
+Baseado na estrutura FIFA 2026 com 48 times:
+- 24 primeiros e segundos + 8 melhores terceiros = 32 classificados
+- Os confrontos R32 seguem o mapeamento oficial de grupo cruzado
 
-```text
-Grupo alterado → recalcular terceiros disponíveis
-Terceiros alterados → recalcular R32 matchups
-R32 alterado → limpar R16 picks dependentes
-... até a final
-```
+Os 16 jogos do R32 serão configurados com `home_source`/`away_source` corretos (ex: `1A` vs `2C`, `1B` vs `3rd_X`, etc.) conforme as regras oficiais da FIFA para o formato expandido.
 
-Cada match tem `home_source` e `away_source` (ex: "W_M1", "W_M2") que permitem resolver qual time deve aparecer com base nos picks anteriores.
+### 3. Códigos ISO e bandeiras
 
-### 6. Rotas
+Atualizar `team_code` e `flag_emoji` para todas as 48 seleções com dados corretos.
 
-- `/bracket` — lista de torneios ativos (inicialmente só Copa 2026)
-- `/bracket/:slug` — página do bracket interativo
-- `/bracket/:slug/leaderboard` — ranking do bracket
+## Arquivos modificados
 
-### 7. Admin
+- **1 nova migração SQL**: limpa dados antigos e insere dados oficiais
+- Nenhuma mudança de código frontend necessária — a estrutura das tabelas e a lógica do hook permanecem idênticas
 
-Nova seção no admin existente:
-- `/admin/tournaments` — CRUD de torneios
-- Configurar deadline, scoring, status (open/locked/scored)
-- Registrar resultados oficiais (oficial_winner em cada match)
+## Notas
 
-### 8. Scoring (preparado, não ativo até resultados reais)
-
-```json
-{
-  "group_correct_position": 2,
-  "group_qualified": 1,
-  "third_place_correct": 2,
-  "R32": 2,
-  "R16": 4,
-  "QF": 6,
-  "SF": 10,
-  "final": 15,
-  "champion": 25
-}
-```
-
-### 9. UX
-
-- Desktop: bracket horizontal com scroll, grupos em grid 4x3
-- Mobile: stepper vertical, grupos empilhados, bracket com scroll horizontal
-- Animação sutil (framer-motion) ao avançar time
-- Estados visuais: pendente (outline), definido (preenchido), bloqueado (lock icon), concluído (check)
-- Campeão com destaque dourado no centro
-
-### 10. Navegação
-
-- Adicionar "Bracket" no Header NAV_ITEMS e no BottomNav
-- Card promocional na Home page
-
-## Arquivos criados/modificados
-
-**Novos** (~15 arquivos):
-- 1 migração SQL (tabelas + seed data + RLS)
-- 4 páginas (BracketPage, Leaderboard, Admin)
-- 6 componentes bracket
-- 2 hooks (useBracketEntry, useTournament)
-- 1 tipo (bracket types)
-
-**Modificados** (~4 arquivos):
-- App.tsx (rotas)
-- Header.tsx (nav item)
-- BottomNav.tsx (nav item)
-- AdminSidebar.tsx (link admin)
-
-## Fora do escopo inicial
-
-- Múltiplas entries por usuário
-- Card compartilhável (imagem gerada)
-- Duplicar entry
-- Scoring automático (requer resultados reais)
+- A 1 entry existente será removida (dados de teste incompatíveis com novos grupos)
+- O deadline do torneio será atualizado para `2026-06-10T12:00:00Z` (12h UTC do dia anterior ao início)
+- Posições marcadas como "Intercontinental 2" (Iraque no Grupo I) serão incluídas normalmente; se necessário, pode-se adicionar um campo `verified` no futuro
 
