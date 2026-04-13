@@ -8,9 +8,10 @@ interface GroupCardProps {
   orderedTeams: GroupTeam[];
   onReorder: (teamIds: string[]) => void;
   disabled?: boolean;
+  isConfirmed?: boolean;
 }
 
-export function GroupCard({ group, orderedTeams, onReorder, disabled }: GroupCardProps) {
+export function GroupCard({ group, orderedTeams, onReorder, disabled, isConfirmed }: GroupCardProps) {
   const teams = orderedTeams.length === 4 ? orderedTeams : group.teams;
 
   const moveTeam = useCallback((fromIdx: number, toIdx: number) => {
@@ -76,9 +77,24 @@ export function GroupCard({ group, orderedTeams, onReorder, disabled }: GroupCar
           </div>
         ))}
       </div>
-      <div className="px-4 py-2 bg-secondary/20 text-[10px] text-muted-foreground flex gap-4">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary/50" /> Classificado</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning/50" /> Possível 3º</span>
+      <div className="px-4 py-2 bg-secondary/20 flex items-center justify-between">
+        <div className="text-[10px] text-muted-foreground flex gap-4">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary/50" /> Classificado</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning/50" /> Possível 3º</span>
+        </div>
+        {isConfirmed ? (
+          <span className="text-[10px] font-medium text-accent flex items-center gap-1">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Confirmado
+          </span>
+        ) : !disabled ? (
+          <button
+            onClick={() => onReorder(teams.map(t => t.id))}
+            className="text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            Confirmar ✓
+          </button>
+        ) : null}
       </div>
     </div>
   );
