@@ -510,7 +510,13 @@ export default function AdminMarkets() {
                         </TableCell>
                         <TableCell><Badge variant="secondary" className="text-xs">{m.category}</Badge></TableCell>
                         <TableCell>
-                          <Select defaultValue={m.status} onValueChange={(s) => statusMutation.mutate({ id: m.id, status: s })}>
+                          <Select defaultValue={m.status} onValueChange={(s) => {
+                            if (s === 'resolved') {
+                              setResolvingMarket(m);
+                            } else {
+                              statusMutation.mutate({ id: m.id, status: s });
+                            }
+                          }}>
                             <SelectTrigger className="h-7 w-[100px] text-xs"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
