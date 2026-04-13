@@ -192,7 +192,8 @@ export function useBracketEntry(tournamentId: string | undefined) {
       const newKnockout = { ...prev.knockoutPicks };
       if (matches) {
         const invalidateMatch = (m: BracketMatch) => {
-          if (m.home_source.startsWith('3rd_') || m.away_source.startsWith('3rd_')) {
+          const isThirdSource = (s: string) => s.startsWith('3') && s.includes('_') && !s.startsWith('W_');
+          if (isThirdSource(m.home_source) || isThirdSource(m.away_source)) {
             delete newKnockout[m.id];
             const downstreamSrc = `W_${m.round}_${m.match_order}`;
             matches.filter(dm => dm.home_source === downstreamSrc || dm.away_source === downstreamSrc)
