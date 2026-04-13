@@ -36,6 +36,17 @@ export default function BracketPage() {
   const stepIndex = BRACKET_STEPS.findIndex(s => s.key === step);
 
   const nextStep = () => {
+    // Auto-confirm unset groups when leaving the groups step
+    if (step === 'groups' && groups) {
+      groups.forEach(g => {
+        const picks = localState.groupPicks[g.id];
+        if (!picks || picks.length !== 4) {
+          const defaultOrder = [...g.teams].sort((a, b) => a.seed_position - b.seed_position);
+          setGroupOrder(g.id, defaultOrder.map(t => t.id));
+        }
+      });
+    }
+
     if (stepIndex < BRACKET_STEPS.length - 1) {
       setStep(BRACKET_STEPS[stepIndex + 1].key);
     }
