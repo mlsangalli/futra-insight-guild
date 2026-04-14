@@ -1209,67 +1209,7 @@ export type Database = {
       }
     }
     Views: {
-      public_profiles: {
-        Row: {
-          accuracy_rate: number | null
-          avatar_url: string | null
-          bio: string | null
-          created_at: string | null
-          display_name: string | null
-          futra_score: number | null
-          global_rank: number | null
-          id: string | null
-          influence_level: Database["public"]["Enums"]["influence_level"] | null
-          resolved_predictions: number | null
-          specialties: string[] | null
-          streak: number | null
-          total_predictions: number | null
-          updated_at: string | null
-          user_id: string | null
-          username: string | null
-        }
-        Insert: {
-          accuracy_rate?: number | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          futra_score?: number | null
-          global_rank?: number | null
-          id?: string | null
-          influence_level?:
-            | Database["public"]["Enums"]["influence_level"]
-            | null
-          resolved_predictions?: number | null
-          specialties?: string[] | null
-          streak?: number | null
-          total_predictions?: number | null
-          updated_at?: string | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Update: {
-          accuracy_rate?: number | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          futra_score?: number | null
-          global_rank?: number | null
-          id?: string | null
-          influence_level?:
-            | Database["public"]["Enums"]["influence_level"]
-            | null
-          resolved_predictions?: number | null
-          specialties?: string[] | null
-          streak?: number | null
-          total_predictions?: number | null
-          updated_at?: string | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       calculate_user_scores: {
@@ -1326,6 +1266,27 @@ export type Database = {
           influence_level: Database["public"]["Enums"]["influence_level"]
           resolved_predictions: number
           total_predictions: number
+          user_id: string
+          username: string
+        }[]
+      }
+      get_public_profile: {
+        Args: { p_username: string }
+        Returns: {
+          accuracy_rate: number
+          avatar_url: string
+          bio: string
+          created_at: string
+          display_name: string
+          futra_score: number
+          global_rank: number
+          id: string
+          influence_level: Database["public"]["Enums"]["influence_level"]
+          resolved_predictions: number
+          specialties: string[]
+          streak: number
+          total_predictions: number
+          updated_at: string
           user_id: string
           username: string
         }[]
