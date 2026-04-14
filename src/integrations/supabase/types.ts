@@ -1270,6 +1270,27 @@ export type Database = {
           username: string
         }[]
       }
+      get_public_profile: {
+        Args: { p_username: string }
+        Returns: {
+          accuracy_rate: number
+          avatar_url: string
+          bio: string
+          created_at: string
+          display_name: string
+          futra_score: number
+          global_rank: number
+          id: string
+          influence_level: Database["public"]["Enums"]["influence_level"]
+          resolved_predictions: number
+          specialties: string[]
+          streak: number
+          total_predictions: number
+          updated_at: string
+          user_id: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

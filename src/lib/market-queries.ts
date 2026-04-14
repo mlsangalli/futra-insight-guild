@@ -198,12 +198,10 @@ export async function fetchLeaderboard(filters?: { period?: string; category?: s
 
 export async function fetchProfile(username: string) {
   const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('username', username)
-    .single();
+    .rpc('get_public_profile', { p_username: username });
   if (error) throw error;
-  return data;
+  if (!data || (data as any[]).length === 0) return null;
+  return (data as any[])[0];
 }
 
 export async function fetchUserPredictions(userId: string) {

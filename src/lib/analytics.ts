@@ -19,9 +19,11 @@ interface AnalyticsEvent {
 export async function trackEvent({ event, properties }: AnalyticsEvent) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
+    // Only track for authenticated users (RLS requires authentication)
+    if (!session?.user) return;
     await supabase.from('analytics_events' as any).insert({
       event_name: event,
-      user_id: session?.user?.id ?? null,
+      user_id: session.user.id,
       properties: properties ?? {},
       url: window.location.pathname,
       referrer: document.referrer || null,
