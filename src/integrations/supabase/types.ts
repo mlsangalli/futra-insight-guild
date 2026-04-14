@@ -1209,7 +1209,67 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profiles: {
+        Row: {
+          accuracy_rate: number | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          futra_score: number | null
+          global_rank: number | null
+          id: string | null
+          influence_level: Database["public"]["Enums"]["influence_level"] | null
+          resolved_predictions: number | null
+          specialties: string[] | null
+          streak: number | null
+          total_predictions: number | null
+          updated_at: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          accuracy_rate?: number | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          futra_score?: number | null
+          global_rank?: number | null
+          id?: string | null
+          influence_level?:
+            | Database["public"]["Enums"]["influence_level"]
+            | null
+          resolved_predictions?: number | null
+          specialties?: string[] | null
+          streak?: number | null
+          total_predictions?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          accuracy_rate?: number | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          futra_score?: number | null
+          global_rank?: number | null
+          id?: string | null
+          influence_level?:
+            | Database["public"]["Enums"]["influence_level"]
+            | null
+          resolved_predictions?: number | null
+          specialties?: string[] | null
+          streak?: number | null
+          total_predictions?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_user_scores: {
