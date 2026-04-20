@@ -121,8 +121,12 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
           </div>
         </button>
 
-        {/* Body */}
-        <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
+        {/* Body — scrollable */}
+        <div
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-5"
+          style={{ touchAction: 'pan-y' }}
+          onPointerDownCapture={(e) => e.stopPropagation()}
+        >
           {/* Question */}
           <h2
             onClick={onOpenDetails}
@@ -152,9 +156,7 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
             </div>
           )}
 
-          <div className="flex-1" />
-
-          {/* Aposta — compacto */}
+          {/* Aposta */}
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
               {QUICK_AMOUNTS.map((amt) => (
@@ -198,7 +200,7 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
-                {sortedOptions.slice(0, 4).map((opt) => (
+                {sortedOptions.map((opt) => (
                   <Button
                     key={opt.id}
                     size="lg"

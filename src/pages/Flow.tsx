@@ -160,7 +160,7 @@ export default function FlowPage() {
 
       {/* Card stage */}
       <main className="relative flex flex-1 items-stretch justify-center px-3 pb-6 pt-2">
-        <div className="relative w-full max-w-md" style={{ height: 'min(78vh, 640px)' }}>
+        <div className="relative w-full max-w-md" style={{ height: 'min(82vh, 720px)' }}>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -206,7 +206,7 @@ export default function FlowPage() {
       </main>
 
       <p className="hidden pb-4 text-center text-xs text-muted-foreground sm:block">
-        Arraste → para SIM · ← para NÃO · ↑ para PULAR · Toque no card para detalhes
+        Arraste → SIM · ← NÃO · Toque para detalhes · Use o botão para pular em listas longas
       </p>
     </div>
   );
