@@ -89,6 +89,27 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_gateway_status: {
+        Row: {
+          id: number
+          last_error: string | null
+          paused_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          last_error?: string | null
+          paused_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          last_error?: string | null
+          paused_until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string | null
@@ -503,6 +524,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      market_resolution_attempts: {
+        Row: {
+          ai_gateway_paused_until: string | null
+          failure_count: number
+          last_attempt_at: string
+          last_error: string | null
+          market_id: string
+        }
+        Insert: {
+          ai_gateway_paused_until?: string | null
+          failure_count?: number
+          last_attempt_at?: string
+          last_error?: string | null
+          market_id: string
+        }
+        Update: {
+          ai_gateway_paused_until?: string | null
+          failure_count?: number
+          last_attempt_at?: string
+          last_error?: string | null
+          market_id?: string
+        }
+        Relationships: []
       }
       markets: {
         Row: {
@@ -1221,6 +1266,10 @@ export type Database = {
         Args: { p_user_mission_id: string }
         Returns: Json
       }
+      clear_market_resolution_attempts: {
+        Args: { p_market_id: string }
+        Returns: undefined
+      }
       get_browse_sorted: {
         Args: {
           p_category?: Database["public"]["Enums"]["market_category"]
@@ -1322,6 +1371,10 @@ export type Database = {
         Returns: string
       }
       recalculate_global_ranks: { Args: never; Returns: undefined }
+      record_market_resolution_failure: {
+        Args: { p_error: string; p_market_id: string }
+        Returns: undefined
+      }
       resolve_market_and_score: {
         Args: { p_market_id: string; p_winning_option: string }
         Returns: Json
