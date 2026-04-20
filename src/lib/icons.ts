@@ -2,6 +2,7 @@
  * Centralized lucide-react icon imports.
  * Each icon is imported from its individual ESM path so Rollup can
  * tree-shake unused icons (the barrel `lucide-react` defeats this).
+ * Auto-generated — to add new icons, edit gen_icons script and rerun build.
  */
 
 import Activity from 'lucide-react/dist/esm/icons/activity';
@@ -9,6 +10,7 @@ import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import ArrowUpRight from 'lucide-react/dist/esm/icons/arrow-up-right';
 import Award from 'lucide-react/dist/esm/icons/award';
 import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
 import Bell from 'lucide-react/dist/esm/icons/bell';
@@ -87,6 +89,7 @@ export {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   Award,
   BarChart3,
   Bell,
@@ -171,6 +174,8 @@ export const icons: Record<string, typeof Trophy> = {
   'arrow-left': ArrowLeft,
   ArrowRight,
   'arrow-right': ArrowRight,
+  ArrowUpRight,
+  'arrow-up-right': ArrowUpRight,
   Award,
   'award': Award,
   BarChart3,
