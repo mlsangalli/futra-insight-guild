@@ -457,6 +457,71 @@ export type Database = {
         }
         Relationships: []
       }
+      flow_sessions: {
+        Row: {
+          cards_answered: number
+          cards_shared: number
+          cards_skipped: number
+          cards_viewed: number
+          device_type: string
+          ended_at: string | null
+          id: string
+          started_at: string
+          total_credits_invested: number
+          user_id: string
+        }
+        Insert: {
+          cards_answered?: number
+          cards_shared?: number
+          cards_skipped?: number
+          cards_viewed?: number
+          device_type?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          total_credits_invested?: number
+          user_id: string
+        }
+        Update: {
+          cards_answered?: number
+          cards_shared?: number
+          cards_skipped?: number
+          cards_viewed?: number
+          device_type?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          total_credits_invested?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      flow_skips: {
+        Row: {
+          market_id: string
+          skipped_at: string
+          user_id: string
+        }
+        Insert: {
+          market_id: string
+          skipped_at?: string
+          user_id: string
+        }
+        Update: {
+          market_id?: string
+          skipped_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_skips_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_executions: {
         Row: {
           created_at: string
@@ -698,6 +763,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      prediction_conviction: {
+        Row: {
+          created_at: string
+          level: string
+          prediction_id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          level: string
+          prediction_id: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          level?: string
+          prediction_id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prediction_conviction_prediction_id_fkey"
+            columns: ["prediction_id"]
+            isOneToOne: true
+            referencedRelation: "predictions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       predictions: {
         Row: {
@@ -1311,6 +1408,28 @@ export type Database = {
           type: string
         }[]
       }
+      get_flow_feed: {
+        Args: { p_limit?: number }
+        Returns: {
+          category: Database["public"]["Enums"]["market_category"]
+          created_at: string
+          description: string
+          end_date: string
+          flow_score: number
+          id: string
+          image_alt: string
+          image_url: string
+          lock_date: string
+          options: Json
+          question: string
+          resolution_source: string
+          status: Database["public"]["Enums"]["market_status"]
+          total_credits: number
+          total_participants: number
+          type: string
+        }[]
+      }
+      get_flow_stats: { Args: { p_user_id?: string }; Returns: Json }
       get_home_feeds: { Args: never; Returns: Json }
       get_leaderboard: {
         Args: {
@@ -1383,8 +1502,13 @@ export type Database = {
       }
       recalculate_global_ranks: { Args: never; Returns: undefined }
       reconcile_credit_drift: { Args: never; Returns: Json }
+      record_flow_skip: { Args: { p_market_id: string }; Returns: undefined }
       record_market_resolution_failure: {
         Args: { p_error: string; p_market_id: string }
+        Returns: undefined
+      }
+      record_prediction_conviction: {
+        Args: { p_level: string; p_prediction_id: string }
         Returns: undefined
       }
       resolve_market_and_score: {
