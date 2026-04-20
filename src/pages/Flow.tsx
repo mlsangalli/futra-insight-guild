@@ -24,7 +24,7 @@ export default function FlowPage() {
   const sessionIdRef = useRef<string | null>(null);
 
   const [index, setIndex] = useState(0);
-  const [stats, setStats] = useState({ answered: 0, skipped: 0, invested: 0, viewed: 0 });
+  const [stats, setStats] = useState({ answered: 0, skipped: 0, invested: 0, viewed: 0, streak: 0 });
 
   const cards = useMemo(() => feed ?? [], [feed]);
   const current = cards[index];
@@ -88,7 +88,7 @@ export default function FlowPage() {
       { marketId: current.id, selectedOption: optionId, credits },
       {
         onSuccess: () => {
-          setStats((s) => ({ ...s, answered: s.answered + 1, invested: s.invested + credits }));
+          setStats((s) => ({ ...s, answered: s.answered + 1, invested: s.invested + credits, streak: s.streak + 1 }));
           void trackEvent({
             event: 'prediction_placed',
             properties: { mode: 'flow', market_id: current.id, credits },
@@ -106,7 +106,7 @@ export default function FlowPage() {
   const handleSkip = () => {
     if (!current) return;
     void recordSkip.mutateAsync(current.id).catch(() => {});
-    setStats((s) => ({ ...s, skipped: s.skipped + 1 }));
+    setStats((s) => ({ ...s, skipped: s.skipped + 1, streak: 0 }));
     advance();
   };
 
@@ -117,7 +117,7 @@ export default function FlowPage() {
 
   const handleRestart = () => {
     setIndex(0);
-    setStats({ answered: 0, skipped: 0, invested: 0, viewed: 0 });
+    setStats({ answered: 0, skipped: 0, invested: 0, viewed: 0, streak: 0 });
     void refetch();
   };
 
@@ -129,15 +129,16 @@ export default function FlowPage() {
       />
 
       {/* Header */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border/30 bg-background/80 px-4 py-3 backdrop-blur">
-        <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-          <Link to="/"><ChevronLeft className="mr-1 h-4 w-4" /> Sair</Link>
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border/20 bg-background/70 px-3 py-2 backdrop-blur-md">
+        <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-muted-foreground">
+          <Link to="/" aria-label="Sair do Flow"><ChevronLeft className="h-4 w-4" /></Link>
         </Button>
-        <div className="flex items-center gap-1.5 font-display text-sm font-bold">
-          <Zap className="h-4 w-4 text-primary" /> FUTRA Flow
+        <div className="flex items-center gap-1 font-display text-xs font-bold uppercase tracking-wider">
+          <Zap className="h-3.5 w-3.5 text-primary" /> Flow
         </div>
-        <div className="text-xs text-muted-foreground">
-          {profile?.futra_credits != null ? `${profile.futra_credits.toLocaleString('pt-BR')} FC` : ''}
+        <div className="font-display text-xs font-semibold tabular-nums text-foreground/80">
+          {profile?.futra_credits != null ? `${profile.futra_credits.toLocaleString('pt-BR')}` : '—'}
+          <span className="ml-0.5 text-[10px] text-muted-foreground">FC</span>
         </div>
       </header>
 
@@ -146,6 +147,7 @@ export default function FlowPage() {
         skipped={stats.skipped}
         invested={stats.invested}
         remaining={Math.max(0, cards.length - index)}
+        streak={stats.streak}
       />
 
       {/* Card stage */}
