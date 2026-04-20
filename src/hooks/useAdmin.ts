@@ -1,9 +1,23 @@
+import { useContext } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+/**
+ * Hook resiliente: retorna isAdmin=false se chamado fora do AuthProvider
+ * (evita quebra em árvores de componentes lazy/Suspense durante HMR).
+ */
 export function useAdmin() {
-  const { user, loading: authLoading } = useAuth();
+  let user: { id: string } | null = null;
+  let authLoading = false;
+  try {
+    const ctx = useAuth();
+    user = ctx.user;
+    authLoading = ctx.loading;
+  } catch {
+    // fora do AuthProvider — comportamento defensivo
+    return { isAdmin: false, loading: false };
+  }
 
   const { data: isAdmin = false, isLoading } = useQuery({
     queryKey: ['admin-role', user?.id],
