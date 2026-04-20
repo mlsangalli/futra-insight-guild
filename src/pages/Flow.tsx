@@ -190,16 +190,6 @@ export default function FlowPage() {
           )}
 
           <AnimatePresence mode="popLayout">
-            {!isFinished && next && (
-              <FlowCard
-                key={`next-${next.id}`}
-                market={next}
-                onAnswer={() => {}}
-                onSkip={() => {}}
-                onOpenDetails={() => {}}
-                isTop={false}
-              />
-            )}
             {!isFinished && current && (
               <FlowCard
                 key={`top-${current.id}`}
