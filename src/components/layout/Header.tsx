@@ -6,6 +6,7 @@ import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useUnreadCount } from '@/hooks/useNotifications';
 
 const NAV_ITEMS = [
   { label: 'Explorar', path: '/browse' },
@@ -23,6 +24,7 @@ export function Header() {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const { data: unreadCount } = useUnreadCount();
 
   const handleSignOut = async () => {
     await signOut();
@@ -52,8 +54,17 @@ export function Header() {
             </button>
 
             {user && (
-              <Link to="/notifications" className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-700 transition-colors relative">
+              <Link
+                to="/notifications"
+                aria-label={unreadCount ? `${unreadCount} notificações não lidas` : 'Notificações'}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-700 transition-colors relative"
+              >
                 <Bell className="h-5 w-5" />
+                {!!unreadCount && unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
             )}
 

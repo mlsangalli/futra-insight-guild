@@ -16,6 +16,7 @@ import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { DailyBonusBanner } from '@/components/futra/DailyBonusBanner';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 function dbToCard(m: any) {
   return {
@@ -80,7 +81,9 @@ export default function HomePage() {
       <SEO />
       {user && (
         <div className="container mx-auto px-4 pt-4">
-          <DailyBonusBanner />
+          <SectionErrorBoundary label="o bônus diário">
+            <DailyBonusBanner />
+          </SectionErrorBoundary>
         </div>
       )}
       {/* Hero */}
@@ -235,6 +238,7 @@ export default function HomePage() {
           <h2 className="font-display text-2xl font-bold text-foreground flex items-center gap-2"><Trophy className="h-5 w-5 text-emerald" /> Melhores previsores</h2>
           <Link to="/leaderboard" className="text-sm text-primary hover:underline">Ranking completo →</Link>
         </div>
+        <SectionErrorBoundary label="o ranking de previsores">
         {loadingUsers ? (
           <LeaderboardSkeleton count={5} />
         ) : (topUsers || []).length > 0 ? (
@@ -254,6 +258,7 @@ export default function HomePage() {
         ) : (
           <EmptyState title="Nenhum previsor ainda" description="Seja o primeiro a fazer previsões!" action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>} />
         )}
+        </SectionErrorBoundary>
       </section>
 
       {/* Categories */}
