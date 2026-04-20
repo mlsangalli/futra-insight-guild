@@ -19,6 +19,7 @@ import { useCreatePrediction } from '@/hooks/usePrediction';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState, EmptyState } from '@/components/futra/Skeletons';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { SEO } from '@/components/SEO';
 
 function formatNumber(n: number) {
@@ -225,7 +226,9 @@ export default function MarketDetailPage() {
               <p className="text-xs text-muted-foreground mt-2">Encerra em: {new Date(market.end_date).toLocaleDateString('pt-BR')}</p>
             </div>
 
-            <CommentSection marketId={market.id} />
+            <SectionErrorBoundary label="os comentários">
+              <CommentSection marketId={market.id} />
+            </SectionErrorBoundary>
           </div>
 
           <div className="lg:col-span-1 hidden lg:block">

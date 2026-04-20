@@ -22,6 +22,7 @@ import { PushNotificationBanner } from '@/components/futra/PushNotificationBanne
 import { ReferralCard } from '@/components/futra/ReferralCard';
 import { useCreditTransactions } from '@/hooks/useCreditTransactions';
 import { AchievementsSection } from '@/components/futra/AchievementsSection';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 const TABS = ['Abertas', 'Resolvidas', 'Salvas'];
 
@@ -60,8 +61,8 @@ export default function DashboardPage() {
     <Layout>
       <SEO title="Painel" description="Seu painel de controle na FUTRA." />
       <div className="container mx-auto px-4 py-8">
-        <PushNotificationBanner />
-        <DailyBonusBanner />
+        <SectionErrorBoundary label="o aviso de notificações"><PushNotificationBanner /></SectionErrorBoundary>
+        <SectionErrorBoundary label="o bônus diário"><DailyBonusBanner /></SectionErrorBoundary>
         <div className="flex items-center justify-between mb-8 mt-4">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">Painel</h1>
@@ -86,15 +87,15 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <RecentResultsCard />
+        <SectionErrorBoundary label="seus resultados recentes"><RecentResultsCard /></SectionErrorBoundary>
 
         <div className="mt-6">
-          <MissionsCard />
+          <SectionErrorBoundary label="suas missões"><MissionsCard /></SectionErrorBoundary>
         </div>
 
         {user && (
           <div className="mt-6">
-            <AchievementsSection userId={user.id} compact />
+            <SectionErrorBoundary label="suas conquistas"><AchievementsSection userId={user.id} compact /></SectionErrorBoundary>
           </div>
         )}
 
