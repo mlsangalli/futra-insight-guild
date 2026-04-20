@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
+  const queryClient = useQueryClient();
 
   const loadProfile = useCallback(async (userId: string) => {
     const result = await fetchProfileWithRetry(userId);
