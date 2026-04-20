@@ -47,6 +47,14 @@ export default function FlowPage() {
     if (current) setStats((s) => ({ ...s, viewed: Math.max(s.viewed, index + 1) }));
   }, [current, index]);
 
+  // Prefetch next card image (silent warm-up, no DOM render)
+  useEffect(() => {
+    if (next?.image_url) {
+      const img = new Image();
+      img.src = next.image_url;
+    }
+  }, [next?.image_url]);
+
   // End session on unmount
   useEffect(() => {
     return () => {
