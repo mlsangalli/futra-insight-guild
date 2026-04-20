@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { GripVertical } from 'lucide-react';
+import { GripVertical } from '@/lib/icons';
 import type { TournamentGroup, GroupTeam } from '@/types/bracket';
 
 interface GroupCardProps {

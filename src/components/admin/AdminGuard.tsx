@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/lib/icons';
 
 export function AdminGuard({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();

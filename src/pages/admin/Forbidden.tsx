@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ShieldX } from 'lucide-react';
+import { ShieldX } from '@/lib/icons';
 
 export default function Forbidden() {
   return (

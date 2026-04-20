@@ -1,4 +1,4 @@
-import { Coins, Loader2 } from 'lucide-react';
+import { Coins, Loader2 } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { useDailyBonusEligibility, useClaimDailyBonus } from '@/hooks/useDailyBonus';
 import { useAuth } from '@/contexts/AuthContext';

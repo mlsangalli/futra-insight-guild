@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Target, Trophy, Coins, CheckCircle2, Calendar } from 'lucide-react';
+import { ArrowLeft, Target, Trophy, Coins, CheckCircle2, Calendar } from '@/lib/icons';
 import { Layout } from '@/components/layout/Layout';
 import { SEO } from '@/components/SEO';
 import { MissionsCard } from '@/components/futra/MissionsCard';

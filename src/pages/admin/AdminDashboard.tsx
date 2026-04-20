@@ -5,7 +5,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminMetricCard } from '@/components/admin/AdminMetricCard';
 import { MonitoringPanel } from '@/components/admin/MonitoringPanel';
 import { OperationsPanel } from '@/components/admin/OperationsPanel';
-import { Users, Store, FolderOpen, FileText, Activity, TrendingUp, Lock, CheckCircle, Clock } from 'lucide-react';
+import { Users, Store, FolderOpen, FileText, Activity, TrendingUp, Lock, CheckCircle, Clock } from '@/lib/icons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

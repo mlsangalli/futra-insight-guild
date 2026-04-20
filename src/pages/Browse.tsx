@@ -5,7 +5,7 @@ import { MarketCard } from '@/components/futra/MarketCard';
 import { useBrowseSorted } from '@/hooks/useMarkets';
 import { CATEGORIES, MarketCategory } from '@/types';
 import { cn } from '@/lib/utils';
-import { Search, X } from 'lucide-react';
+import { Search, X } from '@/lib/icons';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';
 import { useRealtimeMarkets } from '@/hooks/useRealtimeMarket';

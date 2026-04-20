@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
 import { useSearchMarkets } from '@/hooks/useSearch';
-import { Search } from 'lucide-react';
+import { Search } from '@/lib/icons';
 import { MarketGridSkeleton, EmptyState } from '@/components/futra/Skeletons';
 import { CATEGORIES } from '@/types';
 import { Link } from 'react-router-dom';

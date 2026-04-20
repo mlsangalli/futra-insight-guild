@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { BRACKET_STEPS, type BracketStep } from '@/types/bracket';
-import { Check } from 'lucide-react';
+import { Check } from '@/lib/icons';
 
 interface BracketProgressProps {
   currentStep: BracketStep;

@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/futra/StatusBadge';
 import { CountdownTimer } from '@/components/futra/CountdownTimer';
 import { VoteBar } from '@/components/futra/VoteBar';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users } from 'lucide-react';
+import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users } from '@/lib/icons';
 import { useHomeFeeds, useLeaderboard } from '@/hooks/useMarkets';
 import { useSyntheticOverlay } from '@/hooks/useSyntheticOverlay';
 import { CATEGORIES } from '@/types';

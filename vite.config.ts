@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  // Excluir lucide-react do pre-bundle do Vite: o pre-bundle gera um barrel
+  // CommonJS que defeats tree-shaking. Excluindo, o Rollup processa cada
+  // ícone como módulo ESM individual e descarta os não usados.
+  optimizeDeps: {
+    exclude: ["lucide-react"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -27,11 +33,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) {
-            // Group admin pages/components into a single chunk that public users never load
             if (id.includes('/src/pages/admin/') || id.includes('/src/components/admin/')) {
               return 'admin';
             }
-            // Tournament bracket — only loaded for /bracket routes
             if (id.includes('/src/pages/bracket/') || id.includes('/src/components/bracket/')) {
               return 'bracket';
             }
@@ -45,6 +49,8 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('@tanstack/react-query') || id.includes('@tanstack/query-core')) return 'vendor-query';
           if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
           if (id.includes('@radix-ui')) return 'vendor-radix';
+          // Lucide isolado em chunk próprio — combinado com optimizeDeps.exclude
+          // garante tree-shake correto dos ícones individuais.
           if (id.includes('lucide-react')) return 'vendor-icons';
           if (id.includes('date-fns')) return 'vendor-dates';
           if (id.includes('react-helmet')) return 'vendor-seo';

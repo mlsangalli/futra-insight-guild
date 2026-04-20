@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, TrendingUp } from 'lucide-react';
+import { CheckCircle, XCircle, TrendingUp } from '@/lib/icons';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ShareButton, winShareText } from '@/components/futra/ShareButton';

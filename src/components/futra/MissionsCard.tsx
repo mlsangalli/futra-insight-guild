@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Target, MessageCircle, Bookmark, Share2, Trophy, Layers, Clock, Check, Gift } from 'lucide-react';
+import { Target, MessageCircle, Bookmark, Share2, Trophy, Layers, Clock, Check, Gift } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, Trophy as TrophyIcon, Trophy, User, Bell } from 'lucide-react';
+import { Home, Search, Trophy as TrophyIcon, Trophy, User, Bell } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScrollDirection } from '@/hooks/useScrollDirection';

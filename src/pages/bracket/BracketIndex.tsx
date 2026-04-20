@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Trophy, ArrowRight, Calendar } from 'lucide-react';
+import { Trophy, ArrowRight, Calendar } from '@/lib/icons';
 import { useTournaments } from '@/hooks/useTournament';
 import { PageLoader } from '@/components/PageLoader';
 import { Button } from '@/components/ui/button';
