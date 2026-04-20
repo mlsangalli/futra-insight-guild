@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { QUERY_STALE } from '@/lib/query-config';
 
 export function useUserAchievements(userId: string | undefined) {
   return useQuery({
@@ -32,6 +33,6 @@ export function useAllAchievements() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 1000 * 60 * 10,
+    staleTime: QUERY_STALE.long,
   });
 }

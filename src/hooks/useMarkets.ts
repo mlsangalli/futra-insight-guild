@@ -2,6 +2,7 @@ import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-quer
 import { fetchMarkets, fetchAllMarkets, fetchMarketById, fetchLeaderboard, fetchProfile, fetchUserPredictions, fetchHomeFeeds, fetchBrowseSorted } from '@/lib/market-queries';
 import type { Market, MarketOption } from '@/types';
 import { useSyntheticOverlay, useSingleSyntheticOverlay } from './useSyntheticOverlay';
+import { QUERY_STALE } from '@/lib/query-config';
 
 // Re-export types for backward compat
 export type { Market as DbMarket, MarketOption };
@@ -36,7 +37,7 @@ export function useHomeFeeds() {
       });
       return feeds;
     },
-    staleTime: 30_000,
+    staleTime: QUERY_STALE.short,
   });
 }
 
@@ -58,7 +59,7 @@ export function useBrowseSorted(params: {
       limit: pageSize,
       offset,
     }),
-    staleTime: 30_000,
+    staleTime: QUERY_STALE.short,
   });
 }
 
@@ -74,7 +75,7 @@ export function useMarketsInfinite(filters: {
     queryFn: ({ pageParam }) => fetchMarkets({ ...filters, cursor: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    staleTime: 30_000,
+    staleTime: QUERY_STALE.short,
   });
 }
 
@@ -83,7 +84,7 @@ export function useMarket(id: string) {
     queryKey: ['market', id],
     queryFn: () => fetchMarketById(id),
     enabled: !!id,
-    staleTime: 10_000,
+    staleTime: QUERY_STALE.realtime,
   });
 }
 
@@ -91,7 +92,7 @@ export function useLeaderboard(filters?: { period?: string; category?: string })
   return useQuery({
     queryKey: ['leaderboard', filters?.period ?? 'all', filters?.category ?? 'all'],
     queryFn: () => fetchLeaderboard(filters),
-    staleTime: 60_000,
+    staleTime: QUERY_STALE.medium,
   });
 }
 
@@ -100,7 +101,7 @@ export function useProfile(username: string) {
     queryKey: ['profile', username],
     queryFn: () => fetchProfile(username),
     enabled: !!username,
-    staleTime: 60_000,
+    staleTime: QUERY_STALE.medium,
   });
 }
 

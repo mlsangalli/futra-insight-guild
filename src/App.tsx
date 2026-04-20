@@ -13,6 +13,7 @@ import AdminRoute from "@/components/AdminRoute";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { parseSupabaseError } from "@/lib/api-error";
+import { QUERY_STALE, QUERY_GC } from "@/lib/query-config";
 
 const Index = React.lazy(() => import("./pages/Index"));
 const Browse = React.lazy(() => import("./pages/Browse"));
@@ -68,8 +69,8 @@ const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
-      gcTime: 5 * 60_000,
+      staleTime: QUERY_STALE.short,
+      gcTime: QUERY_GC.medium,
       retry: 1,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
@@ -81,14 +82,21 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  // Prefetch das rotas mais acessadas após 2 segundos
+  // Prefetch das rotas mais acessadas após o app montar
   React.useEffect(() => {
-    const timer = setTimeout(() => {
+    const idle = (cb: () => void) => {
+      const w = window as any;
+      if (typeof w.requestIdleCallback === 'function') {
+        w.requestIdleCallback(cb, { timeout: 3000 });
+      } else {
+        setTimeout(cb, 2000);
+      }
+    };
+    idle(() => {
       import('./pages/Browse');
       import('./pages/MarketDetail');
       import('./pages/Leaderboard');
-    }, 2000);
-    return () => clearTimeout(timer);
+    });
   }, []);
 
   return (

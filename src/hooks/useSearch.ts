@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Market, MarketOption } from '@/types';
+import { QUERY_STALE } from '@/lib/query-config';
 
 function parseRow(row: any): Market {
   const rawOptions = row.market_options || row.options || [];
@@ -43,6 +44,6 @@ export function useSearchMarkets(query: string) {
       return data.map(parseRow);
     },
     enabled: query.trim().length >= 2,
-    staleTime: 10_000,
+    staleTime: QUERY_STALE.realtime,
   });
 }
