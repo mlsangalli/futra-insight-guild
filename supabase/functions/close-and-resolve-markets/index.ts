@@ -85,6 +85,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check global AI Gateway circuit breaker before fetching markets
+    const { data: gatewayStatus } = await adminClient
+      .from("ai_gateway_status")
+      .select("paused_until, last_error")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (gatewayStatus?.paused_until && new Date(gatewayStatus.paused_until) > new Date()) {
+      const minutesLeft = Math.ceil(
+        (new Date(gatewayStatus.paused_until).getTime() - Date.now()) / 60000
+      );
+      console.log(`AI Gateway paused for ${minutesLeft}min more. Skipping resolution phase.`);
+      const durationMs = Date.now() - jobStart;
+      await adminClient.from("job_executions").insert({
+        job_name: "close-and-resolve-markets",
+        status: "skipped",
+        duration_ms: durationMs,
+        metrics: { ...results, skipReason: "ai_gateway_paused", minutesLeft },
+      });
+      return new Response(JSON.stringify({ ...results, resolveSkipReason: "ai_gateway_paused", minutesLeft }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let resolveQuery = adminClient
       .from("markets")
       .select("id, question, category, resolution_source, resolution_rules")
@@ -95,10 +119,32 @@ Deno.serve(async (req) => {
     } else {
       resolveQuery = resolveQuery.lte("end_date", new Date().toISOString());
     }
-    resolveQuery = resolveQuery.limit(singleMarketId ? 1 : MAX_RESOLVE_PER_RUN);
+    resolveQuery = resolveQuery.limit(singleMarketId ? 1 : MAX_RESOLVE_PER_RUN * 3); // fetch extra to filter cooldowns
 
-    const { data: marketsToResolve, error: resolveErr } = await resolveQuery;
+    const { data: rawMarkets, error: resolveErr } = await resolveQuery;
     if (resolveErr) throw resolveErr;
+
+    // Filter out markets in cooldown (skip in single-market retry mode)
+    let marketsToResolve = rawMarkets || [];
+    if (!singleMarketId && marketsToResolve.length > 0) {
+      const ids = marketsToResolve.map((m: any) => m.id);
+      const { data: attempts } = await adminClient
+        .from("market_resolution_attempts")
+        .select("market_id, failure_count, last_attempt_at")
+        .in("market_id", ids);
+
+      const attemptsMap = new Map((attempts || []).map((a: any) => [a.market_id, a]));
+      const now = Date.now();
+      marketsToResolve = marketsToResolve.filter((m: any) => {
+        const a = attemptsMap.get(m.id);
+        if (!a) return true;
+        const cooldownMin = a.failure_count >= MAX_FAILURES_BEFORE_LONG_COOLDOWN
+          ? 24 * 60
+          : PER_MARKET_COOLDOWN_MINUTES * Math.max(1, a.failure_count);
+        const ready = (now - new Date(a.last_attempt_at).getTime()) > cooldownMin * 60 * 1000;
+        return ready;
+      }).slice(0, MAX_RESOLVE_PER_RUN);
+    }
 
     // Circuit breaker: if AI is out of credits, abort the whole resolution phase
     let aiCreditsExhausted = false;
