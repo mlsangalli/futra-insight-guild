@@ -13,6 +13,7 @@ import AdminRoute from "@/components/AdminRoute";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { parseSupabaseError } from "@/lib/api-error";
+import { QUERY_STALE, QUERY_GC } from "@/lib/query-config";
 
 const Index = React.lazy(() => import("./pages/Index"));
 const Browse = React.lazy(() => import("./pages/Browse"));
@@ -68,8 +69,8 @@ const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
-      gcTime: 5 * 60_000,
+      staleTime: QUERY_STALE.short,
+      gcTime: QUERY_GC.medium,
       retry: 1,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,

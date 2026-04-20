@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { QUERY_STALE } from '@/lib/query-config';
 
 export function useAdminMetrics() {
   return useQuery({
@@ -21,6 +22,6 @@ export function useAdminMetrics() {
         events24h: events24h.count ?? 0,
       };
     },
-    staleTime: 60_000,
+    staleTime: QUERY_STALE.medium,
   });
 }
