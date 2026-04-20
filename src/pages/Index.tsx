@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/futra/StatusBadge';
 import { CountdownTimer } from '@/components/futra/CountdownTimer';
 import { VoteBar } from '@/components/futra/VoteBar';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users } from '@/lib/icons';
+import { ArrowRight, Target, Coins, Trophy, TrendingUp, Users, Zap } from '@/lib/icons';
 import { useHomeFeeds, useLeaderboard } from '@/hooks/useMarkets';
 import { useSyntheticOverlay } from '@/hooks/useSyntheticOverlay';
 import { CATEGORIES } from '@/types';
@@ -80,10 +80,50 @@ export default function HomePage() {
     <Layout>
       <SEO />
       {user && (
-        <div className="container mx-auto px-4 pt-4">
+        <div className="container mx-auto px-4 pt-4 space-y-3">
           <SectionErrorBoundary label="o bônus diário">
             <DailyBonusBanner />
           </SectionErrorBoundary>
+          <Link
+            to="/flow"
+            className="group relative flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 p-4 sm:p-5 transition hover:border-primary/60"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
+                <Zap className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-base sm:text-lg font-bold">FUTRA Flow</h3>
+                  <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">Novo</span>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Responda mercados em sequência. Um após o outro.</p>
+              </div>
+            </div>
+            <ArrowRight className="h-5 w-5 text-primary transition group-hover:translate-x-1" />
+          </Link>
+        </div>
+      )}
+      {!user && (
+        <div className="container mx-auto px-4 pt-4">
+          <Link
+            to="/login?redirect=/flow"
+            className="group relative flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 p-4 sm:p-5 transition hover:border-primary/60"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
+                <Zap className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-base sm:text-lg font-bold">FUTRA Flow</h3>
+                  <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">Novo</span>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Entre para responder mercados em sequência.</p>
+              </div>
+            </div>
+            <ArrowRight className="h-5 w-5 text-primary transition group-hover:translate-x-1" />
+          </Link>
         </div>
       )}
       {/* Hero */}
