@@ -1270,6 +1270,21 @@ export type Database = {
           username: string
         }[]
       }
+      get_market_comments: {
+        Args: { p_market_id: string }
+        Returns: {
+          author_avatar_url: string
+          author_display_name: string
+          author_influence: Database["public"]["Enums"]["influence_level"]
+          author_username: string
+          body: string
+          created_at: string
+          id: string
+          market_id: string
+          parent_id: string
+          updated_at: string
+        }[]
+      }
       get_public_profile: {
         Args: { p_username: string }
         Returns: {
