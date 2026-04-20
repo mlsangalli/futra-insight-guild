@@ -200,7 +200,7 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
-                {sortedOptions.slice(0, 4).map((opt) => (
+                {sortedOptions.map((opt) => (
                   <Button
                     key={opt.id}
                     size="lg"
