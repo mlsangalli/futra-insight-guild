@@ -206,7 +206,7 @@ export default function FlowPage() {
       </main>
 
       <p className="hidden pb-4 text-center text-xs text-muted-foreground sm:block">
-        Arraste → para SIM · ← para NÃO · ↑ para PULAR · Toque no card para detalhes
+        Arraste → SIM · ← NÃO · Toque para detalhes · Use o botão para pular em listas longas
       </p>
     </div>
   );
