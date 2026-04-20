@@ -2,7 +2,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { captureException } from "../_shared/sentry.ts";
 
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 async function sendAlert(webhookUrl: string, text: string): Promise<void> {
+  if (!isValidHttpUrl(webhookUrl)) {
+    console.warn("ALERT_WEBHOOK_URL is not a valid http(s) URL — skipping alert");
+    return;
+  }
   try {
     await fetch(webhookUrl, {
       method: "POST",

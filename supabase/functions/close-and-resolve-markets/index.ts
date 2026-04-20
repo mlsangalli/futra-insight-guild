@@ -97,8 +97,15 @@ Deno.serve(async (req) => {
     const { data: marketsToResolve, error: resolveErr } = await resolveQuery;
     if (resolveErr) throw resolveErr;
 
+    // Circuit breaker: if AI is out of credits, abort the whole resolution phase
+    let aiCreditsExhausted = false;
+
     if (marketsToResolve && marketsToResolve.length > 0) {
       for (const market of marketsToResolve) {
+        if (aiCreditsExhausted) {
+          results.skipped++;
+          continue;
+        }
         try {
           // Fetch market options
           const { data: options, error: optErr } = await adminClient
@@ -184,6 +191,19 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
           if (!aiResponse.ok) {
             const errText = await aiResponse.text();
             console.error(`AI error for market ${market.id}: ${aiResponse.status} ${errText}`);
+            // Trip circuit breaker on payment/rate-limit errors to stop hammering the gateway
+            if (aiResponse.status === 402 || aiResponse.status === 429) {
+              aiCreditsExhausted = true;
+              await adminClient.from("admin_logs").insert({
+                admin_user_id: SYSTEM_USER_ID,
+                action_type: "auto_resolve_error",
+                entity_type: "market",
+                entity_id: market.id,
+                description: `AI gateway aborted (status ${aiResponse.status}). Circuit breaker tripped — remaining markets skipped this run.`,
+              });
+              results.errors++;
+              continue;
+            }
             results.errors++;
             await adminClient.from("admin_logs").insert({
               admin_user_id: SYSTEM_USER_ID,
