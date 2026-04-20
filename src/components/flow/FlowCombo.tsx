@@ -37,9 +37,9 @@ export function FlowCombo({ streak, className }: FlowComboProps) {
           className,
         )}
       >
-        <Icon className={cn('h-3 w-3', tier.glow && 'animate-pulse')} />
-        <span>×{streak}</span>
-        <span className="hidden sm:inline">· {tier.label}</span>
+        <Icon className={cn('h-3 w-3 shrink-0', tier.glow && 'animate-pulse')} />
+        <span className="tabular-nums">×{streak}</span>
+        <span className="hidden whitespace-nowrap sm:inline">{tier.label}</span>
       </motion.div>
     </AnimatePresence>
   );

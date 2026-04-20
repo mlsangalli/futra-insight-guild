@@ -17,16 +17,19 @@ export function FlowProgress({ answered, skipped, invested, remaining, streak, c
 
   return (
     <div className={cn('w-full max-w-md mx-auto px-4 pt-2 pb-1.5', className)}>
-      <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
+      <div className="mb-1.5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11px]">
         <span className="inline-flex items-center gap-1 font-medium text-muted-foreground">
-          <Zap className="h-3 w-3 text-primary" />
+          <Zap className="h-3 w-3 shrink-0 text-primary" />
           <span className="tabular-nums">{answered}</span>
-          <span className="hidden xs:inline">· {invested.toLocaleString('pt-BR')} FC</span>
+          <span className="text-muted-foreground/60">resp.</span>
         </span>
-        <FlowCombo streak={streak} />
-        <span className="inline-flex items-center gap-1 text-muted-foreground sm:hidden">
-          <Coins className="h-3 w-3 text-warning" />
+        <div className="flex justify-center">
+          <FlowCombo streak={streak} />
+        </div>
+        <span className="inline-flex items-center justify-end gap-1 font-medium text-muted-foreground">
+          <Coins className="h-3 w-3 shrink-0 text-warning" />
           <span className="tabular-nums">{invested.toLocaleString('pt-BR')}</span>
+          <span className="text-muted-foreground/60">FC</span>
         </span>
       </div>
       <div className="h-0.5 w-full overflow-hidden rounded-full bg-surface-700">
