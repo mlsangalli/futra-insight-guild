@@ -45,7 +45,10 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('@tanstack/react-query') || id.includes('@tanstack/query-core')) return 'vendor-query';
           if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
           if (id.includes('@radix-ui')) return 'vendor-radix';
-          if (id.includes('lucide-react')) return 'vendor-icons';
+          // NOTE: lucide-react is intentionally NOT split into a manual chunk.
+          // Manual chunking forces the entire package into one bundle (672kB),
+          // defeating tree-shaking. Letting Rollup handle it via per-import
+          // tree-shaking yields ~30-50kB total for the icons actually used.
           if (id.includes('date-fns')) return 'vendor-dates';
           if (id.includes('react-helmet')) return 'vendor-seo';
           if (id.includes('zod') || id.includes('react-hook-form') || id.includes('@hookform')) return 'vendor-forms';

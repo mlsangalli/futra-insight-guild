@@ -1270,6 +1270,17 @@ export type Database = {
         Args: { p_market_id: string }
         Returns: undefined
       }
+      detect_credit_drift: {
+        Args: never
+        Returns: {
+          drift: number
+          expected_balance: number
+          profile_balance: number
+          tx_count: number
+          user_id: string
+          username: string
+        }[]
+      }
       get_browse_sorted: {
         Args: {
           p_category?: Database["public"]["Enums"]["market_category"]
@@ -1371,6 +1382,7 @@ export type Database = {
         Returns: string
       }
       recalculate_global_ranks: { Args: never; Returns: undefined }
+      reconcile_credit_drift: { Args: never; Returns: Json }
       record_market_resolution_failure: {
         Args: { p_error: string; p_market_id: string }
         Returns: undefined
