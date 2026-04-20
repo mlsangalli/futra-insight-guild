@@ -82,14 +82,21 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  // Prefetch das rotas mais acessadas após 2 segundos
+  // Prefetch das rotas mais acessadas após o app montar
   React.useEffect(() => {
-    const timer = setTimeout(() => {
+    const idle = (cb: () => void) => {
+      const w = window as any;
+      if (typeof w.requestIdleCallback === 'function') {
+        w.requestIdleCallback(cb, { timeout: 3000 });
+      } else {
+        setTimeout(cb, 2000);
+      }
+    };
+    idle(() => {
       import('./pages/Browse');
       import('./pages/MarketDetail');
       import('./pages/Leaderboard');
-    }, 2000);
-    return () => clearTimeout(timer);
+    });
   }, []);
 
   return (

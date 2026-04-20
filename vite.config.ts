@@ -22,24 +22,35 @@ export default defineConfig(({ mode }) => ({
   build: {
     sourcemap: true,
     reportCompressedSize: true,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-query': ['@tanstack/react-query'],
-          'vendor-ui': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-select',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-tooltip',
-            '@radix-ui/react-slider',
-            '@radix-ui/react-toast',
-            '@radix-ui/react-accordion',
-          ],
-          'vendor-charts': ['recharts'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            // Group admin pages/components into a single chunk that public users never load
+            if (id.includes('/src/pages/admin/') || id.includes('/src/components/admin/')) {
+              return 'admin';
+            }
+            // Tournament bracket — only loaded for /bracket routes
+            if (id.includes('/src/pages/bracket/') || id.includes('/src/components/bracket/')) {
+              return 'bracket';
+            }
+            return undefined;
+          }
+
+          // node_modules chunking
+          if (id.includes('react-router')) return 'vendor-react';
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('scheduler')) return 'vendor-react';
+          if (id.includes('@supabase')) return 'vendor-supabase';
+          if (id.includes('@tanstack/react-query') || id.includes('@tanstack/query-core')) return 'vendor-query';
+          if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
+          if (id.includes('@radix-ui')) return 'vendor-radix';
+          if (id.includes('lucide-react')) return 'vendor-icons';
+          if (id.includes('date-fns')) return 'vendor-dates';
+          if (id.includes('react-helmet')) return 'vendor-seo';
+          if (id.includes('zod') || id.includes('react-hook-form') || id.includes('@hookform')) return 'vendor-forms';
+          if (id.includes('sonner') || id.includes('embla-carousel')) return 'vendor-ui';
+          return 'vendor';
         },
       },
     },
