@@ -98,8 +98,12 @@ export default function HomePage() {
                 </h1>
                 <p className="mt-5 text-lg text-secondary-foreground leading-relaxed">A plataforma social de previsões onde suas apostas constroem status, reputação e influência. Sem dinheiro real — apenas convicção.</p>
                 <div className="mt-8 flex flex-wrap gap-3">
-                  <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild><Link to="/browse">Explorar mercados <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-                  <Button size="lg" variant="outline" className="text-base px-8" asChild><Link to="/leaderboard">Ver ranking</Link></Button>
+                  <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild>
+                    <Link to={user ? '/flow' : '/login?redirect=/flow'}>
+                      <Zap className="mr-2 h-4 w-4" /> Jogar FUTRA Flow <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="text-base px-8" asChild><Link to="/browse">Explorar mercados</Link></Button>
                 </div>
                 {!isLoading && markets.length > 0 && (
                   <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
