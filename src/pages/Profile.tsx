@@ -8,7 +8,7 @@ import { ShareButton, profileShareText } from '@/components/futra/ShareButton';
 import { useProfile } from '@/hooks/useMarkets';
 import { usePublicPredictions } from '@/hooks/useProfilePredictions';
 import { useAuth } from '@/contexts/AuthContext';
-import { Target, Coins, Trophy, Zap, UserX, CheckCircle, XCircle } from 'lucide-react';
+import { Target, Coins, Trophy, Zap, UserX, CheckCircle, XCircle } from '@/lib/icons';
 import { MarketCategory } from '@/types';
 import { ProfileSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { SEO } from '@/components/SEO';

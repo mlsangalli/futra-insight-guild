@@ -10,7 +10,7 @@ import { KnockoutBracket } from './KnockoutBracket';
 import { BracketSummary } from './BracketSummary';
 import { PageLoader } from '@/components/PageLoader';
 import { Button } from '@/components/ui/button';
-import { Trophy, ArrowLeft, ArrowRight, LogIn } from 'lucide-react';
+import { Trophy, ArrowLeft, ArrowRight, LogIn } from '@/lib/icons';
 import { SEO } from '@/components/SEO';
 import type { BracketStep } from '@/types/bracket';
 import { BRACKET_STEPS } from '@/types/bracket';

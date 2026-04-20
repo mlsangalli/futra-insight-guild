@@ -1,4 +1,4 @@
-import { LayoutDashboard, Store, FolderOpen, FileText, Users, ScrollText, LogOut, ChevronLeft, Trophy } from 'lucide-react';
+import { LayoutDashboard, Store, FolderOpen, FileText, Users, ScrollText, LogOut, ChevronLeft, Trophy } from '@/lib/icons';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';

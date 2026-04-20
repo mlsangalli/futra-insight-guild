@@ -9,7 +9,7 @@ import { MissionsCard } from '@/components/futra/MissionsCard';
 import { ShareButton, winShareText } from '@/components/futra/ShareButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPredictions } from '@/hooks/useMarkets';
-import { Trophy, Coins, Target, TrendingUp, Bookmark, BarChart3 } from 'lucide-react';
+import { Trophy, Coins, Target, TrendingUp, Bookmark, BarChart3 } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';

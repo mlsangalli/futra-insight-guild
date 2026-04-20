@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Activity, Shield, Clock, CheckCircle2, XCircle, AlertTriangle, MinusCircle } from 'lucide-react';
+import { Activity, Shield, Clock, CheckCircle2, XCircle, AlertTriangle, MinusCircle } from '@/lib/icons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

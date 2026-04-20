@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Pencil } from 'lucide-react';
+import { Pencil } from '@/lib/icons';
 
 export default function EditProfileDialog() {
   const { profile, user, refreshProfile } = useAuth();

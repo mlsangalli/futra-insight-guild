@@ -4,7 +4,7 @@ import { useComments, useCreateComment, Comment } from '@/hooks/useComments';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircle, Send, Loader2, Reply } from 'lucide-react';
+import { MessageCircle, Send, Loader2, Reply } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';

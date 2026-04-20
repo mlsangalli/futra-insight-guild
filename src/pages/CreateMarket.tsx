@@ -2,7 +2,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Lock, ArrowLeft, Send } from 'lucide-react';
+import { Lock, ArrowLeft, Send } from '@/lib/icons';
 import { useState } from 'react';
 import { CATEGORIES } from '@/types';
 import { toast } from 'sonner';

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { GroupCard } from '@/components/bracket/GroupCard';
 import { Button } from '@/components/ui/button';
-import { CheckCheck } from 'lucide-react';
+import { CheckCheck } from '@/lib/icons';
 import type { TournamentGroup, GroupTeam, BracketLocalState } from '@/types/bracket';
 
 interface GroupStageProps {

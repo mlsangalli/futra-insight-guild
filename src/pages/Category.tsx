@@ -3,7 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
 import { useMarkets } from '@/hooks/useMarkets';
 import { CATEGORIES } from '@/types';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen } from '@/lib/icons';
 import { MarketGridSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { useSyntheticOverlay } from '@/hooks/useSyntheticOverlay';
 import { Button } from '@/components/ui/button';

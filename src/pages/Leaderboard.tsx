@@ -5,7 +5,7 @@ import { InfluenceBadge } from '@/components/futra/InfluenceBadge';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
-import { Trophy } from 'lucide-react';
+import { Trophy } from '@/lib/icons';
 import { LeaderboardSkeleton, ErrorState, EmptyState } from '@/components/futra/Skeletons';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';

@@ -1,4 +1,4 @@
-import { Bookmark } from 'lucide-react';
+import { Bookmark } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { useIsWatching, useToggleWatchlist } from '@/hooks/useWatchlist';
 import { useAuth } from '@/contexts/AuthContext';

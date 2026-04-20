@@ -1,4 +1,4 @@
-import { Copy, Share2 } from 'lucide-react';
+import { Copy, Share2 } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';

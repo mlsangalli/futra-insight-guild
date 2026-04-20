@@ -1,4 +1,4 @@
-import { Trophy, Users, Target, RotateCcw, Share2, Send } from 'lucide-react';
+import { Trophy, Users, Target, RotateCcw, Share2, Send } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import type { BracketEntry, TournamentGroup, BracketLocalState } from '@/types/bracket';
 import { cn } from '@/lib/utils';

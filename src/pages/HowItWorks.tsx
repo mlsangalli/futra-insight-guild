@@ -1,7 +1,7 @@
 import { Layout } from '@/components/layout/Layout';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Target, Coins, TrendingUp, Trophy, Shield, ArrowRight } from 'lucide-react';
+import { Target, Coins, TrendingUp, Trophy, Shield, ArrowRight } from '@/lib/icons';
 import { SEO } from '@/components/SEO';
 
 export default function HowItWorksPage() {

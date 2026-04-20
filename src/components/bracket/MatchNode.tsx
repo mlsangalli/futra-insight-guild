@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { BracketMatch } from '@/types/bracket';
-import { Lock, Trophy } from 'lucide-react';
+import { Lock, Trophy } from '@/lib/icons';
 
 interface MatchNodeProps {
   match: BracketMatch;

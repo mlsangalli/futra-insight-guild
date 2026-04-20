@@ -1,4 +1,4 @@
-import { icons } from 'lucide-react';
+import { icons } from '@/lib/icons';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 

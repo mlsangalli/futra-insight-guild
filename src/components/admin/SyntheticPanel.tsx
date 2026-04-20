@@ -18,7 +18,7 @@ import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { FlaskConical, RotateCw, Trash2, Settings, Eye, Zap } from 'lucide-react';
+import { FlaskConical, RotateCw, Trash2, Settings, Eye, Zap } from '@/lib/icons';
 import { PriceChart } from '@/components/futra/PriceChart';
 import { cn } from '@/lib/utils';
 import type { SyntheticConfig } from '@/lib/synthetic-engine';

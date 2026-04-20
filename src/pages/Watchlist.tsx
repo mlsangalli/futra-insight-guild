@@ -2,7 +2,7 @@ import { Layout } from '@/components/layout/Layout';
 import { MarketCard } from '@/components/futra/MarketCard';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { useAuth } from '@/contexts/AuthContext';
-import { Bookmark } from 'lucide-react';
+import { Bookmark } from '@/lib/icons';
 import { MarketGridSkeleton, EmptyState } from '@/components/futra/Skeletons';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';

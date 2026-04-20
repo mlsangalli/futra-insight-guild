@@ -4,7 +4,7 @@ import { AdminSidebar } from './AdminSidebar';
 import { AdminGuard } from './AdminGuard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyntheticMarkets } from '@/hooks/useSyntheticMarket';
-import { FlaskConical } from 'lucide-react';
+import { FlaskConical } from '@/lib/icons';
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const { profile } = useAuth();

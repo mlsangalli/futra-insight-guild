@@ -1,4 +1,4 @@
-import { Bell, X } from 'lucide-react';
+import { Bell, X } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useState } from 'react';

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
+import { Check } from '@/lib/icons';
 import type { GroupTeam, TournamentGroup, BracketLocalState } from '@/types/bracket';
 
 interface ThirdPlacePickerProps {

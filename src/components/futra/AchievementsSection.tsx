@@ -1,6 +1,6 @@
 import { useUserAchievements, useAllAchievements } from '@/hooks/useAchievements';
 import { AchievementBadge } from './AchievementBadge';
-import { Award } from 'lucide-react';
+import { Award } from '@/lib/icons';
 
 interface AchievementsSectionProps {
   userId: string | undefined;

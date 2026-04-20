@@ -11,7 +11,7 @@ import { WatchlistButton } from '@/components/futra/WatchlistButton';
 import { CommentSection } from '@/components/futra/CommentSection';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy } from 'lucide-react';
+import { Users, Coins, Shield, ExternalLink, CheckCircle, Loader2, FileQuestion, Lock, Trophy } from '@/lib/icons';
 import { useMarket, useUserPredictions } from '@/hooks/useMarkets';
 import { useRealtimeMarket } from '@/hooks/useRealtimeMarket';
 import { useAuth } from '@/contexts/AuthContext';

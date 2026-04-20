@@ -4,7 +4,7 @@ import { useNotifications, useMarkAsRead } from '@/hooks/useNotifications';
 import {
   Bell, Trophy, Coins, Target, Clock, CheckCheck,
   TrendingUp, Eye, Star, Award, Zap, ArrowUpRight,
-} from 'lucide-react';
+} from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';

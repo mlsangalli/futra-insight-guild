@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Coins } from 'lucide-react';
+import { Users, Coins } from '@/lib/icons';
 import { MarketCardData } from '@/types';
 import { fetchMarketById } from '@/lib/market-queries';
 import { CategoryBadge } from './CategoryBadge';
