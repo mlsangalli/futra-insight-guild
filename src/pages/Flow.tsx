@@ -146,6 +146,7 @@ export default function FlowPage() {
         skipped={stats.skipped}
         invested={stats.invested}
         remaining={Math.max(0, cards.length - index)}
+        streak={stats.streak}
       />
 
       {/* Card stage */}
