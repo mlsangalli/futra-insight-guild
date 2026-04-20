@@ -5,6 +5,9 @@ import { captureException } from "../_shared/sentry.ts";
 
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
 const MAX_RESOLVE_PER_RUN = 5;
+const AI_GATEWAY_PAUSE_MINUTES = 30; // pausa global após 402/429
+const PER_MARKET_COOLDOWN_MINUTES = 60; // cooldown por mercado após falha
+const MAX_FAILURES_BEFORE_LONG_COOLDOWN = 3; // após 3 falhas, espera 24h
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
