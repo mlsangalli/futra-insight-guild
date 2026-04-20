@@ -1266,6 +1266,10 @@ export type Database = {
         Args: { p_user_mission_id: string }
         Returns: Json
       }
+      clear_market_resolution_attempts: {
+        Args: { p_market_id: string }
+        Returns: undefined
+      }
       get_browse_sorted: {
         Args: {
           p_category?: Database["public"]["Enums"]["market_category"]
@@ -1367,6 +1371,10 @@ export type Database = {
         Returns: string
       }
       recalculate_global_ranks: { Args: never; Returns: undefined }
+      record_market_resolution_failure: {
+        Args: { p_error: string; p_market_id: string }
+        Returns: undefined
+      }
       resolve_market_and_score: {
         Args: { p_market_id: string; p_winning_option: string }
         Returns: Json
