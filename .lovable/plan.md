@@ -1,45 +1,50 @@
 
 
-## Corrigir sobreposição visual no FUTRA Flow
+## Permitir rolagem do card e mostrar todas as opções
 
-A imagem mostra o card do topo deixando vazar o texto do próximo card por trás (pergunta duplicada, "Consenso:" duplicado, barra de progresso fantasma). Causa raiz: o card do fundo é renderizado no mesmo stack, totalmente sobreposto ao card do topo, mas com `opacity: 0.7` e o card do topo não tem fundo 100% opaco em todas as áreas.
+A imagem mostra um mercado multi-opção (eleição 2026) com várias opções, mas só 4 aparecem porque há `slice(0, 4)`, o card tem altura fixa e `overflow-hidden`, e um `flex-1` cria um espaço vazio que empurra a aposta para baixo.
 
 ### Mudanças
 
-**1. `src/components/flow/FlowCard.tsx` — fundo do card 100% opaco**
+**1. `src/components/flow/FlowCard.tsx`**
 
-- Trocar `bg-gradient-to-b from-surface-800 to-surface-900` (que pode renderizar com alpha em algumas configs do Tailwind) por uma cor sólida `bg-card` + camada de gradient decorativa por cima, garantindo que **nada** atrás vaze.
-- Adicionar `bg-background` explicitamente como cor base no wrapper `<motion.div>` interno, para que mesmo em transições, o card oculte completamente o que está atrás.
+- Remover o `<div className="flex-1" />` (linha 155) que cria o gap vazio entre a pergunta e a área de aposta — assim os textos sobem naturalmente para logo após a imagem.
+- Tornar o **corpo do card rolável** envolvendo a área principal num container `overflow-y-auto` com `overscroll-contain`. A imagem header continua fixa no topo do card; o restante (pergunta, consenso, picker de créditos, opções) rola dentro do card.
+- Remover o `slice(0, 4)` para mercados não-binários — exibir **todas** as opções. Como agora o card rola, qualquer quantidade cabe.
+- Importante: como `framer-motion` usa `drag`, precisamos garantir que o scroll interno não conflite. Solução: aplicar `drag` apenas no wrapper externo (já é assim) e o scroll interno via `touch-action: pan-y` no container rolável só impacta o gesto vertical de pular. Vou alternar: o swipe **vertical para pular** continua funcionando porque o scroll interno só ativa quando o conteúdo realmente excede o card; quando não excede (binários SIM/NÃO), o gesto vertical do framer-motion continua livre.
+- Para evitar conflito, o gesto de "pular ao arrastar para cima" passa a funcionar **apenas via botão "Pular este"** quando o conteúdo é rolável (multi-opção longo). Em binários (sem rolagem necessária), o swipe ↑ continua. O texto de ajuda no rodapé da página já menciona "↑ para PULAR · Toque no card para detalhes" — atualizo para "Em listas longas, use o botão Pular".
 
-**2. `src/pages/Flow.tsx` — não renderizar o próximo card visualmente**
+**2. `src/pages/Flow.tsx`**
 
-Hoje o "next" card é renderizado escalonado atrás (estilo Tinder deck), mas isso só funciona se ele for **menor** que o card do topo. Como ambos usam `absolute inset-0`, o do fundo fica do mesmo tamanho e vaza. Duas opções (escolho a 1 por simplicidade e visual mais limpo):
+- Aumentar levemente a altura do palco: `height: 'min(82vh, 720px)'` (era 78vh/640px) para dar mais respiro ao card e reduzir necessidade de scroll em casos médios.
+- Pequeno ajuste no texto de dica do rodapé: "Arraste → SIM · ← NÃO · Toque para detalhes · Use o botão para pular em listas longas".
 
-- **Opção escolhida**: remover completamente o card de fundo visual. Manter apenas **prefetch invisível** (renderizar o `next` com `opacity-0 pointer-events-none` apenas para warm-up de imagem/dados) ou simplesmente não renderizar e confiar no React Query para já ter os dados em cache.
-- Resultado: stage limpo, só 1 card visível por vez, transições suaves via `AnimatePresence`.
-
-**3. Prefetch da imagem do próximo card (bônus de fluidez)**
-
-- Em `Flow.tsx`, quando há `next?.image_url`, criar um `<link rel="preload" as="image" href={next.image_url} />` ou um `new Image().src = next.image_url` em `useEffect` para garantir que a imagem do próximo já esteja em cache quando virar o card do topo. Zero overhead visual.
-
-### Resultado
+### Resultado visual
 
 ```text
-Antes:                          Depois:
-┌──────────────────┐            ┌──────────────────┐
-│ Quem será...     │            │ Quem será eleito │
-│ Quem será o...   │ ← vaza     │ o melhor jogador │
-│ Consenso: Messi  │            │ (Bola de Ouro)?  │
-│ Consenso: Mes... │ ← vaza     │                  │
-│ ▓▓▓▓             │            │ Consenso: Messi  │
-│ ▓▓ (fantasma)    │            │ ▓▓▓▓▓▓░░░░       │
-└──────────────────┘            └──────────────────┘
+Antes (multi-opção):              Depois:
+┌──────────────────┐              ┌──────────────────┐
+│ [imagem]         │              │ [imagem]         │
+├──────────────────┤              ├──────────────────┤
+│ Pergunta...      │              │ Pergunta...      │
+│ Consenso ▓▓▓     │              │ Consenso ▓▓▓     │
+│                  │              │ [50][100][250]   │
+│  (gap vazio)     │              │ ┌──────────────┐ │
+│                  │              │ │ Opção 1   0% │ │
+│ [50][100][250]   │              │ │ Opção 2   0% │ │
+│ ┌──────────┐     │              │ │ Opção 3   0% │ │
+│ │ Opção 1  │     │              │ │ Opção 4   0% │ │ ↕ rola
+│ │ Opção 2  │     │              │ │ Opção 5   0% │ │
+│ │ Opção 3  │     │              │ │ Opção 6   0% │ │
+│ │ Opção 4  │     │              │ └──────────────┘ │
+│ (5,6 cortadas)   │              │ Pular este       │
+└──────────────────┘              └──────────────────┘
 ```
 
 ### Considerações
 
-- Não muda lógica de gestos, contadores, streak ou créditos.
-- Mantém `AnimatePresence` para transição entrar/sair do card.
-- Não altera backend, RPCs ou tipos.
-- Prefetch de imagem é silencioso e melhora a sensação de "instantâneo" entre cards.
+- Sem mudanças em backend, RPCs ou tipos.
+- Mantém gestos de swipe horizontal (SIM/NÃO em binários) e tap para detalhes.
+- Em mercados com muitas opções, o usuário rola dentro do card e usa o botão "Pular este" quando quiser avançar.
+- Preserva a estética dark fintech e a hierarquia visual.
 
