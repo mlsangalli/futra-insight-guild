@@ -1,58 +1,39 @@
 
 
-# Corrigir Dados do Bracket — Copa do Mundo 2026 (Grupos Oficiais)
+## Promover FUTRA Flow no Hero
 
-## Problema
+Trocar o botão principal "Explorar mercados" do hero pelo CTA do FUTRA Flow, dando muito mais visibilidade ao modo principal. "Explorar mercados" continua acessível, mas como botão secundário.
 
-Os dados seed atuais usam grupos fictícios (A: EUA/Holanda/Senegal/Costa Rica, etc.). O prompt do usuário fornece a composição oficial dos 12 grupos conforme sorteio da FIFA. Precisamos substituir completamente os dados de grupos e times, e corrigir a estrutura do R32 para refletir o chaveamento oficial.
+### Mudanças
 
-## O que muda
+**`src/pages/Index.tsx` — ambos os heros (com mercado em destaque e fallback):**
 
-### 1. Migração SQL — Limpar e re-inserir seed data
+1. **Botão primário (gradient destacado)** passa a ser **"Jogar FUTRA Flow"** com ícone `Zap` → leva para `/flow` (ou `/login?redirect=/flow` se deslogado).
+2. **Botão secundário (outline)** vira **"Explorar mercados"** → leva para `/browse`.
+3. No hero de fallback (sem mercado), o terceiro botão "Criar conta grátis" só aparece para deslogados; logados veem só Flow + Explorar.
 
-Uma nova migração que:
-- Deleta todos os `bracket_entry_knockout_picks`, `bracket_entry_group_picks`, `bracket_entries` existentes (apenas 1 entry de teste)
-- Deleta todos os `bracket_matches`, `tournament_group_teams`, `tournament_groups` do torneio `copa-2026`
-- Re-insere os 12 grupos com as seleções oficiais:
+**Banner superior do FUTRA Flow (linhas 82-128):**
+- Remover o banner duplicado da home — como o Flow agora ocupa o CTA primário do hero, o banner extra polui. Mantém a hierarquia limpa que o branding exige.
+
+### Resultado visual
 
 ```text
-A: México, África do Sul, Coreia do Sul, República Tcheca
-B: Canadá, Bósnia, Catar, Suíça
-C: Brasil, Marrocos, Haiti, Escócia
-D: Estados Unidos, Paraguai, Austrália, Turquia
-E: Alemanha, Curaçao, Costa do Marfim, Equador
-F: Holanda, Japão, Suécia, Tunísia
-G: Bélgica, Egito, Irã, Nova Zelândia
-H: Espanha, Cabo Verde, Arábia Saudita, Uruguai
-I: França, Senegal, Iraque, Noruega
-J: Argentina, Argélia, Áustria, Jordânia
-K: Portugal, RD Congo, Uzbequistão, Colômbia
-L: Inglaterra, Croácia, Gana, Panamá
+Hero (logado):
+┌──────────────────────────────────────────┐
+│ Preveja o futuro.                        │
+│ Construa sua reputação.                  │
+│                                          │
+│ A plataforma social de previsões...      │
+│                                          │
+│ [⚡ Jogar FUTRA Flow →] [Explorar mercados]│
+│  ↑ gradiente neon         ↑ outline      │
+└──────────────────────────────────────────┘
 ```
 
-- Re-insere os 16 matches de R32 com chaveamento correto baseado na estrutura oficial (1º de cada grupo vs 2º de outro ou 3º melhor colocado)
-- Mantém R16, QF, SF, F com a mesma estrutura de dependência (`W_R32_N`)
+### Considerações
 
-### 2. Chaveamento R32 oficial
-
-Baseado na estrutura FIFA 2026 com 48 times:
-- 24 primeiros e segundos + 8 melhores terceiros = 32 classificados
-- Os confrontos R32 seguem o mapeamento oficial de grupo cruzado
-
-Os 16 jogos do R32 serão configurados com `home_source`/`away_source` corretos (ex: `1A` vs `2C`, `1B` vs `3rd_X`, etc.) conforme as regras oficiais da FIFA para o formato expandido.
-
-### 3. Códigos ISO e bandeiras
-
-Atualizar `team_code` e `flag_emoji` para todas as 48 seleções com dados corretos.
-
-## Arquivos modificados
-
-- **1 nova migração SQL**: limpa dados antigos e insere dados oficiais
-- Nenhuma mudança de código frontend necessária — a estrutura das tabelas e a lógica do hook permanecem idênticas
-
-## Notas
-
-- A 1 entry existente será removida (dados de teste incompatíveis com novos grupos)
-- O deadline do torneio será atualizado para `2026-06-10T12:00:00Z` (12h UTC do dia anterior ao início)
-- Posições marcadas como "Intercontinental 2" (Iraque no Grupo I) serão incluídas normalmente; se necessário, pode-se adicionar um campo `verified` no futuro
+- Reaproveita os botões existentes do hero, sem componentes novos.
+- Mantém `/browse` acessível em 1 clique no secundário + nos cards de seções (Trending, Popular, etc).
+- Preserva o branding dark fintech: ícone `Zap` já usado no BottomNav e no banner — coerência total.
+- Sem mudanças de backend, rotas ou tipos.
 
