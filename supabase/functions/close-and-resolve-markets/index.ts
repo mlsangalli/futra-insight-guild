@@ -261,13 +261,11 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
               continue;
             }
             results.errors++;
-            // Track failure per market
-            await adminClient.from("market_resolution_attempts").upsert({
-              market_id: market.id,
-              failure_count: 1,
-              last_attempt_at: new Date().toISOString(),
-              last_error: `${aiResponse.status}: ${errText.substring(0, 200)}`,
-            }, { onConflict: "market_id", ignoreDuplicates: false });
+            // Track failure per market (increments counter)
+            await adminClient.rpc("record_market_resolution_failure", {
+              p_market_id: market.id,
+              p_error: `${aiResponse.status}: ${errText.substring(0, 200)}`,
+            });
             await adminClient.from("admin_logs").insert({
               admin_user_id: SYSTEM_USER_ID,
               action_type: "auto_resolve_error",
