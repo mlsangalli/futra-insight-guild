@@ -70,98 +70,99 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
       animate={isTop ? { scale: 1, opacity: 1, y: 0 } : { scale: 0.94, opacity: 0.7, y: 16 }}
       transition={{ type: 'spring', stiffness: 220, damping: 26 }}
     >
-      <div className="relative h-full w-full overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-b from-surface-800 to-surface-900 shadow-2xl">
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-b from-surface-800 to-surface-900 shadow-2xl">
         {/* Swipe overlays */}
         {isTop && (
           <>
-            <motion.div style={{ opacity: yesOpacity }} className="pointer-events-none absolute left-6 top-6 z-30 rounded-lg border-2 border-success/70 bg-success/10 px-4 py-2 backdrop-blur">
-              <span className="font-display text-2xl font-bold text-success">SIM ✓</span>
+            <motion.div style={{ opacity: yesOpacity }} className="pointer-events-none absolute left-5 top-5 z-30 rotate-[-8deg] rounded-xl border-2 border-success/80 bg-success/15 px-4 py-1.5 backdrop-blur-md">
+              <span className="font-display text-xl font-black tracking-wide text-success">SIM</span>
             </motion.div>
-            <motion.div style={{ opacity: noOpacity }} className="pointer-events-none absolute right-6 top-6 z-30 rounded-lg border-2 border-destructive/70 bg-destructive/10 px-4 py-2 backdrop-blur">
-              <span className="font-display text-2xl font-bold text-destructive">NÃO ✗</span>
+            <motion.div style={{ opacity: noOpacity }} className="pointer-events-none absolute right-5 top-5 z-30 rotate-[8deg] rounded-xl border-2 border-destructive/80 bg-destructive/15 px-4 py-1.5 backdrop-blur-md">
+              <span className="font-display text-xl font-black tracking-wide text-destructive">NÃO</span>
             </motion.div>
-            <motion.div style={{ opacity: skipOpacity }} className="pointer-events-none absolute left-1/2 top-12 z-30 -translate-x-1/2 rounded-lg border-2 border-muted-foreground/70 bg-muted/10 px-4 py-2 backdrop-blur">
-              <span className="font-display text-lg font-bold text-muted-foreground">PULAR ⤴</span>
+            <motion.div style={{ opacity: skipOpacity }} className="pointer-events-none absolute left-1/2 top-10 z-30 -translate-x-1/2 rounded-xl border-2 border-muted-foreground/70 bg-muted/15 px-4 py-1.5 backdrop-blur-md">
+              <span className="font-display text-base font-bold uppercase tracking-wider text-muted-foreground">Pular</span>
             </motion.div>
           </>
         )}
 
-        {/* Image header */}
-        {market.image_url ? (
-          <div
-            className="relative h-44 w-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${market.image_url})` }}
-            aria-label={market.image_alt || ''}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/40 to-transparent" />
-          </div>
-        ) : (
-          <div className="relative h-32 w-full bg-gradient-to-br from-primary/20 via-surface-800 to-accent/20">
-            <div className="absolute inset-0 bg-gradient-to-t from-surface-900 to-transparent" />
-          </div>
-        )}
+        {/* Image header — clickable for details */}
+        <button
+          type="button"
+          onClick={onOpenDetails}
+          aria-label="Ver detalhes"
+          className="group relative block h-40 w-full shrink-0 overflow-hidden text-left"
+        >
+          {market.image_url ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+              style={{ backgroundImage: `url(${market.image_url})` }}
+              aria-label={market.image_alt || ''}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-surface-800 to-accent/30" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/30 to-transparent" />
 
-        <div className="flex h-[calc(100%-11rem)] flex-col gap-3 p-5">
-          {/* Meta */}
-          <div className="flex items-center justify-between gap-2">
+          {/* Floating meta over image */}
+          <div className="absolute left-3 top-3 flex items-center gap-1.5">
             <CategoryBadge category={market.category as any} />
+            {market.flow_score > 80 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-[10px] font-bold uppercase text-warning backdrop-blur">
+                <Flame className="h-3 w-3" /> Hot
+              </span>
+            )}
+          </div>
+          <div className="absolute right-3 top-3">
             <CountdownTimer endDate={market.lock_date || market.end_date} />
           </div>
+        </button>
 
+        {/* Body */}
+        <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
           {/* Question */}
-          <button
+          <h2
             onClick={onOpenDetails}
-            className="text-left transition hover:opacity-90"
-            aria-label="Ver detalhes do mercado"
+            className="cursor-pointer font-display text-xl font-bold leading-tight text-foreground transition hover:opacity-80 sm:text-[1.6rem] sm:leading-[1.15]"
           >
-            <h2 className="font-display text-xl font-bold leading-tight text-foreground sm:text-2xl">
-              {market.question}
-            </h2>
-          </button>
+            {market.question}
+          </h2>
 
-          {/* Consensus bar */}
+          {/* Consensus + social, em uma linha unificada */}
           {leader && (
-            <div className="rounded-lg border border-border/40 bg-surface-900/70 p-3">
-              <div className="mb-1.5 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Consenso atual</span>
-                <span className="font-display font-semibold text-foreground">
-                  {leader.label} · {Math.round(leader.percentage ?? 0)}%
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-medium text-muted-foreground">
+                  Consenso: <span className="font-semibold text-foreground">{leader.label}</span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-muted-foreground">
+                  <Users className="h-3 w-3" />
+                  <span className="tabular-nums">{market.total_participants.toLocaleString('pt-BR')}</span>
                 </span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-surface-700">
+              <div className="h-1 overflow-hidden rounded-full bg-surface-700">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
                   style={{ width: `${Math.max(2, Math.min(100, leader.percentage ?? 0))}%` }}
                 />
               </div>
             </div>
           )}
 
-          {/* Social */}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {market.total_participants.toLocaleString('pt-BR')}</span>
-            <span className="inline-flex items-center gap-1"><Coins className="h-3.5 w-3.5" /> {market.total_credits.toLocaleString('pt-BR')} FC</span>
-            {market.flow_score > 80 && (
-              <span className="inline-flex items-center gap-1 text-warning"><Flame className="h-3.5 w-3.5" /> Quente</span>
-            )}
-          </div>
+          <div className="flex-1" />
 
-          {/* Credits picker */}
-          <div className="mt-auto space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Aposta</span>
-              <span className="font-display text-lg font-bold text-foreground">{credits} FC</span>
-            </div>
-            <div className="flex gap-1.5">
+          {/* Aposta — compacto */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
               {QUICK_AMOUNTS.map((amt) => (
                 <button
                   key={amt}
                   onClick={() => setCredits(amt)}
                   className={cn(
-                    'flex-1 rounded-md border px-2 py-1.5 text-xs font-medium transition',
+                    'flex-1 rounded-lg border px-2 py-1.5 font-display text-xs font-semibold tabular-nums transition',
                     credits === amt
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border/40 text-muted-foreground hover:border-border hover:text-foreground',
+                      ? 'border-primary bg-primary/10 text-primary shadow-[0_0_0_2px_hsl(var(--primary)/0.15)]'
+                      : 'border-border/40 text-muted-foreground hover:border-border/80 hover:text-foreground',
                   )}
                 >
                   {amt}
@@ -171,16 +172,16 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
 
             {/* Action buttons */}
             {isBinary && yesOption && noOption ? (
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   size="lg"
                   variant="outline"
                   disabled={isSubmitting}
                   onClick={() => onAnswer(noOption.id, credits)}
-                  className="h-14 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  className="h-14 border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
-                  <X className="mr-1 h-5 w-5" />
-                  <span className="font-display font-semibold">NÃO</span>
+                  <X className="mr-1.5 h-5 w-5" />
+                  <span className="font-display text-base font-bold">NÃO</span>
                 </Button>
                 <Button
                   size="lg"
@@ -188,12 +189,12 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
                   onClick={() => onAnswer(yesOption.id, credits)}
                   className="h-14 bg-success text-success-foreground hover:bg-success/90"
                 >
-                  <Check className="mr-1 h-5 w-5" />
-                  <span className="font-display font-semibold">SIM</span>
+                  <Check className="mr-1.5 h-5 w-5" />
+                  <span className="font-display text-base font-bold">SIM</span>
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5 pt-1">
+              <div className="flex flex-col gap-1.5">
                 {sortedOptions.slice(0, 4).map((opt) => (
                   <Button
                     key={opt.id}
@@ -204,18 +205,22 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
                     className="h-12 justify-between border-border/40 text-left"
                   >
                     <span className="truncate">{opt.label}</span>
-                    <span className="text-xs text-muted-foreground">{Math.round(opt.percentage ?? 0)}%</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{Math.round(opt.percentage ?? 0)}%</span>
                   </Button>
                 ))}
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-2 pt-1">
-              <Button variant="ghost" size="sm" onClick={onSkip} disabled={isSubmitting} className="text-muted-foreground">
-                <ArrowUpRight className="mr-1 h-4 w-4" /> Pular
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onOpenDetails} className="text-muted-foreground">
-                <Zap className="mr-1 h-4 w-4" /> Detalhes
+            {/* Footer minimalista */}
+            <div className="flex items-center justify-center pt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSkip}
+                disabled={isSubmitting}
+                className="h-8 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <ArrowUpRight className="mr-1 h-3.5 w-3.5" /> Pular este
               </Button>
             </div>
           </div>
