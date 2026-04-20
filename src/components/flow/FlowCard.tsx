@@ -66,11 +66,13 @@ export function FlowCard({ market, onAnswer, onSkip, onOpenDetails, isSubmitting
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.6}
       onDragEnd={handleDragEnd}
-      initial={isTop ? { scale: 1, opacity: 1 } : { scale: 0.94, opacity: 0.7, y: 16 }}
-      animate={isTop ? { scale: 1, opacity: 1, y: 0 } : { scale: 0.94, opacity: 0.7, y: 16 }}
+      initial={isTop ? { scale: 1, opacity: 1 } : { scale: 1, opacity: 0, y: 0 }}
+      animate={isTop ? { scale: 1, opacity: 1, y: 0 } : { scale: 1, opacity: 0, y: 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 26 }}
     >
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-b from-surface-800 to-surface-900 shadow-2xl">
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-border/40 bg-card shadow-2xl">
+        {/* Decorative gradient overlay (non-transparent base above) */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface-800 to-surface-900" aria-hidden />
         {/* Swipe overlays */}
         {isTop && (
           <>
