@@ -117,6 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    // Limpa cache do React Query para evitar vazar dados entre sessões
+    queryClient.clear();
   };
 
   const refreshProfile = useCallback(async () => {
