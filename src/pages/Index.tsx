@@ -80,50 +80,10 @@ export default function HomePage() {
     <Layout>
       <SEO />
       {user && (
-        <div className="container mx-auto px-4 pt-4 space-y-3">
+        <div className="container mx-auto px-4 pt-4">
           <SectionErrorBoundary label="o bônus diário">
             <DailyBonusBanner />
           </SectionErrorBoundary>
-          <Link
-            to="/flow"
-            className="group relative flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 p-4 sm:p-5 transition hover:border-primary/60"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
-                <Zap className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-display text-base sm:text-lg font-bold">FUTRA Flow</h3>
-                  <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">Novo</span>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Responda mercados em sequência. Um após o outro.</p>
-              </div>
-            </div>
-            <ArrowRight className="h-5 w-5 text-primary transition group-hover:translate-x-1" />
-          </Link>
-        </div>
-      )}
-      {!user && (
-        <div className="container mx-auto px-4 pt-4">
-          <Link
-            to="/login?redirect=/flow"
-            className="group relative flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 p-4 sm:p-5 transition hover:border-primary/60"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
-                <Zap className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-display text-base sm:text-lg font-bold">FUTRA Flow</h3>
-                  <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">Novo</span>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Entre para responder mercados em sequência.</p>
-              </div>
-            </div>
-            <ArrowRight className="h-5 w-5 text-primary transition group-hover:translate-x-1" />
-          </Link>
         </div>
       )}
       {/* Hero */}
@@ -138,8 +98,12 @@ export default function HomePage() {
                 </h1>
                 <p className="mt-5 text-lg text-secondary-foreground leading-relaxed">A plataforma social de previsões onde suas apostas constroem status, reputação e influência. Sem dinheiro real — apenas convicção.</p>
                 <div className="mt-8 flex flex-wrap gap-3">
-                  <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild><Link to="/browse">Explorar mercados <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-                  <Button size="lg" variant="outline" className="text-base px-8" asChild><Link to="/leaderboard">Ver ranking</Link></Button>
+                  <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild>
+                    <Link to={user ? '/flow' : '/login?redirect=/flow'}>
+                      <Zap className="mr-2 h-4 w-4" /> Jogar FUTRA Flow <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="text-base px-8" asChild><Link to="/browse">Explorar mercados</Link></Button>
                 </div>
                 {!isLoading && markets.length > 0 && (
                   <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
@@ -195,13 +159,20 @@ export default function HomePage() {
             <p className="text-lg md:text-xl text-secondary-foreground max-w-2xl mx-auto mb-8">
               Preveja o futuro, construa reputação e suba no ranking. A plataforma social de previsões que transforma opiniões em dados.
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3">
               <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild>
-                <Link to="/browse">Explorar mercados <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link to={user ? '/flow' : '/login?redirect=/flow'}>
+                  <Zap className="mr-2 h-4 w-4" /> Jogar FUTRA Flow <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-base px-8" asChild>
-                <Link to="/signup">Criar conta grátis</Link>
+                <Link to="/browse">Explorar mercados</Link>
               </Button>
+              {!user && (
+                <Button size="lg" variant="outline" className="text-base px-8" asChild>
+                  <Link to="/signup">Criar conta grátis</Link>
+                </Button>
+              )}
             </div>
             {!isLoading && markets.length > 0 && (
               <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
