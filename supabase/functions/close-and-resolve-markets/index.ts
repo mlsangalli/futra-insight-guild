@@ -339,6 +339,10 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
           if (rpcErr) {
             console.error(`RPC error for market ${market.id}:`, rpcErr);
             results.errors++;
+            await adminClient.rpc("record_market_resolution_failure", {
+              p_market_id: market.id,
+              p_error: `RPC: ${rpcErr.message.substring(0, 200)}`,
+            });
             await adminClient.from("admin_logs").insert({
               admin_user_id: SYSTEM_USER_ID,
               action_type: "auto_resolve_error",
@@ -348,6 +352,9 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
             });
             continue;
           }
+
+          // Success: clear failure tracker
+          await adminClient.rpc("clear_market_resolution_attempts", { p_market_id: market.id });
 
           results.resolved++;
           results.resolvedIds.push(market.id);
