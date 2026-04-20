@@ -34,13 +34,33 @@ export function useComments(marketId: string) {
   return useQuery({
     queryKey: ['comments', marketId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('market_id', marketId)
-        .order('created_at', { ascending: true });
+      // RPC retorna comentários enriquecidos sem expor user_id cru
+      const { data, error } = await supabase.rpc('get_market_comments', { p_market_id: marketId });
       if (error) throw error;
-      return (data || []) as unknown as Comment[];
+      return ((data || []) as Array<{
+        id: string;
+        market_id: string;
+        parent_id: string | null;
+        body: string;
+        created_at: string;
+        updated_at: string;
+        author_username: string | null;
+        author_display_name: string | null;
+        author_avatar_url: string | null;
+      }>).map(r => ({
+        id: r.id,
+        market_id: r.market_id,
+        parent_id: r.parent_id,
+        body: r.body,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        user_id: '', // intencionalmente vazio: não expor UUID
+        profiles: {
+          username: r.author_username || 'usuario',
+          display_name: r.author_display_name || 'Usuário',
+          avatar_url: r.author_avatar_url,
+        },
+      })) as Comment[];
     },
     enabled: !!marketId,
   });
