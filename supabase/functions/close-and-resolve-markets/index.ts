@@ -240,20 +240,34 @@ Determine the winning option. Today's date is ${new Date().toISOString().split("
           if (!aiResponse.ok) {
             const errText = await aiResponse.text();
             console.error(`AI error for market ${market.id}: ${aiResponse.status} ${errText}`);
-            // Trip circuit breaker on payment/rate-limit errors to stop hammering the gateway
+            // Trip GLOBAL persistent circuit breaker on payment/rate-limit errors
             if (aiResponse.status === 402 || aiResponse.status === 429) {
               aiCreditsExhausted = true;
+              const pausedUntil = new Date(Date.now() + AI_GATEWAY_PAUSE_MINUTES * 60 * 1000).toISOString();
+              await adminClient.from("ai_gateway_status").upsert({
+                id: 1,
+                paused_until: pausedUntil,
+                last_error: `${aiResponse.status}: ${errText.substring(0, 200)}`,
+                updated_at: new Date().toISOString(),
+              });
               await adminClient.from("admin_logs").insert({
                 admin_user_id: SYSTEM_USER_ID,
                 action_type: "auto_resolve_error",
                 entity_type: "market",
                 entity_id: market.id,
-                description: `AI gateway aborted (status ${aiResponse.status}). Circuit breaker tripped — remaining markets skipped this run.`,
+                description: `AI gateway aborted (status ${aiResponse.status}). Global circuit breaker active until ${pausedUntil}.`,
               });
               results.errors++;
               continue;
             }
             results.errors++;
+            // Track failure per market
+            await adminClient.from("market_resolution_attempts").upsert({
+              market_id: market.id,
+              failure_count: 1,
+              last_attempt_at: new Date().toISOString(),
+              last_error: `${aiResponse.status}: ${errText.substring(0, 200)}`,
+            }, { onConflict: "market_id", ignoreDuplicates: false });
             await adminClient.from("admin_logs").insert({
               admin_user_id: SYSTEM_USER_ID,
               action_type: "auto_resolve_error",
