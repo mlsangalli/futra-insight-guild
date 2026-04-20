@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, Trophy as TrophyIcon, Trophy, User, Bell } from '@/lib/icons';
+import { Home, Search, Zap, Trophy, User, Bell } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
@@ -8,7 +8,7 @@ import { useUnreadCount } from '@/hooks/useNotifications';
 const NAV_ITEMS = [
   { icon: Home, label: 'Início', path: '/' },
   { icon: Search, label: 'Explorar', path: '/browse' },
-  { icon: TrophyIcon, label: 'Bracket', path: '/bracket', highlight: true },
+  { icon: Zap, label: 'Flow', path: '/flow', highlight: true },
   { icon: Trophy, label: 'Ranking', path: '/leaderboard' },
   { icon: User, label: 'Perfil', path: '/login' },
 ];
