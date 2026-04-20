@@ -159,13 +159,20 @@ export default function HomePage() {
             <p className="text-lg md:text-xl text-secondary-foreground max-w-2xl mx-auto mb-8">
               Preveja o futuro, construa reputação e suba no ranking. A plataforma social de previsões que transforma opiniões em dados.
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3">
               <Button size="lg" className="gradient-primary border-0 text-base px-8" asChild>
-                <Link to="/browse">Explorar mercados <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link to={user ? '/flow' : '/login?redirect=/flow'}>
+                  <Zap className="mr-2 h-4 w-4" /> Jogar FUTRA Flow <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-base px-8" asChild>
-                <Link to="/signup">Criar conta grátis</Link>
+                <Link to="/browse">Explorar mercados</Link>
               </Button>
+              {!user && (
+                <Button size="lg" variant="outline" className="text-base px-8" asChild>
+                  <Link to="/signup">Criar conta grátis</Link>
+                </Button>
+              )}
             </div>
             {!isLoading && markets.length > 0 && (
               <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
