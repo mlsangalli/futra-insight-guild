@@ -151,33 +151,23 @@ export default function FlowPage() {
       {/* Card stage */}
       <main className="relative flex flex-1 items-stretch justify-center px-3 pb-6 pt-2">
         <div className="relative w-full max-w-md" style={{ height: 'min(78vh, 640px)' }}>
-          {isLoading && (
+          {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          )}
-          {isError && (
+          ) : isError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
               <p className="mb-4 text-muted-foreground">Não foi possível carregar o feed.</p>
               <Button onClick={() => refetch()}>Tentar novamente</Button>
             </div>
-          )}
-          {isEmpty && (
+          ) : (isEmpty || isFinished) ? (
             <FlowSummary
               answered={stats.answered}
               skipped={stats.skipped}
               invested={stats.invested}
               onRestart={handleRestart}
             />
-          )}
-          {isFinished && (
-            <FlowSummary
-              answered={stats.answered}
-              skipped={stats.skipped}
-              invested={stats.invested}
-              onRestart={handleRestart}
-            />
-          )}
+          ) : null}
 
           <AnimatePresence mode="popLayout">
             {!isFinished && next && (
