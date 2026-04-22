@@ -13,11 +13,22 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
-  // Excluir lucide-react do pre-bundle do Vite: o pre-bundle gera um barrel
-  // CommonJS que defeats tree-shaking. Excluindo, o Rollup processa cada
-  // ícone como módulo ESM individual e descarta os não usados.
+  // Evita 504/ERR_ABORTED no preview quando o dep optimizer entra em estado
+  // inconsistente. Esses pacotes são servidos como módulos ESM normais.
   optimizeDeps: {
-    exclude: ["lucide-react"],
+    exclude: [
+      "lucide-react",
+      "framer-motion",
+      "zod",
+      "date-fns",
+      "recharts",
+      "@tanstack/react-query",
+      "@tanstack/query-core",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-select",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-progress",
+    ],
   },
   resolve: {
     alias: {
