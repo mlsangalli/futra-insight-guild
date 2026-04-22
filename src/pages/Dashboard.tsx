@@ -7,13 +7,15 @@ import { LevelProgressBar } from '@/components/futra/LevelProgressBar';
 import { RecentResultsCard } from '@/components/futra/RecentResultsCard';
 import { MissionsCard } from '@/components/futra/MissionsCard';
 import { ShareButton, winShareText } from '@/components/futra/ShareButton';
+import { MarketCard } from '@/components/futra/MarketCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPredictions } from '@/hooks/useMarkets';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import { Trophy, Coins, Target, TrendingUp, Bookmark, BarChart3 } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { StatCardSkeleton, PredictionRowSkeleton, EmptyState } from '@/components/futra/Skeletons';
+import { StatCardSkeleton, PredictionRowSkeleton, EmptyState, MarketCardSkeleton } from '@/components/futra/Skeletons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import EditProfileDialog from '@/components/EditProfileDialog';
@@ -30,6 +32,7 @@ export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const { data: predictions, isLoading: loadingPredictions } = useUserPredictions(user?.id);
   const { data: transactions } = useCreditTransactions();
+  const { data: watchlist, isLoading: loadingWatchlist } = useWatchlist();
   const [tab, setTab] = useState('Abertas');
 
   if (loading) {
@@ -178,11 +181,22 @@ export default function DashboardPage() {
         )}
 
         {tab === 'Salvas' && (
-          <EmptyState
-            icon={<Bookmark className="h-10 w-10 text-muted-foreground" />}
-            title="Nenhum mercado salvo"
-            description="Salve mercados para acompanhá-los aqui."
-          />
+          loadingWatchlist ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => <MarketCardSkeleton key={i} />)}
+            </div>
+          ) : !watchlist || watchlist.length === 0 ? (
+            <EmptyState
+              icon={<Bookmark className="h-10 w-10 text-muted-foreground" />}
+              title="Nenhum mercado salvo"
+              description="Salve mercados para acompanhá-los aqui."
+              action={<Button variant="outline" asChild><Link to="/browse">Explorar mercados</Link></Button>}
+            />
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {watchlist.map((m: any) => <MarketCard key={m.id} market={m} />)}
+            </div>
+          )
         )}
 
         {transactions && transactions.length > 0 && (
