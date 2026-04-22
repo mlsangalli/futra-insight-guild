@@ -47,7 +47,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <p className="text-sm text-muted-foreground mb-2">
               Ocorreu um erro inesperado. Nosso time foi notificado.
             </p>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <p className="text-xs text-destructive/70 font-mono mb-4 break-all">
                 {this.state.error.message}
               </p>

@@ -26,6 +26,10 @@ export default function FlowPage() {
   const [index, setIndex] = useState(0);
   const [stats, setStats] = useState({ answered: 0, skipped: 0, invested: 0, viewed: 0, streak: 0 });
 
+  // Ref que sempre reflete o último valor de stats — evita closure stale no cleanup do unmount
+  const statsRef = useRef(stats);
+  useEffect(() => { statsRef.current = stats; }, [stats]);
+
   const cards = useMemo(() => feed ?? [], [feed]);
   const current = cards[index];
   const next = cards[index + 1];
@@ -55,15 +59,15 @@ export default function FlowPage() {
     }
   }, [next?.image_url]);
 
-  // End session on unmount
+  // End session on unmount — usa statsRef para enviar valores atualizados (não os do mount)
   useEffect(() => {
     return () => {
       if (sessionIdRef.current) {
         void flowSession.end(sessionIdRef.current, {
-          cards_viewed: stats.viewed,
-          cards_answered: stats.answered,
-          cards_skipped: stats.skipped,
-          total_credits_invested: stats.invested,
+          cards_viewed: statsRef.current.viewed,
+          cards_answered: statsRef.current.answered,
+          cards_skipped: statsRef.current.skipped,
+          total_credits_invested: statsRef.current.invested,
         });
       }
     };

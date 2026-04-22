@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,14 @@ const loginSchema = z.object({
 
 type FieldErrors = Partial<Record<'email' | 'password', string>>;
 
+/** Garante que o redirect é interno (não permite open redirect para domínios externos). */
+function safeRedirectPath(redirect: string | null, fallback = '/dashboard'): string {
+  if (!redirect) return fallback;
+  // Apenas paths que começam com '/' e não com '//' (que viraria URL com protocolo)
+  if (redirect.startsWith('/') && !redirect.startsWith('//')) return redirect;
+  return fallback;
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,6 +30,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const validate = () => {
     const result = loginSchema.safeParse({ email, password });
@@ -55,7 +64,7 @@ export default function LoginPage() {
       }
     } else {
       toast.success('Bem-vindo de volta!');
-      navigate('/dashboard');
+      navigate(safeRedirectPath(searchParams.get('redirect')));
     }
   };
 
