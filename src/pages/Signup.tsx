@@ -15,8 +15,10 @@ const signupSchema = z.object({
     .regex(/^[a-zA-Z0-9_]+$/, 'Apenas letras, números e underscores'),
   email: z.string().trim().min(1, 'Email é obrigatório').email('Email inválido'),
   password: z.string()
-    .min(6, 'Senha deve ter pelo menos 6 caracteres')
-    .max(72, 'Senha pode ter no máximo 72 caracteres'),
+    .min(8, 'Senha deve ter pelo menos 8 caracteres')
+    .max(72, 'Senha pode ter no máximo 72 caracteres')
+    .regex(/[A-Za-z]/, 'Inclua ao menos uma letra')
+    .regex(/[0-9]/, 'Inclua ao menos um número'),
 });
 
 type FieldErrors = Partial<Record<'username' | 'email' | 'password', string>>;
@@ -118,7 +120,7 @@ export default function SignupPage() {
                 className={`mt-1 bg-surface-800 ${errors.password ? 'border-destructive' : ''}`}
               />
               {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
-              {!errors.password && <p className="text-xs text-muted-foreground mt-1">Mínimo 6 caracteres</p>}
+              {!errors.password && <p className="text-xs text-muted-foreground mt-1">Mínimo 8 caracteres, com letras e números</p>}
             </div>
             <Button type="submit" className="w-full gradient-primary border-0" disabled={loading}>
               {loading ? 'Criando...' : 'Criar conta'}

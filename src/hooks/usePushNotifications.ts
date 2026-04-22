@@ -23,6 +23,8 @@ export function usePushNotifications() {
   // Check if already subscribed
   useEffect(() => {
     if (!user) return;
+    // .eq('user_id') é redundante com o RLS atual, mas mantém defesa em profundidade
+    // caso uma migration futura desabilite ou afrouxe a policy.
     supabase
       .from('push_subscriptions' as any)
       .select('id')

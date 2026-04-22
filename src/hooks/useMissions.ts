@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getBrazilDayKey, getBrazilWeekStartKey } from '@/lib/date-br';
 
 export interface MissionWithProgress {
   id: string;
@@ -18,17 +19,14 @@ export interface MissionWithProgress {
   claimed_at: string | null;
 }
 
+// Os períodos das missões usam horário de São Paulo para coincidir com a percepção
+// do usuário (e com o backend, que persiste period_start no mesmo fuso).
 function getToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  return getBrazilDayKey();
 }
 
 function getWeekStart(): string {
-  const now = new Date();
-  const day = now.getUTCDay();
-  const diff = day === 0 ? 6 : day - 1; // Monday = 0
-  const monday = new Date(now);
-  monday.setUTCDate(now.getUTCDate() - diff);
-  return monday.toISOString().slice(0, 10);
+  return getBrazilWeekStartKey();
 }
 
 export function useMissions() {

@@ -6,24 +6,12 @@
 import { useMemo } from 'react';
 import { useAdmin } from './useAdmin';
 import { useSyntheticMarkets } from './useSyntheticMarket';
+import { useViewMode, setViewMode, type SyntheticViewMode } from './useViewMode';
 import { generateSyntheticStats } from '@/lib/synthetic-engine';
 import type { Market } from '@/types';
 
-export type SyntheticViewMode = 'real' | 'synthetic' | 'both';
-
-function getViewMode(): SyntheticViewMode {
-  try {
-    return (localStorage.getItem('futra-synthetic-view') as SyntheticViewMode) || 'synthetic';
-  } catch {
-    return 'synthetic';
-  }
-}
-
-export function setViewMode(mode: SyntheticViewMode) {
-  try {
-    localStorage.setItem('futra-synthetic-view', mode);
-  } catch {}
-}
+export type { SyntheticViewMode };
+export { setViewMode };
 
 /**
  * Apply synthetic overlay to an array of markets.
@@ -37,7 +25,7 @@ export function useSyntheticOverlay(markets: Market[]): {
 } {
   const { isAdmin } = useAdmin();
   const { enabledMap, enabledCount } = useSyntheticMarkets();
-  const viewMode = getViewMode();
+  const viewMode = useViewMode();
 
   const result = useMemo(() => {
     // For admins: respect viewMode. For everyone else: always apply synthetic data.
@@ -85,7 +73,7 @@ export function useSingleSyntheticOverlay(market: Market | null | undefined): {
 } {
   const { isAdmin } = useAdmin();
   const { enabledMap } = useSyntheticMarkets();
-  const viewMode = getViewMode();
+  const viewMode = useViewMode();
 
   return useMemo(() => {
     if (!market || (isAdmin && viewMode === 'real')) {

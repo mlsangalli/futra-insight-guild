@@ -3,12 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isOnCooldown } from '@/lib/rate-limiter';
+import { isSameBrazilDay } from '@/lib/date-br';
 
 export function useDailyBonusEligibility() {
   const { profile } = useAuth();
-  
-  const isEligible = !profile?.last_daily_bonus || 
-    new Date(profile.last_daily_bonus).toDateString() !== new Date().toDateString();
+
+  // Comparar em horário de São Paulo evita o bug em que o usuário resgata às
+  // 22h BRT (>=01h UTC do dia seguinte) e não consegue resgatar no dia seguinte.
+  const isEligible = !profile?.last_daily_bonus ||
+    !isSameBrazilDay(profile.last_daily_bonus);
 
   const streak = profile?.streak || 0;
   const bonusAmount = Math.min(50 + (streak * 5), 100);

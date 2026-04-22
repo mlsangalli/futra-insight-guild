@@ -24,6 +24,7 @@ export function useWatchlist() {
       const { data, error } = await supabase
         .from('watchlist')
         .select('*, markets(*, market_options(*))')
+        .eq('user_id', user!.id) // defense-in-depth: nunca depender só de RLS
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []).map(parseRow);
@@ -41,6 +42,7 @@ export function useIsWatching(marketId: string) {
         .from('watchlist')
         .select('id')
         .eq('market_id', marketId)
+        .eq('user_id', user!.id)
         .maybeSingle();
       if (error) throw error;
       return !!data;
@@ -61,6 +63,7 @@ export function useToggleWatchlist() {
         .from('watchlist')
         .select('id')
         .eq('market_id', marketId)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (existing) {
