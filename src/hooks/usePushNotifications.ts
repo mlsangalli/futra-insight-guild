@@ -56,6 +56,13 @@ export function usePushNotifications() {
         swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
       }
 
+      // Aguarda o SW estar ativo e envia a config (necessário para onBackgroundMessage funcionar)
+      await navigator.serviceWorker.ready;
+      const activeWorker = swRegistration.active || swRegistration.waiting || swRegistration.installing;
+      if (activeWorker) {
+        activeWorker.postMessage({ type: 'FIREBASE_CONFIG', config: FIREBASE_CONFIG });
+      }
+
       const token = await getToken(messaging, {
         vapidKey: VAPID_KEY,
         serviceWorkerRegistration: swRegistration,
