@@ -35,9 +35,7 @@ export function SyntheticPanel() {
   const [configMarket, setConfigMarket] = useState<any>(null);
   const [configValues, setConfigValues] = useState<SyntheticConfig>(DEFAULT_CONFIG);
   const [configSeed, setConfigSeed] = useState(0);
-  const [viewMode, setViewModeState] = useState<SyntheticViewMode>(
-    () => (localStorage.getItem('futra-synthetic-view') as SyntheticViewMode) || 'synthetic'
-  );
+  const viewMode = useViewMode();
 
   // Get all markets for listing
   const { data: allMarkets } = useQuery({
