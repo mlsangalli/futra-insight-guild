@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSyntheticMarkets } from '@/hooks/useSyntheticMarket';
 import { DEFAULT_CONFIG, CONFIG_PRESETS, generateSyntheticStats } from '@/lib/synthetic-engine';
 import { setViewMode, type SyntheticViewMode } from '@/hooks/useSyntheticOverlay';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,9 +35,7 @@ export function SyntheticPanel() {
   const [configMarket, setConfigMarket] = useState<any>(null);
   const [configValues, setConfigValues] = useState<SyntheticConfig>(DEFAULT_CONFIG);
   const [configSeed, setConfigSeed] = useState(0);
-  const [viewMode, setViewModeState] = useState<SyntheticViewMode>(
-    () => (localStorage.getItem('futra-synthetic-view') as SyntheticViewMode) || 'synthetic'
-  );
+  const viewMode = useViewMode();
 
   // Get all markets for listing
   const { data: allMarkets } = useQuery({
@@ -86,10 +85,8 @@ export function SyntheticPanel() {
 
   const handleViewModeChange = (mode: SyntheticViewMode) => {
     setViewMode(mode);
-    setViewModeState(mode);
     toast({ title: `Visualização: ${mode === 'real' ? 'Dados Reais' : mode === 'synthetic' ? 'Dados Sintéticos' : 'Comparação'}` });
-    // Force re-render by reloading — simplest approach
-    window.location.reload();
+    // O store reativo (useViewMode) propaga automaticamente — sem reload.
   };
 
   const handleResetAll = async () => {

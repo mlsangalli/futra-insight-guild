@@ -1433,7 +1433,8 @@ function BulkCreateButton({ supabase: sb, queryClient: qc, toast: t, log: logFn 
                             className="h-6 px-2 text-xs shrink-0"
                             onClick={() => {
                               const next = new Set(excluded);
-                              isExcluded ? next.delete(index) : next.add(index);
+                              if (isExcluded) next.delete(index);
+                              else next.add(index);
                               setExcluded(next);
                             }}
                           >

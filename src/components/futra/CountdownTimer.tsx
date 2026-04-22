@@ -9,13 +9,13 @@ interface CountdownTimerProps {
 
 function computeTimeLeft(endDate: string) {
   const diff = new Date(endDate).getTime() - Date.now();
-  if (diff <= 0) return 'Ended';
+  if (diff <= 0) return 'Encerrado';
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   if (days > 30) {
     const months = Math.floor(days / 30);
-    return `${months}mo left`;
+    return months > 1 ? `${months} meses` : '1 mês';
   }
   if (days > 0) return `${days}d ${hours}h ${mins}m`;
   if (hours > 0) return `${hours}h ${mins}m`;

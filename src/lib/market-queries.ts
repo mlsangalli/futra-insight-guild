@@ -39,11 +39,42 @@ function parseMarketRow(row: MarketRow): Market {
   };
 }
 
+interface RpcMarketRow {
+  id: string;
+  question: string;
+  description?: string | null;
+  category: Tables<'markets'>['category'];
+  type?: string | null;
+  status: Tables<'markets'>['status'];
+  options: Array<{
+    id?: string;
+    label?: string;
+    votes?: number;
+    total_votes?: number;
+    creditsAllocated?: number;
+    credits_allocated?: number;
+    total_credits?: number;
+    percentage?: number | string;
+  }> | null;
+  total_participants?: number;
+  total_credits?: number;
+  end_date: string;
+  created_at: string;
+  resolution_source?: string | null;
+  resolution_rules?: string | null;
+  featured?: boolean;
+  trending?: boolean;
+  created_by?: string | null;
+  lock_date?: string | null;
+  resolved_option?: string | null;
+  total_count?: number;
+}
+
 /** Parse a flat market row from RPC (no nested market_options) */
-function parseRpcMarket(row: any): Market {
+function parseRpcMarket(row: RpcMarketRow): Market {
   const rawOptions = row.options;
   const options: MarketOption[] = Array.isArray(rawOptions)
-    ? rawOptions.map((opt: any) => ({
+    ? rawOptions.map((opt) => ({
         id: opt.id || '',
         label: opt.label || '',
         votes: opt.votes ?? opt.total_votes ?? 0,
@@ -85,7 +116,7 @@ export async function fetchHomeFeeds(): Promise<HomeFeeds> {
   const { data, error } = await supabase.rpc('get_home_feeds');
   if (error) throw error;
 
-  const raw = data as any;
+  const raw = (data ?? {}) as Partial<Record<keyof HomeFeeds, RpcMarketRow[]>>;
   return {
     featured: (raw.featured || []).map(parseRpcMarket),
     trending: (raw.trending || []).map(parseRpcMarket),
@@ -109,7 +140,7 @@ export async function fetchBrowseSorted(params: {
   } as any);
   if (error) throw error;
 
-  const rows = (data || []) as any[];
+  const rows = (data || []) as RpcMarketRow[];
   // O RPC `get_browse_sorted` repete `total_count` em todas as linhas.
   // Quando rows está vazio mas há páginas anteriores, ainda assim totalCount precisa refletir
   // o total — nesse caso confiamos em que offset>0 só ocorre quando totalCount já era conhecido.

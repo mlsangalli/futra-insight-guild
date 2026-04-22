@@ -124,14 +124,14 @@ function parseDate(raw: string): string | null {
   const trimmed = raw.trim();
 
   // dd/MM/yyyy HH:mm or dd-MM-yyyy HH:mm
-  const brFull = trimmed.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})\s+(\d{1,2}):(\d{2})$/);
+  const brFull = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})\s+(\d{1,2}):(\d{2})$/);
   if (brFull) {
     const [, d, m, y, h, min] = brFull;
     return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${h.padStart(2, '0')}:${min}`;
   }
 
   // dd/MM/yyyy or dd-MM-yyyy or dd.MM.yyyy
-  const brDate = trimmed.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  const brDate = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
   if (brDate) {
     const [, d, m, y] = brDate;
     return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T12:00`;
@@ -172,7 +172,7 @@ function parseOptions(raw: string): string[] {
   
   return lines
     .map(line => line.replace(/^[-–—•*►▸▹→]\s*/, '')) // bullets
-    .map(line => line.replace(/^\d+[.):\-]\s*/, ''))    // numbering
+    .map(line => line.replace(/^\d+[.):-]\s*/, ''))    // numbering
     .map(line => line.replace(/^\[.\]\s*/, ''))          // checkboxes
     .map(line => line.trim())
     .filter(Boolean);
