@@ -4,8 +4,35 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 
 // Mock the market-queries module
+const sampleMarkets = [
+  {
+    id: 'test-1',
+    question: 'Will BTC hit 100k?',
+    description: 'Test market',
+    category: 'crypto',
+    type: 'binary',
+    status: 'open',
+    options: [
+      { id: 'opt-1', label: 'Yes', votes: 10, creditsAllocated: 500, percentage: 70 },
+      { id: 'opt-2', label: 'No', votes: 4, creditsAllocated: 200, percentage: 30 },
+    ],
+    total_participants: 14,
+    total_credits: 700,
+    end_date: '2026-12-31T00:00:00Z',
+    created_at: '2026-01-01T00:00:00Z',
+    resolution_source: null,
+    resolution_rules: null,
+    featured: true,
+    trending: false,
+    created_by: null,
+    lock_date: null,
+    resolved_option: null,
+  },
+];
+
 vi.mock('@/lib/market-queries', () => ({
-  fetchMarkets: vi.fn().mockResolvedValue([
+  fetchAllMarkets: vi.fn().mockResolvedValue(sampleMarkets),
+  fetchMarkets: vi.fn().mockResolvedValue({ data: sampleMarkets, nextCursor: null }),
     {
       id: 'test-1',
       question: 'Will BTC hit 100k?',
