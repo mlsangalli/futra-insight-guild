@@ -103,14 +103,19 @@ export async function fetchBrowseSorted(params: {
 }): Promise<{ data: Market[]; totalCount: number }> {
   const { data, error } = await supabase.rpc('get_browse_sorted', {
     p_sort: params.sort || 'trending',
-    p_category: params.category || null,
+    p_category: (params.category as any) || null,
     p_limit: params.limit || 20,
     p_offset: params.offset || 0,
   } as any);
   if (error) throw error;
 
   const rows = (data || []) as any[];
-  const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  // O RPC `get_browse_sorted` repete `total_count` em todas as linhas.
+  // Quando rows está vazio mas há páginas anteriores, ainda assim totalCount precisa refletir
+  // o total — nesse caso confiamos em que offset>0 só ocorre quando totalCount já era conhecido.
+  const totalCount = rows.length > 0 && rows[0].total_count != null
+    ? Number(rows[0].total_count)
+    : 0;
   return {
     data: rows.map(parseRpcMarket),
     totalCount,

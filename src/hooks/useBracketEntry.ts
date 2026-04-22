@@ -86,6 +86,16 @@ export function useBracketEntry(tournamentId: string | undefined) {
     load();
   }, [user, tournamentId]);
 
+  // Cleanup do save timer no unmount — evita persist com closure stale após desmonte
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = undefined;
+      }
+    };
+  }, []);
+
   // Compute third-place teams from group picks
   const thirdPlaceTeams = useMemo(() => {
     if (!groups) return [];
@@ -121,7 +131,6 @@ export function useBracketEntry(tournamentId: string | undefined) {
     // Third place pool source: "3A_B_F" means the 3rd-place qualifier from groups A, B, or F
     if (source.startsWith('3') && source.includes('_')) {
       const letters = source.substring(1).split('_');
-      // Find which of the user's selected third-place qualifiers comes from one of these groups
       const qualifying = thirdPlaceTeams.filter(
         t => letters.includes(t.groupLetter) && localState.thirdPlaceQualifiers.includes(t.team_name)
       );
@@ -141,6 +150,81 @@ export function useBracketEntry(tournamentId: string | undefined) {
     return null;
   }, [groups, matches, localState, thirdPlaceTeams]);
 
+  // Persist all picks. Usa upsert + delete-órfãos para evitar perda total se a 2ª query falhar.
+  const persistPicks = useCallback(async () => {
+    if (!entry) return;
+
+    const allGroupPicks = Object.values(localState.groupPicks).flat().map(p => ({
+      entry_id: entry.id,
+      group_id: p.group_id,
+      team_id: p.team_id,
+      predicted_position: p.predicted_position,
+    }));
+    const allKnockoutPicks = Object.entries(localState.knockoutPicks).map(([matchId, team]) => ({
+      entry_id: entry.id,
+      match_id: matchId,
+      chosen_team_name: team,
+    }));
+
+    try {
+      // Group picks: upsert por (entry_id, group_id, predicted_position) + delete órfãos
+      if (allGroupPicks.length > 0) {
+        const { error: upGErr } = await supabase
+          .from('bracket_entry_group_picks')
+          .upsert(allGroupPicks, { onConflict: 'entry_id,group_id,predicted_position' });
+        if (upGErr) throw upGErr;
+      }
+
+      // Remove apenas os group picks que não estão mais na lista atual
+      const validGroupKeys = new Set(allGroupPicks.map(p => `${p.group_id}:${p.predicted_position}`));
+      const { data: existingGPicks } = await supabase
+        .from('bracket_entry_group_picks')
+        .select('id, group_id, predicted_position')
+        .eq('entry_id', entry.id);
+      const orphanGIds = (existingGPicks || [])
+        .filter((r: any) => !validGroupKeys.has(`${r.group_id}:${r.predicted_position}`))
+        .map((r: any) => r.id);
+      if (orphanGIds.length > 0) {
+        await supabase.from('bracket_entry_group_picks').delete().in('id', orphanGIds);
+      }
+
+      // Knockout picks: upsert por (entry_id, match_id) + delete órfãos
+      if (allKnockoutPicks.length > 0) {
+        const { error: upKErr } = await supabase
+          .from('bracket_entry_knockout_picks')
+          .upsert(allKnockoutPicks, { onConflict: 'entry_id,match_id' });
+        if (upKErr) throw upKErr;
+      }
+
+      const validMatchIds = new Set(allKnockoutPicks.map(p => p.match_id));
+      const { data: existingKPicks } = await supabase
+        .from('bracket_entry_knockout_picks')
+        .select('id, match_id')
+        .eq('entry_id', entry.id);
+      const orphanKIds = (existingKPicks || [])
+        .filter((r: any) => !validMatchIds.has(r.match_id))
+        .map((r: any) => r.id);
+      if (orphanKIds.length > 0) {
+        await supabase.from('bracket_entry_knockout_picks').delete().in('id', orphanKIds);
+      }
+
+      // Update entry progress
+      await supabase.from('bracket_entries').update({
+        progress_percent: progress,
+        champion_pick: champion,
+      }).eq('id', entry.id);
+    } catch (err) {
+      console.error('Failed to save bracket picks', err);
+      toast.error('Não foi possível salvar suas escolhas. Tentaremos novamente.');
+    }
+  }, [entry, localState, /* progress, champion definidos abaixo via closure */]);
+
+  // Auto-save with debounce — declarado ANTES dos setters para que as deps sejam estáveis
+  const scheduleSave = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => { void persistPicks(); }, 1500);
+  }, [persistPicks]);
+
   // Set group picks for a group
   const setGroupOrder = useCallback((groupId: string, orderedTeamIds: string[]) => {
     setLocalState(prev => {
@@ -151,12 +235,10 @@ export function useBracketEntry(tournamentId: string | undefined) {
         predicted_position: idx + 1,
       }));
 
-      // Check if any knockout picks depend on this group and need invalidation
       const group = groups?.find(g => g.id === groupId);
       const newKnockout = { ...prev.knockoutPicks };
 
       if (group && matches) {
-        // Invalidate knockout picks that depend on changed group results
         const invalidateFromSource = (src: string): boolean => {
           const gm = src.match(/^(\d)([A-L])$/);
           return !!gm && gm[2] === group.group_letter;
@@ -165,7 +247,6 @@ export function useBracketEntry(tournamentId: string | undefined) {
         const invalidateMatch = (m: BracketMatch) => {
           if (invalidateFromSource(m.home_source) || invalidateFromSource(m.away_source)) {
             delete newKnockout[m.id];
-            // Also invalidate downstream
             const downstreamSrc = `W_${m.round}_${m.match_order}`;
             matches.filter(dm => dm.home_source === downstreamSrc || dm.away_source === downstreamSrc)
               .forEach(invalidateMatch);
@@ -183,12 +264,11 @@ export function useBracketEntry(tournamentId: string | undefined) {
     });
 
     scheduleSave();
-  }, [entry, groups, matches]);
+  }, [entry, groups, matches, scheduleSave]);
 
   // Set third place qualifiers
   const setThirdPlaceQualifiers = useCallback((qualifiers: string[]) => {
     setLocalState(prev => {
-      // Invalidate knockout picks that depend on 3rd place
       const newKnockout = { ...prev.knockoutPicks };
       if (matches) {
         const invalidateMatch = (m: BracketMatch) => {
@@ -206,14 +286,13 @@ export function useBracketEntry(tournamentId: string | undefined) {
       return { ...prev, thirdPlaceQualifiers: qualifiers, knockoutPicks: newKnockout };
     });
     scheduleSave();
-  }, [matches]);
+  }, [matches, scheduleSave]);
 
   // Set knockout pick
   const setKnockoutPick = useCallback((matchId: string, teamName: string) => {
     setLocalState(prev => {
       const newKnockout = { ...prev.knockoutPicks, [matchId]: teamName };
 
-      // Invalidate downstream
       if (matches) {
         const match = matches.find(m => m.id === matchId);
         if (match) {
@@ -231,7 +310,7 @@ export function useBracketEntry(tournamentId: string | undefined) {
       return { ...prev, knockoutPicks: newKnockout };
     });
     scheduleSave();
-  }, [matches]);
+  }, [matches, scheduleSave]);
 
   // Progress calculation
   const progress = useMemo(() => {
@@ -247,7 +326,6 @@ export function useBracketEntry(tournamentId: string | undefined) {
     const totalMatches = matches.length;
     const completedMatches = Object.keys(localState.knockoutPicks).length;
 
-    // Weight: groups 30%, thirds 10%, knockout 60%
     const groupProgress = totalGroups > 0 ? completedGroups / totalGroups : 0;
     const knockoutProgress = totalMatches > 0 ? completedMatches / totalMatches : 0;
 
@@ -261,56 +339,6 @@ export function useBracketEntry(tournamentId: string | undefined) {
     if (!final) return null;
     return localState.knockoutPicks[final.id] ?? null;
   }, [matches, localState.knockoutPicks]);
-
-  // Auto-save with debounce
-  const scheduleSave = useCallback(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      persistPicks();
-    }, 1500);
-  }, []);
-
-  const persistPicks = useCallback(async () => {
-    if (!entry) return;
-
-    try {
-      // Save group picks: delete all then re-insert
-      await supabase.from('bracket_entry_group_picks').delete().eq('entry_id', entry.id);
-
-      const allGroupPicks = Object.values(localState.groupPicks).flat().map(p => ({
-        entry_id: entry.id,
-        group_id: p.group_id,
-        team_id: p.team_id,
-        predicted_position: p.predicted_position,
-      }));
-
-      if (allGroupPicks.length > 0) {
-        await supabase.from('bracket_entry_group_picks').insert(allGroupPicks);
-      }
-
-      // Save knockout picks
-      await supabase.from('bracket_entry_knockout_picks').delete().eq('entry_id', entry.id);
-
-      const allKnockoutPicks = Object.entries(localState.knockoutPicks).map(([matchId, team]) => ({
-        entry_id: entry.id,
-        match_id: matchId,
-        chosen_team_name: team,
-      }));
-
-      if (allKnockoutPicks.length > 0) {
-        await supabase.from('bracket_entry_knockout_picks').insert(allKnockoutPicks);
-      }
-
-      // Update entry progress
-      await supabase.from('bracket_entries').update({
-        progress_percent: progress,
-        champion_pick: champion,
-      }).eq('id', entry.id);
-
-    } catch (err) {
-      console.error('Failed to save bracket picks', err);
-    }
-  }, [entry, localState, progress, champion]);
 
   // Submit entry
   const submitEntry = useCallback(async () => {
