@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { MessageCircle, Send, Loader2, Reply } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR } from 'date-fns/locale/pt-BR';
 
 interface Props {
   marketId: string;
