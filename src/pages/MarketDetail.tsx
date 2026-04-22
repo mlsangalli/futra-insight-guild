@@ -172,7 +172,7 @@ export default function MarketDetailPage() {
                 {market.options.map((opt, idx) => {
                   const isWinner = isResolved && opt.id === market.resolved_option;
                   const isLoser = isResolved && opt.id !== market.resolved_option;
-                  const isLeader = opt.id === topOption.id;
+                  const isLeader = topOption ? opt.id === topOption.id : false;
                   return (
                     <div key={opt.id} className={cn(
                       'relative p-4 overflow-hidden transition-all',
