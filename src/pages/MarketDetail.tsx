@@ -107,13 +107,17 @@ export default function MarketDetailPage() {
     ? market.options.find(o => o.id === market.resolved_option)
     : null;
 
-  const topOption = [...market.options].sort((a, b) => b.percentage - a.percentage)[0];
+  const topOption = market.options.length > 0
+    ? [...market.options].sort((a, b) => b.percentage - a.percentage)[0]
+    : null;
   const selectedOpt = market.options.find(o => o.id === selectedOption);
   const maxCredits = Math.min(1000, profile?.futra_credits || 0);
   const submitting = createPrediction.isPending;
 
   const shareUrl = `${window.location.origin}/market/${market.id}`;
-  const shareText = marketShareText(market.question, topOption.label, topOption.percentage);
+  const shareText = topOption
+    ? marketShareText(market.question, topOption.label, topOption.percentage)
+    : market.question;
   const ogImageUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/og-image?id=${market.id}`;
 
   const handleConfirm = async () => {
