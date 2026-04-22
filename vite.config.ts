@@ -33,6 +33,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@tanstack/react-query": path.resolve(__dirname, "./node_modules/@tanstack/react-query/build/modern/index.js"),
+      "@tanstack/query-core": path.resolve(__dirname, "./node_modules/@tanstack/query-core/build/modern/index.js"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
