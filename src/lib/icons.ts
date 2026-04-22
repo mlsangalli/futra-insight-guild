@@ -20,6 +20,13 @@ import Check from 'lucide-react/dist/esm/icons/check';
 import CheckCheck from 'lucide-react/dist/esm/icons/check-check';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import Circle from 'lucide-react/dist/esm/icons/circle';
+import Dot from 'lucide-react/dist/esm/icons/dot';
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal';
+import PanelLeft from 'lucide-react/dist/esm/icons/panel-left';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import Coins from 'lucide-react/dist/esm/icons/coins';
@@ -99,6 +106,13 @@ export {
   CheckCheck,
   CheckCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Circle,
+  Dot,
+  MoreHorizontal,
+  PanelLeft,
   ChevronLeft,
   Clock,
   Coins,
@@ -194,6 +208,20 @@ export const icons: Record<string, typeof Trophy> = {
   'check-circle': CheckCircle,
   CheckCircle2,
   'check-circle-2': CheckCircle2,
+  ChevronDown,
+  'chevron-down': ChevronDown,
+  ChevronRight,
+  'chevron-right': ChevronRight,
+  ChevronUp,
+  'chevron-up': ChevronUp,
+  Circle,
+  'circle': Circle,
+  Dot,
+  'dot': Dot,
+  MoreHorizontal,
+  'more-horizontal': MoreHorizontal,
+  PanelLeft,
+  'panel-left': PanelLeft,
   ChevronLeft,
   'chevron-left': ChevronLeft,
   Clock,
