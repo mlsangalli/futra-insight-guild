@@ -6,7 +6,7 @@ import { MissionsCard } from '@/components/futra/MissionsCard';
 import { useMissionHistory, useMissionStats } from '@/hooks/useMissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR } from 'date-fns/locale/pt-BR';
 
 function StatsBar() {
   const { data: stats, isLoading } = useMissionStats();

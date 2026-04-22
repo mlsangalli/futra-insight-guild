@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 import { Layout } from '@/components/layout/Layout';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR } from 'date-fns/locale/pt-BR';
 
 export default function BracketIndex() {
   const { data: tournaments, isLoading } = useTournaments();
