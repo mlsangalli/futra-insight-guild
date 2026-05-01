@@ -13,19 +13,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
-  // Mantém fora do dep optimizer apenas pacotes que já são ESM seguros no app.
-  // Radix precisa ser otimizado para o Vite aplicar interop com react-dom CJS.
-  optimizeDeps: {
-    exclude: [
-      "lucide-react",
-      "framer-motion",
-      "zod",
-      "date-fns",
-      "recharts",
-      "@tanstack/react-query",
-      "@tanstack/query-core",
-    ],
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
